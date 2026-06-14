@@ -1,0 +1,38 @@
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# Variables de entorno
+.env
+*.env
+
+# Bytecode Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+
+# Migraciones (opcional, normalmente SÍ se versionan)
+# Solo descomenta si decides no versionarlas
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Editores / IDEs
+.vscode/
+.idea/
+*.swp
+
+# Coverage / tests
+.coverage
+htmlcov/
+.pytest_cache/
