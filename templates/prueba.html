@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Menú Único</title>
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        /* ===== RESET ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* ===== FONDO CON ANIMACIÓN ===== */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(72, 0, 255, 0.3), transparent 50%),
+                        radial-gradient(circle at 80% 50%, rgba(255, 0, 200, 0.2), transparent 50%);
+            animation: bgMove 12s ease-in-out infinite alternate;
+        }
+
+        @keyframes bgMove {
+            0% {
+                transform: scale(1) rotate(0deg);
+            }
+            100% {
+                transform: scale(1.2) rotate(5deg);
+            }
+        }
+
+        /* ===== CONTENEDOR PRINCIPAL ===== */
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 1200px;
+            padding: 2rem;
+        }
+
+        /* ===== TARJETA DE CONTENIDO ===== */
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 2.5rem;
+            padding: 3rem 4rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            color: #fff;
+            text-align: center;
+            transition: all 0.3s ease;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .content-card h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #f093fb, #f5576c, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+
+        .content-card p {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            max-width: 500px;
+            line-height: 1.6;
+        }
+
+        /* ===== BOTÓN DE TOGGLE (HAMBURGUESA → FLECHA) ===== */
+        .menu-toggle {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            z-index: 1000;
+            width: 60px;
+            height: 60px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .menu-toggle:hover {
+            transform: scale(1.08);
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .menu-toggle .line {
+            width: 28px;
+            height: 3px;
+            background: #fff;
+            border-radius: 10px;
+            position: absolute;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .menu-toggle .line:nth-child(1) {
+            transform: translateY(-9px);
+        }
+        .menu-toggle .line:nth-child(2) {
+            width: 18px;
+            transform: translateX(5px);
+        }
+        .menu-toggle .line:nth-child(3) {
+            transform: translateY(9px);
+        }
+
+        /* Estado activo → se convierte en flecha */
+        .menu-toggle.active .line:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+            width: 28px;
+        }
+        .menu-toggle.active .line:nth-child(2) {
+            opacity: 0;
+            transform: translateX(-20px);
+            width: 0;
+        }
+        .menu-toggle.active .line:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+            width: 28px;
+        }
+
+        /* ===== MENÚ LATERAL ===== */
+        .side-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 320px;
+            z-index: 999;
+            background: rgba(15, 12, 41, 0.75);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 6rem 2rem 2rem 2rem;
+            transform: translateX(-100%);
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .side-menu.open {
+            transform: translateX(0%);
+        }
+
+        /* ===== ITEMS DEL MENÚ ===== */
+        .menu-items {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .menu-items li {
+            opacity: 0;
+            transform: translateX(-30px) scale(0.95);
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .side-menu.open .menu-items li {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+
+        /* Retrasos escalonados para cada ítem */
+        .side-menu.open .menu-items li:nth-child(1) { transition-delay: 0.05s; }
+        .side-menu.open .menu-items li:nth-child(2) { transition-delay: 0.12s; }
+        .side-menu.open .menu-items li:nth-child(3) { transition-delay: 0.19s; }
+        .side-menu.open .menu-items li:nth-child(4) { transition-delay: 0.26s; }
+        .side-menu.open .menu-items li:nth-child(5) { transition-delay: 0.33s; }
+
+        .menu-items li a {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            color: rgba(255, 255, 255, 0.75);
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid transparent;
+        }
+
+        .menu-items li a::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 16px;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .menu-items li a:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            transform: translateX(8px) scale(1.02);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .menu-items li a:hover::before {
+            opacity: 1;
+        }
+
+        .menu-items li a i {
+            font-size: 1.5rem;
+            width: 2rem;
+            text-align: center;
+            color: #4facfe;
+            transition: all 0.3s ease;
+        }
+
+        .menu-items li a:hover i {
+            transform: rotate(-8deg) scale(1.15);
+            color: #f5576c;
+        }
+
+        /* Efecto de brillo en el hover */
+        .menu-items li a .glow {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        .menu-items li a:hover .glow {
+            opacity: 1;
+        }
+
+        /* ===== PIE DEL MENÚ ===== */
+        .menu-footer {
+            margin-top: auto;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            opacity: 0.5;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.4);
+            text-align: center;
+        }
+
+        .menu-footer .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            margin-right: 8px;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 640px) {
+            .side-menu {
+                width: 280px;
+                padding: 5rem 1.2rem 1.5rem 1.2rem;
+            }
+            .content-card {
+                padding: 2rem 1.5rem;
+            }
+            .content-card h1 {
+                font-size: 2rem;
+            }
+            .menu-toggle {
+                top: 1rem;
+                left: 1rem;
+                width: 50px;
+                height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Fondo animado -->
+    <div class="bg-animation"></div>
+
+    <!-- Botón toggle -->
+    <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú">
+        <span class="line"></span>
+        <span class="line"></span>
+        <span class="line"></span>
+    </button>
+
+    <!-- Menú lateral -->
+    <nav class="side-menu" id="sideMenu">
+        <ul class="menu-items">
+            <li>
+                <a href="#">
+                    <span class="glow"></span>
+                    <i class="fas fa-home"></i>
+                    <span>Inicio</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <span class="glow"></span>
+                    <i class="fas fa-compass"></i>
+                    <span>Explorar</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <span class="glow"></span>
+                    <i class="fas fa-bell"></i>
+                    <span>Notificaciones</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <span class="glow"></span>
+                    <i class="fas fa-cog"></i>
+                    <span>Ajustes</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <span class="glow"></span>
+                    <i class="fas fa-user-astronaut"></i>
+                    <span>Perfil</span>
+                </a>
+            </li>
+        </ul>
+        <div class="menu-footer">
+            <div>
+                <span class="status-dot"></span>
+                <span>Online · v2.4.1</span>
+            </div>
+            <div style="margin-top: 4px; font-size: 0.75rem;">
+                <i class="fas fa-code"></i> &nbsp; Hecho con ❤️
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido principal -->
+    <main class="container">
+        <div class="content-card">
+            <h1>Menú Único</h1>
+            <p>
+                <i class="fas fa-arrow-left" style="margin-right: 8px; opacity: 0.6;"></i>
+                Toca el botón de la esquina para desplegar un menú con animaciones fluidas y efectos visuales modernos.
+            </p>
+            <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+                <span style="background: rgba(255,255,255,0.06); padding: 0.4rem 1.2rem; border-radius: 30px; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.05);">
+                    <i class="fas fa-circle" style="color: #4facfe; font-size: 0.5rem; margin-right: 6px;"></i>
+                    Glassmorphism
+                </span>
+                <span style="background: rgba(255,255,255,0.06); padding: 0.4rem 1.2rem; border-radius: 30px; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.05);">
+                    <i class="fas fa-circle" style="color: #f5576c; font-size: 0.5rem; margin-right: 6px;"></i>
+                    Micro-interacciones
+                </span>
+                <span style="background: rgba(255,255,255,0.06); padding: 0.4rem 1.2rem; border-radius: 30px; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.05);">
+                    <i class="fas fa-circle" style="color: #f093fb; font-size: 0.5rem; margin-right: 6px;"></i>
+                    Animación escalonada
+                </span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        (function() {
+            const toggle = document.getElementById('menuToggle');
+            const menu = document.getElementById('sideMenu');
+
+            function toggleMenu() {
+                const isOpen = menu.classList.toggle('open');
+                toggle.classList.toggle('active');
+                toggle.setAttribute('aria-label', isOpen ? 'Cerrar menú' : 'Abrir menú');
+
+                // Pequeño feedback háptico visual
+                if (isOpen) {
+                    toggle.style.boxShadow = '0 0 30px rgba(79, 172, 254, 0.3)';
+                } else {
+                    toggle.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)';
+                }
+            }
+
+            toggle.addEventListener('click', toggleMenu);
+
+            // Cerrar menú al hacer clic fuera (opcional)
+            document.addEventListener('click', function(e) {
+                const isClickInsideMenu = menu.contains(e.target);
+                const isClickOnToggle = toggle.contains(e.target);
+                if (!isClickInsideMenu && !isClickOnToggle && menu.classList.contains('open')) {
+                    toggleMenu();
+                }
+            });
+
+            // Cerrar con tecla ESC
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && menu.classList.contains('open')) {
+                    toggleMenu();
+                }
+            });
+
+            // Animación al cargar: pequeña bienvenida
+            setTimeout(() => {
+                toggle.style.transform = 'scale(1)';
+            }, 100);
+        })();
+    </script>
+
+</body>
+</html>
