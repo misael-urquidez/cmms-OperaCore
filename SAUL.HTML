@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Galería</title>
+
+    <style>
+        body{
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1{
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        img{
+            width: 300px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            margin: 10px;
+            transition: transform 0.3s;
+        }
+
+        img:hover{
+            transform: scale(1.05);
+        }
+
+        iframe{
+            margin-top: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Aquí</h1>
+
+    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2nEfAmDDLAxBJT6iTxzeTOdXhONCRMwLTaw&s" alt="Imagen 1">
+
+    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcScs-isS-0IG6p19d2Iz3lMmDYAMs8cpnz6nA&s" alt="Imagen 2">
+
+    <br><br>
+
+    <iframe
+        width="560"
+        height="315"
+        src="https://www.youtube.com/embed/Jpdfk-5VpYc"
+        title="YouTube video player"
+        allowfullscreen>
+    </iframe>
+
+</body>
+</html>
