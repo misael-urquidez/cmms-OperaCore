@@ -30,14 +30,14 @@ CREATE TABLE TIPO_PIEZA (
 -- Tabla: EDO_PIEZA
 CREATE TABLE EDO_PIEZA (
     codigo          VARCHAR(5)   PRIMARY KEY,
-    nombre          VARCHAR(50)  NOT NULL,
+    nombre          VARCHAR(50)  NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
 -- Tabla: EDO_REFACCION
 CREATE TABLE EDO_REFACCION (
     codigo          VARCHAR(5)   PRIMARY KEY,
-    nombre          VARCHAR(50)  NOT NULL,
+    nombre          VARCHAR(50)  NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
@@ -115,45 +115,39 @@ CREATE TABLE ESPECIALIDAD (
     descripcion     VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
--- Tabla: TIPO_REPORTE
-CREATE TABLE TIPO_REPORTE (
-    codigo          VARCHAR(5)   PRIMARY KEY,
-    nombre          VARCHAR(50)  NOT NULL,
-    descripcion     VARCHAR(255) NULL
-) ENGINE=InnoDB;
 
 -- Tabla: TIPO_FALLA
 CREATE TABLE TIPO_FALLA (
-    codigo          VARCHAR(5)   PRIMARY KEY,
-    nombre          VARCHAR(50)  NOT NULL,
+    numeroRegistro  INT AUTO_INCREMENT PRIMARY KEY,
+    nombre          VARCHAR(50)  NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
 -- Tabla: TIPO_SEVERIDAD
 CREATE TABLE TIPO_SEVERIDAD (
     codigo          VARCHAR(5)   PRIMARY KEY,
-    nombre          VARCHAR(30)  NOT NULL,
+    nombre          VARCHAR(30)  NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
 -- Tabla: EDO_REPORTE
 CREATE TABLE EDO_REPORTE (
     codigo          VARCHAR(5)   PRIMARY KEY,
-    nombre          VARCHAR(50)  NOT NULL,
+    nombre          VARCHAR(50)  NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
 -- Tabla: TIPO_MANTENIMIENTO
 CREATE TABLE TIPO_MANTENIMIENTO (
     codigo          VARCHAR(5)   PRIMARY KEY,
-    nombre          VARCHAR(50)  NOT NULL,
+    nombre          VARCHAR(50)  NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
 -- Tabla: ESTADO_ORDEN
 CREATE TABLE ESTADO_ORDEN (
     codigo          VARCHAR(5)   PRIMARY KEY,
-    nombre          VARCHAR(50)  NOT NULL,
+    nombre          VARCHAR(50)  NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
@@ -166,7 +160,7 @@ CREATE TABLE TIPO_MOVIMIENTO (
 -- Tabla: EDO_HERRAMIENTA
 CREATE TABLE EDO_HERRAMIENTA (
     codigo          VARCHAR(5)   PRIMARY KEY,
-    nombre          VARCHAR(50)  NOT NULL,
+    nombre          VARCHAR(50)  NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
@@ -220,7 +214,7 @@ CREATE TABLE REFACCION (
     puntoReorden     INT NULL,
     codigoInventario VARCHAR(30) NOT NULL UNIQUE,
     numeroOrden      VARCHAR(20) NOT NULL UNIQUE,
-    costo            DECIMAL(10,2) NOT NULL,
+    costo            float NOT NULL,
     tiempoEntregaApr INT NULL,
     stock            INT NOT NULL DEFAULT 0,
     stockMinimo      INT NOT NULL DEFAULT 0,
@@ -238,10 +232,10 @@ CREATE TABLE TRABAJADOR (
     numeroNomina    VARCHAR(15)  PRIMARY KEY,
     nombre          VARCHAR(50)  NOT NULL,
     apellidoPat     VARCHAR(50)  NOT NULL,
-    apellidoMat     VARCHAR(50)  NOT NULL,
-    telefono        VARCHAR(15)  NULL,
-    correo          VARCHAR(100) NULL UNIQUE,
-    usuario         VARCHAR(30)  NULL UNIQUE,
+    apellidoMat     VARCHAR(50)  NULL,
+    telefono        VARCHAR(15)  NOT NULL UNIQUE,
+    correo          VARCHAR(100) NOT NULL UNIQUE,
+    usuario         VARCHAR(30)  NOT NULL UNIQUE,
     `contraseña`    VARCHAR(255) NOT NULL,
     actividad       BOOLEAN NOT NULL DEFAULT TRUE,
     rol             VARCHAR(5)   NULL,
@@ -258,8 +252,8 @@ CREATE TABLE TRABAJADOR (
 -- quiere de verdad un código de texto, hay que agregarle a
 -- TIPO_HERRAMIENTA una columna "codigo" VARCHAR y usar esa.
 CREATE TABLE HERRAMIENTA (
-    codigo             VARCHAR(10)  PRIMARY KEY,
-    nombre             VARCHAR(100) NOT NULL,
+    numeroRegistro   INT AUTO_INCREMENT PRIMARY KEY,
+    nombre             VARCHAR(100) NOT NULL UNIQUE,
     descripcion        VARCHAR(255) NULL,
     imagen             VARCHAR(255) NULL,
     tipo_herramienta   INT NULL,
@@ -331,8 +325,8 @@ CREATE TABLE INDICADOR (
     numeroRegistro  INT AUTO_INCREMENT PRIMARY KEY,
     fechaInicio     DATE NULL,
     fechaFin        DATE NULL,
-    mttr            DECIMAL(10,2) NULL,
-    mtbf            DECIMAL(10,2) NULL,
+    mttr            float NULL,
+    mtbf            float NULL,
     porcentajeDispo INT NULL,
     maquina         VARCHAR(10) NULL,
     CONSTRAINT fk_indicador_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo)
@@ -347,40 +341,24 @@ CREATE TABLE PIEZA (
     numeroSerie      VARCHAR(30)  PRIMARY KEY,
     codigoEtiqueta   VARCHAR(30)  NULL UNIQUE,
     nombre           VARCHAR(100) NOT NULL,
-    costoInicial     DECIMAL(10,2) NOT NULL,
+    costoInicial     float NOT NULL,
     horasOperacion   INT NOT NULL DEFAULT 0,
     tiempoVidaUtil   INT NOT NULL,
-    depresacionAnual DECIMAL(5,2) NULL,
-    valorResidual    DECIMAL(10,2) NULL,
+    depresacionAnual float NULL,
+    valorResidual    float NULL,
     fechaInstalacion DATE NOT NULL,
     fechaGarantia    DATE NULL,
-    estado_pieza     VARCHAR(5)  NULL,
+    edo_pieza     VARCHAR(5)  NULL,
     maquina          VARCHAR(10) NULL,
     tipo_pieza       INT NULL,
     refaccion        INT NULL,
-    CONSTRAINT fk_pieza_estado FOREIGN KEY (estado_pieza) REFERENCES EDO_PIEZA(codigo),
+    CONSTRAINT fk_pieza_estado FOREIGN KEY (edo_pieza) REFERENCES EDO_PIEZA(codigo),
     CONSTRAINT fk_pieza_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo),
     CONSTRAINT fk_pieza_tipo FOREIGN KEY (tipo_pieza) REFERENCES TIPO_PIEZA(numeroRegistro),
     CONSTRAINT fk_pieza_refaccion FOREIGN KEY (refaccion) REFERENCES REFACCION(numeroRegistro)
 ) ENGINE=InnoDB;
 
--- Tabla: ESTADO_PIEZA
--- TABLA NUEVA (no existía en la v1). [REVISAR CON EL EQUIPO]: en el
--- diccionario esta tabla está mal descrita (la PK "codigo" se define
--- como "pieza asociada al estado" y "nombre"/"descripcion" se describen
--- como "cantidad de piezas en ese estado", pero están tipados como
--- Entero). Ninguna de esas dos lecturas cuadra con un PK real existente.
--- Aquí implementé la lectura más consistente con el resto del modelo
--- (mismo patrón que ESTADO_REFACCION / ESTADO_HERRAMIENTA: pieza +
--- estado + cantidad). Confirma con tu equipo antes de darla por buena.
-CREATE TABLE ESTADO_PIEZA (
-    pieza           VARCHAR(30) NOT NULL,
-    estado_pieza    VARCHAR(5)  NOT NULL,
-    cantidad        INT NOT NULL DEFAULT 0,
-    PRIMARY KEY (pieza, estado_pieza),
-    CONSTRAINT fk_estpieza_pieza FOREIGN KEY (pieza) REFERENCES PIEZA(numeroSerie),
-    CONSTRAINT fk_estpieza_edo   FOREIGN KEY (estado_pieza) REFERENCES EDO_PIEZA(codigo)
-) ENGINE=InnoDB;
+
 
 -- Tabla: REGISTRO_OPS
 -- CAMBIO: ya no referencia INDICADOR ni tiene "valor". Ahora guarda
@@ -415,8 +393,8 @@ CREATE TABLE REPORTE_FALLA (
     fechaCreacion   DATE NOT NULL,
     horaCreacion    TIME NOT NULL,
     tiempoParo      INT NULL,
-    causaRaiz       VARCHAR(500) NULL,
-    descripcion     VARCHAR(500) NOT NULL,
+    causaRaiz       VARCHAR(500) NOT NULL,
+    descripcion     VARCHAR(500) NULL,
     imagen          VARCHAR(255) NULL,
     maquina         VARCHAR(10) NULL,
     trabajador      VARCHAR(15) NULL,
@@ -445,7 +423,7 @@ CREATE TABLE ORDEN_MANTENIMIENTO (
     horaCreacion        TIME NOT NULL,
     fechaCierre         DATE NULL,
     horaCierre          TIME NULL,
-    horasIntervenidas   DECIMAL(5,2) NULL,
+    horasIntervenidas   float NULL,
     imagen              VARCHAR(255) NULL,
     maquina             VARCHAR(10) NULL,
     trabajador          VARCHAR(15) NULL,
@@ -469,8 +447,10 @@ CREATE TABLE MOVIMIENTO (
     tipoMovimiento      VARCHAR(20) NOT NULL,
     orden_mantenimiento VARCHAR(15) NULL,
     refaccion           INT NULL,
+    PIEZA               INT NULL,
     CONSTRAINT fk_mov_orden FOREIGN KEY (orden_mantenimiento) REFERENCES ORDEN_MANTENIMIENTO(folio),
-    CONSTRAINT fk_mov_refaccion FOREIGN KEY (refaccion) REFERENCES REFACCION(numeroRegistro)
+    CONSTRAINT fk_mov_refaccion FOREIGN KEY (refaccion) REFERENCES REFACCION(numeroRegistro),
+    CONSTRAINT fk_mov_PIEZA FOREIGN KEY (PIEZA) REFERENCES REFACCION(numeroRegistro)
 ) ENGINE=InnoDB;
 
 -- =====================================================================
@@ -490,6 +470,13 @@ CREATE TABLE TRABA_ORDE_PERSONAL (
 CREATE TABLE TAREA_ORDEN (
     tarea               INT NOT NULL,
     orden_mantenimiento VARCHAR(15) NOT NULL,
+    porcentaje float null,
+    fechaInicio date not null,
+    fechaCierre date null,
+    horaInicio time not null,
+    horafin time null,
+    verificacion boolean,
+    observaciones varchar(250) null,
     PRIMARY KEY (tarea, orden_mantenimiento),
     CONSTRAINT fk_tareaord_tarea FOREIGN KEY (tarea) REFERENCES TAREAS(numeroRegistro),
     CONSTRAINT fk_tareaord_orden FOREIGN KEY (orden_mantenimiento) REFERENCES ORDEN_MANTENIMIENTO(folio)
