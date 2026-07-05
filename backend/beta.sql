@@ -12,6 +12,7 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP DATABASE IF EXISTS operacore;
 CREATE DATABASE IF NOT EXISTS operacore
     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE operacore;
@@ -285,11 +286,11 @@ CREATE TABLE ESTADO_REFACCION (
 
 -- Tabla: ESTADO_HERRAMIENTA
 CREATE TABLE ESTADO_HERRAMIENTA (
-    herramienta      VARCHAR(10) NOT NULL,
+    herramienta      INT NOT NULL,
     edo_herramienta  VARCHAR(5)  NOT NULL,
     cantidad         INT NOT NULL DEFAULT 0,
     PRIMARY KEY (herramienta, edo_herramienta),
-    CONSTRAINT fk_estherr_herramienta FOREIGN KEY (herramienta) REFERENCES HERRAMIENTA(codigo),
+    CONSTRAINT fk_estherr_herramienta FOREIGN KEY (herramienta) REFERENCES HERRAMIENTA(numeroRegistro),
     CONSTRAINT fk_estherr_edo FOREIGN KEY (edo_herramienta) REFERENCES EDO_HERRAMIENTA(codigo)
 ) ENGINE=InnoDB;
 
@@ -398,11 +399,11 @@ CREATE TABLE REPORTE_FALLA (
     imagen          VARCHAR(255) NULL,
     maquina         VARCHAR(10) NULL,
     trabajador      VARCHAR(15) NULL,
-    tipo_falla      VARCHAR(5)  NULL,
+    tipo_falla      INT  NULL,
     tipo_severidad  VARCHAR(5)  NULL,
     CONSTRAINT fk_repfalla_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo),
     CONSTRAINT fk_repfalla_trabajador FOREIGN KEY (trabajador) REFERENCES TRABAJADOR(numeroNomina),
-    CONSTRAINT fk_repfalla_tipofalla FOREIGN KEY (tipo_falla) REFERENCES TIPO_FALLA(codigo),
+    CONSTRAINT fk_repfalla_tipofalla FOREIGN KEY (tipo_falla) REFERENCES TIPO_FALLA(numeroRegistro),
     CONSTRAINT fk_repfalla_severidad FOREIGN KEY (tipo_severidad) REFERENCES TIPO_SEVERIDAD(codigo)
 ) ENGINE=InnoDB;
 
@@ -484,10 +485,10 @@ CREATE TABLE TAREA_ORDEN (
 
 -- Tabla: HERRA_ORDEN
 CREATE TABLE HERRA_ORDEN (
-    herramienta         VARCHAR(10) NOT NULL,
+    herramienta         INT(10) NOT NULL,
     orden_mantenimiento VARCHAR(15) NOT NULL,
     PRIMARY KEY (herramienta, orden_mantenimiento),
-    CONSTRAINT fk_herraord_herramienta FOREIGN KEY (herramienta) REFERENCES HERRAMIENTA(codigo),
+    CONSTRAINT fk_herraord_herramienta FOREIGN KEY (herramienta) REFERENCES HERRAMIENTA(numeroRegistro),
     CONSTRAINT fk_herraord_orden FOREIGN KEY (orden_mantenimiento) REFERENCES ORDEN_MANTENIMIENTO(folio)
 ) ENGINE=InnoDB;
 
