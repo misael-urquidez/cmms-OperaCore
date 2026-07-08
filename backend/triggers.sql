@@ -152,4 +152,28 @@ END$$
 DELIMITER ;
 
 
+/*
+Tercer trigger para calcular la disponibilidad
+*/
 
+DELIMITER $$
+CREATE or replace tg_actualizar_disponibilidad_indicador
+before update on indicador
+for EACH ROW
+BEGIN
+    DECLARE nuevaDIsponibilidad INT
+
+    If(NOT(new.mtbf <=> old.mtbf)) or (not(new.mttr <=> old.mttr)) then
+        IF new.mtbf is not NULL and new.mttr is not NULL and (new.mtbf + new.mttr) > 0 then
+            SET nuevaDIsponibilidad = round((new.mtbf + new.mttr)) * 100
+        ELSE
+            SET nuevaDIsponibilidad = NULL;
+        END if;
+
+        SET new.porcentajeDispo =  nuevaDIsponibilidad;
+
+    end if;
+
+
+end $$
+DELIMITER;
