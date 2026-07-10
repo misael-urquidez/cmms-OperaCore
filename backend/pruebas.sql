@@ -174,3 +174,277 @@ SELECT
     ) AS MTBF_Calculado
 FROM REGISTRO_OPS ro
 GROUP BY maquina;
+
+
+
+-- TRIGER NUMERO 2 PRUEBAS ABAJO CON DATOS 
+
+-- =====================================================
+-- PASO 1. Verificar que existan los reportes de falla
+-- =====================================================
+
+SELECT numeroRegistro, asunto, tiempoParo, maquina
+FROM REPORTE_FALLA
+WHERE maquina='MQ001';
+
+-- Deben existir al menos 5 reportes de falla
+-- Si realizaste la prueba del MTBF ya deberían existir.
+
+-- =====================================================
+-- PASO 2. Crear 5 órdenes de mantenimiento
+-- (Todas abiertas, fechaCierre = NULL)
+-- =====================================================
+
+INSERT INTO ORDEN_MANTENIMIENTO
+(folio, descripcion, fechaProgramada, fechaCreacion, horaCreacion, maquina, reporte_falla)
+VALUES 
+('OM001','Reparación del motor','2026-01-11','2026-01-10','09:30:00','MQ001',1),
+('OM002','Cambio de sensor','2026-02-06','2026-02-05','11:40:00','MQ001',2),
+('OM003','Revisión del ventilador','2026-03-04','2026-03-03','13:20:00','MQ001',3),
+('OM004','Reparación neumática','2026-04-13','2026-04-12','09:10:00','MQ001',4),
+('OM005','Reparación eléctrica','2026-05-21','2026-05-20','15:30:00','MQ001',5);
+
+SELECT folio, fechaCierre
+FROM ORDEN_MANTENIMIENTO
+WHERE maquina='MQ001';
+
+-- =====================================================
+-- PASO 3. Cerrar la orden #1
+-- Tiempo paro = 45
+-- MTTR esperado = 45
+-- =====================================================
+
+UPDATE ORDEN_MANTENIMIENTO
+SET fechaCierre='2026-01-11', horaCierre='11:00:00'
+WHERE folio='OM001';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- =====================================================
+-- PASO 4. Cerrar la orden #2
+-- Tiempo acumulado = 65
+-- Reparaciones = 2
+-- MTTR esperado = 32.50
+-- =====================================================
+
+UPDATE ORDEN_MANTENIMIENTO
+SET fechaCierre='2026-02-06', horaCierre='13:00:00'
+WHERE folio='OM002';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- =====================================================
+-- PASO 5. Cerrar la orden #3
+-- Tiempo acumulado = 120
+-- Reparaciones = 3
+-- MTTR esperado = 40
+-- =====================================================
+
+UPDATE ORDEN_MANTENIMIENTO
+SET fechaCierre='2026-03-04', horaCierre='16:00:00'
+WHERE folio='OM003';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- =====================================================
+-- PASO 6. Cerrar la orden #4
+-- Tiempo acumulado = 155
+-- Reparaciones = 4
+-- MTTR esperado = 38.75
+-- =====================================================
+
+UPDATE ORDEN_MANTENIMIENTO
+SET fechaCierre='2026-04-13', horaCierre='12:00:00'
+WHERE folio='OM004';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- =====================================================
+-- PASO 7. Cerrar la orden #5
+-- Tiempo acumulado = 215
+-- Reparaciones = 5
+-- MTTR esperado = 43
+-- =====================================================
+
+UPDATE ORDEN_MANTENIMIENTO
+SET fechaCierre='2026-05-21', horaCierre='18:00:00'
+WHERE folio='OM005';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- =====================================================
+-- CONSULTAS FINALES
+-- =====================================================
+
+SELECT folio, fechaCierre, horaCierre, reporte_falla
+FROM ORDEN_MANTENIMIENTO
+WHERE maquina='MQ001';
+
+SELECT numeroRegistro, tiempoParo, maquina
+FROM REPORTE_FALLA
+WHERE maquina='MQ001';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+SELECT SUM(rf.tiempoParo) AS Tiempo_Total_Paro,
+COUNT(*) AS Total_Reparaciones, ROUND( SUM(rf.tiempoParo)/COUNT(*),2 ) AS MTTR_Calculado
+FROM REPORTE_FALLA rf
+INNER JOIN ORDEN_MANTENIMIENTO om
+ON rf.numeroRegistro = om.reporte_falla
+WHERE om.maquina='MQ001'
+AND om.fechaCierre IS NOT NULL;
+
+
+
+-- TRIGER NUMERO 3 DATOS PARA PRUEBAS 
+
+
+-- =====================================================
+-- PASO 1. Verificar el indicador de la máquina
+-- =====================================================
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- =====================================================
+-- PASO 2. Actualizar únicamente el MTBF
+-- El trigger detecta el cambio.
+-- Como MTTR es NULL, porcentajeDispo seguirá siendo NULL.
+-- =====================================================
+
+UPDATE INDICADOR
+SET mtbf = 100
+WHERE maquina='MQ001';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- =====================================================
+-- PASO 3. Actualizar el MTTR
+-- Ahora existen ambos valores.
+-- Se ejecuta nuevamente el trigger.
+-- =====================================================
+
+UPDATE INDICADOR
+SET mttr = 20
+WHERE maquina='MQ001';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- Resultado esperado:
+--
+-- round(100 + 20) * 100
+--
+-- = 12000
+
+-- =====================================================
+-- PASO 4. Cambiar el MTBF
+-- =====================================================
+
+UPDATE INDICADOR
+SET mtbf = 150
+WHERE maquina='MQ001';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- Resultado esperado:
+--
+-- round(150 + 20) *100
+--
+-- =17000
+
+-- =====================================================
+-- PASO 5. Cambiar el MTTR
+-- =====================================================
+
+UPDATE INDICADOR
+SET mttr = 35
+WHERE maquina='MQ001';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- Resultado esperado:
+--
+-- round(150 +35)*100
+--
+-- =18500
+
+-- =====================================================
+-- PASO 6. Cambiar ambos valores
+-- =====================================================
+
+UPDATE INDICADOR
+SET
+mtbf = 200,
+mttr = 50
+WHERE maquina='MQ001';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- Resultado esperado:
+--
+-- round(250)*100
+--
+-- =25000
+
+-- =====================================================
+-- PASO 7. Colocar MTTR en NULL
+-- =====================================================
+
+UPDATE INDICADOR
+SET mttr = NULL
+WHERE maquina='MQ001';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- porcentajeDispo = NULL
+
+-- =====================================================
+-- PASO 8. Restaurar el MTTR
+-- =====================================================
+
+UPDATE INDICADOR
+SET mttr = 40
+WHERE maquina='MQ001';
+
+SELECT *
+FROM INDICADOR
+WHERE maquina='MQ001';
+
+-- Resultado esperado:
+--
+-- round(200 +40)*100
+--
+-- =24000
+
+-- =====================================================
+-- CONSULTAS FINALES
+-- =====================================================
+
+SELECT maquina, mtbf, mttr, porcentajeDispo
+FROM INDICADOR
+WHERE maquina='MQ001';
