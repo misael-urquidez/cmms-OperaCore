@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}OperaCore CMMS{% endblock %}</title>
+    <link rel="icon" href="{% static 'img/pre_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="navbar">
+        <a class="navbar__brand" href="{% url 'home' %}">
+            <img src="{% static 'img/pre_logo.png' %}" alt="OperaCore" height="32">
+            OperaCore
+        </a>
+        <nav class="navbar__links">
+            <a href="{% url 'maquinaria:index' %}">Maquinaria</a>
+            <a href="{% url 'mantenimiento:index' %}">Mantenimiento</a>
+            <a href="{% url 'fallas:index' %}">Fallas</a>
+            <a href="{% url 'inventario:index' %}">Inventario</a>
+            <a href="{% url 'indicadores:index' %}">Indicadores</a>
+            <a href="{% url 'usuarios:index' %}">Usuarios</a>
+        </nav>
+    </header>
+
+    <main class="content">
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li class="messages__item messages__item--{{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>OperaCore CMMS &middot; UTT · Proyecto Integrador</p>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
