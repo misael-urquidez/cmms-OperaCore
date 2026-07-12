@@ -1,7 +1,5 @@
 ----------- triggers del proyecto -------------
 
-
-
 use operacore;
 
 SELECT * from registro_ops;
