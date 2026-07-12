@@ -1,7 +1,99 @@
-{% extends "base.html" %}
-{% block title %}Usuarios · OperaCore{% endblock %}
-{% block content %}
-  <h1>Módulo de Usuarios</h1>
-  <p>Estado del API para este módulo: <code>{{ api_status }}</code></p>
-  <p class="hint">Esta vista ya está jalando datos de <code>api/</code> vía <code>requests</code>. Reemplázala por tus listas/formularios reales.</p>
-{% endblock %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso · CMMS</title>
+  <link rel="icon" href="{% static 'img/pre_logo.png' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'usuarios/css/auth.css' %}">
+</head>
+<body class="auth-body" data-tab="{{ tab }}">
+
+  <div id="bg-fade"></div>
+  <canvas id="auth-waves"></canvas>
+
+  <div class="stage">
+    <div id="boot-logo">CMMS</div>
+
+    <div id="login-box">
+      {% if messages %}
+      <ul class="auth-messages">
+        {% for message in messages %}
+          <li class="auth-messages__item auth-messages__item--{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <!-- ── Iniciar sesión ── -->
+      <form class="auth-form {% if tab != 'registro' %}auth-form--active{% endif %}"
+            id="form-login" method="post" action="{% url 'usuarios:login' %}">
+        {% csrf_token %}
+        <h2>Inicio de Sesión</h2>
+        <div class="inp-wrap">
+          <input type="text" name="identificador" placeholder="Usuario o correo" required {% if tab != 'registro' %}autofocus{% endif %}>
+        </div>
+        <div class="inp-wrap">
+          <input type="password" name="password" placeholder="Contraseña" required>
+        </div>
+        <button type="submit" class="btn-login">Entrar</button>
+        <p class="auth-switch">¿No tienes cuenta? <a href="#" data-tab="registro">Crear una</a></p>
+      </form>
+
+      <!-- ── Crear cuenta ── -->
+      <form class="auth-form {% if tab == 'registro' %}auth-form--active{% endif %}"
+            id="form-registro" method="post" action="{% url 'usuarios:registro' %}" novalidate>
+        {% csrf_token %}
+        <h2>Crear Cuenta</h2>
+        <div class="inp-row">
+          <div class="inp-wrap"><input type="text" name="nombre" placeholder="Nombre" maxlength="50" autocomplete="given-name" required></div>
+          <div class="inp-wrap"><input type="text" name="apellidoPat" placeholder="Apellido paterno" maxlength="50" autocomplete="family-name" required></div>
+        </div>
+        <div class="inp-wrap">
+          <input type="text" name="apellidoMat" placeholder="Apellido materno (opcional)" maxlength="50" autocomplete="additional-name">
+        </div>
+        <div class="inp-wrap">
+          <input type="tel" name="telefono" placeholder="Teléfono (10 dígitos)" maxlength="15" inputmode="numeric" autocomplete="tel" required>
+        </div>
+        <div class="inp-wrap">
+          <input type="email" name="correo" placeholder="Correo" maxlength="100" inputmode="email" autocomplete="email" required>
+        </div>
+        <div class="inp-wrap">
+          <input type="text" name="usuario" placeholder="Usuario" maxlength="30" autocomplete="username" required>
+        </div>
+        <div class="inp-row">
+          <div class="inp-wrap">
+            <select name="rol">
+              <option value="">Rol...</option>
+              {% for rol in roles %}
+                <option value="{{ rol.codigo }}">{{ rol.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="inp-wrap">
+            <select name="especialidad">
+              <option value="">Especialidad...</option>
+              {% for esp in especialidades %}
+                <option value="{{ esp.codigo }}">{{ esp.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="inp-wrap">
+          <input type="password" name="password" id="reg-password" placeholder="Contraseña (mín. 8)" autocomplete="new-password" required>
+        </div>
+        <div class="inp-wrap">
+          <input type="password" name="password2" id="reg-password2" placeholder="Confirmar contraseña" autocomplete="new-password" required>
+        </div>
+        <button type="submit" class="btn-login">Crear cuenta</button>
+        <p class="auth-switch">¿Ya tienes cuenta? <a href="#" data-tab="login">Inicia sesión</a></p>
+      </form>
+    </div>
+
+    <div id="skip-hint">Presiona cualquier tecla para continuar</div>
+  </div>
+
+  <script src="{% static 'usuarios/js/auth.js' %}"></script>
+</body>
+</html>

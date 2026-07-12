@@ -11,10 +11,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-client")
 DEBUG = config("DEBUG", default=True, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
+ALLOWED_HOSTS = ["*"]
 
 # URL base del proyecto api/. Ajusta el puerto si corres el api en otro.
-API_BASE_URL = config("API_BASE_URL", default="http://localhost:8000/api")
+API_ROOT_URL = config("API_ROOT_URL", default="http://localhost:8000")
+API_BASE_URL = config("API_BASE_URL", default=f"{API_ROOT_URL}/api")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -67,6 +68,16 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+
+# Caché basado en archivos: se comparte entre procesos (a diferencia del de
+# memoria), por eso se puede limpiar desde la terminal. Ver comandos.txt.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": BASE_DIR / "cache",
+        "TIMEOUT": 600,  # 10 minutos por defecto
     }
 }
 

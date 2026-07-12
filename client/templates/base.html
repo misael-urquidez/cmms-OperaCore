@@ -23,6 +23,14 @@
             <a href="{% url 'indicadores:index' %}">Indicadores</a>
             <a href="{% url 'usuarios:index' %}">Usuarios</a>
         </nav>
+        <div class="navbar__auth">
+            {% if request.session.usuario %}
+                <span class="navbar__user">{{ request.session.usuario.nombre|default:request.session.usuario.usuario }}</span>
+                <a href="{% url 'usuarios:logout' %}">Salir</a>
+            {% else %}
+                <a href="{% url 'usuarios:index' %}">Iniciar sesión</a>
+            {% endif %}
+        </div>
     </header>
 
     <main class="content">
