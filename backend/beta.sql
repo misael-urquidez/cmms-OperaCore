@@ -492,7 +492,7 @@ CREATE TABLE HERRA_ORDEN (
     CONSTRAINT fk_herraord_orden FOREIGN KEY (orden_mantenimiento) REFERENCES ORDEN_MANTENIMIENTO(folio)
 ) ENGINE=InnoDB;
 
-SET FOREIGN_KEY_CHECKS = 1;
+SET FOREIGN_KEY_CHECKS = 1; 
 
 -- =====================================================================
 -- ÍNDICES ADICIONALES PARA OPTIMIZACIÓN
