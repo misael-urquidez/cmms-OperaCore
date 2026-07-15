@@ -1,0 +1,264 @@
+*{
+
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Segoe UI, sans-serif;
+
+}
+
+body{
+
+    background:#0f172a;
+
+    min-height:100vh;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+/*==============================*/
+
+.contenedor{
+
+    width:1200px;
+
+}
+
+h1{
+
+    color:white;
+
+    text-align:center;
+
+    margin-bottom:50px;
+
+    font-size:40px;
+
+    letter-spacing:2px;
+
+}
+
+/*==============================*/
+
+.cards{
+
+    display:grid;
+
+    grid-template-columns:repeat(4,1fr);
+
+    gap:30px;
+
+}
+
+/*==============================*/
+
+.card{
+
+    position:relative;
+
+    overflow:hidden;
+
+    border-radius:25px;
+
+    padding:35px;
+
+    cursor:pointer;
+
+    color:white;
+
+    transition:.5s;
+
+    background:linear-gradient(
+        135deg,
+        #1e3a8a,
+        #2563eb,
+        #3b82f6,
+        #60a5fa
+    );
+
+    background-size:350% 350%;
+
+}
+
+/*==============================*/
+/* Brillo superior */
+
+.card::before{
+
+    content:"";
+
+    position:absolute;
+
+    width:250px;
+
+    height:250px;
+
+    background:rgba(255,255,255,.18);
+
+    border-radius:50%;
+
+    top:-130px;
+
+    right:-100px;
+
+    transition:.5s;
+
+}
+
+/*==============================*/
+/* Brillo inferior */
+
+.card::after{
+
+    content:"";
+
+    position:absolute;
+
+    width:180px;
+
+    height:180px;
+
+    background:rgba(255,255,255,.10);
+
+    border-radius:50%;
+
+    bottom:-80px;
+
+    left:-60px;
+
+    transition:.5s;
+
+}
+
+/*==============================*/
+
+.icono{
+
+    font-size:55px;
+
+    margin-bottom:30px;
+
+    transition:.5s;
+
+}
+
+h2{
+
+    font-size:22px;
+
+    margin-bottom:10px;
+
+}
+
+h3{
+
+    font-size:42px;
+
+    margin-bottom:20px;
+
+}
+
+p{
+
+    line-height:24px;
+
+    opacity:.9;
+
+}
+
+/*========================================*/
+/* HOVER PRINCIPAL */
+/*========================================*/
+
+.card:hover{
+
+    transform:
+
+        translateY(-18px)
+        scale(1.05);
+
+    background-position:right center;
+
+    box-shadow:
+
+    0 15px 35px rgba(0,0,0,.35),
+
+    0 0 25px rgba(59,130,246,.6),
+
+    0 0 60px rgba(59,130,246,.4);
+
+}
+
+/*========================================*/
+
+.card:hover .icono{
+
+    transform:
+
+        rotate(12deg)
+        scale(1.18);
+
+}
+
+/*========================================*/
+
+.card:hover::before{
+
+    transform:
+
+        scale(1.6);
+
+}
+
+.card:hover::after{
+
+    transform:
+
+        scale(1.8);
+
+}
+
+/*========================================*/
+
+.card:hover h3{
+
+    letter-spacing:2px;
+
+}
+
+/*========================================*/
+/* Movimiento del gradiente */
+/*========================================*/
+
+.card{
+
+    animation:gradient 8s ease infinite;
+
+}
+
+@keyframes gradient{
+
+    0%{
+
+        background-position:left;
+
+    }
+
+    50%{
+
+        background-position:right;
+
+    }
+
+    100%{
+
+        background-position:left;
+
+    }
+
+}
