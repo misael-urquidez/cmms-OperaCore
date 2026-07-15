@@ -1,0 +1,32 @@
+========================================================================
+ COMANDOS ÚTILES · OperaCore CMMS
+========================================================================
+
+
+------------------------------------------------------------------------
+ LIMPIAR EL CACHÉ DE CATÁLOGOS (roles / especialidades)
+------------------------------------------------------------------------
+
+¿Qué es esto?
+  Para que la pantalla de login/registro cargue rápido, el proyecto
+  `client` guarda en caché la lista de ROLES y ESPECIALIDADES durante
+  10 minutos, en vez de pedírsela al `api` en cada recarga.
+
+  Ese caché vive en el SERVIDOR (carpeta client/cache/), NO en el
+  navegador. Por eso Ctrl+R / Ctrl+Shift+R NO lo limpian: eso solo
+  refresca lo que guardó tu navegador (CSS, JS, imágenes).
+
+¿Cuándo lo necesito?
+  Solo si AGREGAS o RENOMBRAS un rol o una especialidad y quieres que
+  aparezca YA en el formulario de registro, sin esperar los 10 minutos
+  a que el caché expire solo.
+
+Cómo limpiarlo (desde la carpeta client/, con el entorno activado):
+
+  python manage.py shell -c "from django.core.cache import cache; cache.clear(); print('Cache limpiado')"
+
+Alternativa: reiniciar el servidor del client (Ctrl+C y volver a correr
+runserver) también borra el caché.
+
+Nota: la carpeta client/cache/ se crea sola la primera vez. No pasa nada
+si la borras a mano estando el server apagado; se vuelve a generar.
