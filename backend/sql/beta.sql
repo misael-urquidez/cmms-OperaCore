@@ -352,7 +352,7 @@ CREATE TABLE PIEZA (
     edo_pieza     VARCHAR(5)  NULL,
     maquina          VARCHAR(10) NULL,
     tipo_pieza       INT NULL,
-    refaccion        INT NULL,
+    refaccion        INT NULL, -- Eliminar esto
     CONSTRAINT fk_pieza_estado FOREIGN KEY (edo_pieza) REFERENCES EDO_PIEZA(codigo),
     CONSTRAINT fk_pieza_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo),
     CONSTRAINT fk_pieza_tipo FOREIGN KEY (tipo_pieza) REFERENCES TIPO_PIEZA(numeroRegistro),
@@ -419,7 +419,7 @@ CREATE TABLE ORDEN_MANTENIMIENTO (
     descripcion         VARCHAR(500) NOT NULL,
     diagnostico         VARCHAR(500) NULL,
     notas               VARCHAR(500) NULL,
-    fechaProgramada     DATE NOT NULL,
+    fechaProgramada     DATE NOT NULL, -- NULL
     fechaCreacion       DATE NOT NULL,
     horaCreacion        TIME NOT NULL,
     fechaCierre         DATE NULL,
@@ -430,7 +430,7 @@ CREATE TABLE ORDEN_MANTENIMIENTO (
     trabajador          VARCHAR(15) NULL,
     reporte_falla       INT NULL,
     tipo_mantenimiento  VARCHAR(5)  NULL,
-    estado_orden        VARCHAR(5)  NULL,
+    estado_orden        VARCHAR(5)  NULL, -- Falta porcentaje
     CONSTRAINT fk_orden_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo),
     CONSTRAINT fk_orden_trabajador FOREIGN KEY (trabajador) REFERENCES TRABAJADOR(numeroNomina),
     CONSTRAINT fk_orden_reportefalla FOREIGN KEY (reporte_falla) REFERENCES REPORTE_FALLA(numeroRegistro),
