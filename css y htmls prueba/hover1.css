@@ -1,15 +1,214 @@
-.card{
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Segoe UI, sans-serif;
+}
+
+body{
+
+    display:flex;
+    background:#eef2f7;
+
+}
+
+/*--------------------*/
+/* SIDEBAR */
+/*--------------------*/
+
+.sidebar{
+
     width:260px;
-    padding:30px;
-    border-radius:20px;
-    background:rgba(255,255,255,.08);
-    backdrop-filter:blur(10px);
+    height:100vh;
+
+    background:#111827;
+
     color:white;
-    transition:.4s;
+
+    position:fixed;
+
+    padding-top:30px;
+
+}
+
+.sidebar h2{
+
+    text-align:center;
+
+    margin-bottom:40px;
+
+    color:#60a5fa;
+
+    letter-spacing:2px;
+
+}
+
+.sidebar ul{
+
+    list-style:none;
+
+}
+
+.sidebar li{
+
+    padding:18px 25px;
+
     cursor:pointer;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:15px;
+
+    transition:.35s;
+
+    border-left:5px solid transparent;
+
+}
+
+/*========================*/
+/* HOVER MODERNO */
+/*========================*/
+
+.sidebar li:hover{
+
+    background:#1e293b;
+
+    border-left:5px solid #3b82f6;
+
+    padding-left:38px;
+
+    color:#60a5fa;
+
+    box-shadow:0 0 20px rgba(59,130,246,.25);
+
+}
+
+.sidebar li i{
+
+    width:20px;
+
+    transition:.35s;
+
+}
+
+.sidebar li:hover i{
+
+    transform:scale(1.25);
+
+}
+
+/*---------------------*/
+/* CONTENIDO */
+/*---------------------*/
+
+.contenido{
+
+    margin-left:260px;
+
+    width:100%;
+
+    padding:40px;
+
+}
+
+/*---------------------*/
+/* HEADER */
+/*---------------------*/
+
+header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:40px;
+
+}
+
+header h1{
+
+    color:#1f2937;
+
+}
+
+button{
+
+    border:none;
+
+    padding:15px 30px;
+
+    border-radius:10px;
+
+    background:#2563eb;
+
+    color:white;
+
+    cursor:pointer;
+
+    transition:.35s;
+
+}
+
+button:hover{
+
+    background:#1d4ed8;
+
+    transform:translateY(-4px);
+
+    box-shadow:0 12px 25px rgba(37,99,235,.4);
+
+}
+
+/*---------------------*/
+/* CARDS */
+/*---------------------*/
+
+.cards{
+
+    display:grid;
+
+    grid-template-columns:repeat(4,1fr);
+
+    gap:25px;
+
+}
+
+.card{
+
+    background:white;
+
+    padding:30px;
+
+    border-radius:18px;
+
+    transition:.35s;
+
+    cursor:pointer;
+
+}
+
+.card h2{
+
+    color:#2563eb;
+
+    margin-bottom:10px;
+
+}
+
+.card p{
+
+    color:#6b7280;
+
 }
 
 .card:hover{
-    transform:translateY(-12px);
-    box-shadow:0 20px 40px rgba(0,0,0,.4);
+
+    transform:translateY(-10px);
+
+    box-shadow:0 20px 35px rgba(0,0,0,.12);
+
 }
