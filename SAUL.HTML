@@ -1,62 +1,71 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
+
     <meta charset="UTF-8">
-    <title>Galería</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        body{
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-        }
+    <title>Botones Neumorphism - OperaCore CMMS</title>
 
-        h1{
-            color: #333;
-            margin-bottom: 30px;
-        }
+    <link rel="stylesheet" href="hover3.css">
 
-        img{
-            width: 300px;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            margin: 10px;
-            transition: transform 0.3s;
-        }
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet">
 
-        img:hover{
-            transform: scale(1.05);
-        }
-
-        iframe{
-            margin-top: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-    </style>
 </head>
 
 <body>
 
-    <h1>Aquí</h1>
+<div class="contenedor">
 
-    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2nEfAmDDLAxBJT6iTxzeTOdXhONCRMwLTaw&s" alt="Imagen 1">
+    <h1>OperaCore CMMS</h1>
 
-    <img src="https://i.pinimg.com/1200x/b0/b5/bd/b0b5bdbbb5e461f79597fafb6dd9ff9d.jpg" alt="Imagen 2">
+    <p class="subtitulo">
+        Panel de acciones rápidas
+    </p>
 
-    <br><br>
+    <div class="botones">
 
-    <iframe
-        width="560"
-        height="315"
-        src="https://www.youtube.com/embed/Jpdfk-5VpYc"
-        title="YouTube video player"
-        allowfullscreen>
-    </iframe>
+        <button class="neo">
+            <i class="fa-solid fa-plus"></i>
+            Nueva Orden
+        </button>
+
+        <button class="neo success">
+            <i class="fa-solid fa-circle-check"></i>
+            Finalizar
+        </button>
+
+        <button class="neo warning">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            Pendiente
+        </button>
+
+        <button class="neo danger">
+            <i class="fa-solid fa-trash"></i>
+            Eliminar
+        </button>
+
+        <button class="neo info">
+            <i class="fa-solid fa-chart-line"></i>
+            Reportes
+        </button>
+
+        <button class="neo dark">
+            <i class="fa-solid fa-gear"></i>
+            Configuración
+        </button>
+
+    </div>
+
+</div>
+
+<div class="floating">
+
+    <i class="fa-solid fa-plus"></i>
+
+</div>
 
 </body>
+
 </html>

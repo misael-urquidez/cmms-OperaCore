@@ -1,0 +1,284 @@
+*{
+
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Segoe UI,sans-serif;
+
+}
+
+body{
+
+    background:#e8edf3;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    height:100vh;
+
+}
+
+/*===========================*/
+
+.contenedor{
+
+    width:900px;
+
+    text-align:center;
+
+}
+
+/*===========================*/
+
+h1{
+
+    font-size:45px;
+
+    color:#2d3748;
+
+}
+
+.subtitulo{
+
+    color:#64748b;
+
+    margin:20px 0 50px;
+
+    font-size:18px;
+
+}
+
+/*===========================*/
+
+.botones{
+
+    display:grid;
+
+    grid-template-columns:repeat(3,1fr);
+
+    gap:30px;
+
+}
+
+/*===========================*/
+/* BOTÓN BASE */
+/*===========================*/
+
+.neo{
+
+    height:75px;
+
+    border:none;
+
+    border-radius:20px;
+
+    background:#e8edf3;
+
+    cursor:pointer;
+
+    font-size:18px;
+
+    font-weight:600;
+
+    color:#334155;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    gap:12px;
+
+    transition:.35s;
+
+    box-shadow:
+
+        10px 10px 20px #c6ccd2,
+
+       -10px -10px 20px #ffffff;
+
+}
+
+/*===========================*/
+/* HOVER */
+/*===========================*/
+
+.neo:hover{
+
+    transform:translateY(-6px);
+
+    box-shadow:
+
+        14px 14px 25px #c2c7ce,
+
+       -14px -14px 25px white;
+
+}
+
+/*===========================*/
+/* CLICK */
+/*===========================*/
+
+.neo:active{
+
+    transform:scale(.97);
+
+    box-shadow:
+
+        inset 8px 8px 15px #c4c8cf,
+
+        inset -8px -8px 15px white;
+
+}
+
+/*===========================*/
+
+.neo i{
+
+    font-size:24px;
+
+    transition:.4s;
+
+}
+
+.neo:hover i{
+
+    transform:rotate(12deg) scale(1.2);
+
+}
+
+/*===========================*/
+/* COLORES */
+/*===========================*/
+
+.success{
+
+    color:#16a34a;
+
+}
+
+.success:hover{
+
+    background:#dcfce7;
+
+}
+
+.warning{
+
+    color:#ca8a04;
+
+}
+
+.warning:hover{
+
+    background:#fef9c3;
+
+}
+
+.danger{
+
+    color:#dc2626;
+
+}
+
+.danger:hover{
+
+    background:#fee2e2;
+
+}
+
+.info{
+
+    color:#2563eb;
+
+}
+
+.info:hover{
+
+    background:#dbeafe;
+
+}
+
+.dark{
+
+    color:#374151;
+
+}
+
+.dark:hover{
+
+    background:#e2e8f0;
+
+}
+
+/*===========================*/
+/* BOTÓN FLOTANTE */
+/*===========================*/
+
+.floating{
+
+    position:fixed;
+
+    bottom:40px;
+
+    right:40px;
+
+    width:70px;
+
+    height:70px;
+
+    border-radius:50%;
+
+    background:#e8edf3;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    cursor:pointer;
+
+    transition:.35s;
+
+    box-shadow:
+
+        10px 10px 20px #c6ccd2,
+
+       -10px -10px 20px white;
+
+}
+
+.floating i{
+
+    font-size:28px;
+
+    color:#2563eb;
+
+}
+
+.floating:hover{
+
+    transform:translateY(-8px) rotate(90deg);
+
+    box-shadow:
+
+        18px 18px 30px #c2c8cf,
+
+       -18px -18px 30px white;
+
+}
+
+.floating:active{
+
+    box-shadow:
+
+        inset 8px 8px 15px #c2c7ce,
+
+        inset -8px -8px 15px white;
+
+}
