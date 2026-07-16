@@ -1,0 +1,279 @@
+/* ==========================================================================
+   Pantalla de acceso — port fiel de la maqueta original (pantalla completa,
+   secuencia boot: negro -> ondas -> logo CMMS -> hint -> caja de login).
+   El registro vive en la misma caja, con el mismo lenguaje visual.
+   ========================================================================== */
+
+.auth-body {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  /* Solo bloqueamos el scroll horizontal; el vertical debe funcionar
+     para que el formulario de registro se pueda recorrer en pantallas bajas. */
+  overflow-x: hidden;
+  background: #000;
+  color: #fff;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Fondo radial que aparece desde negro */
+#bg-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(ellipse at 50% 20%, #1a3a8c 0%, #0d1e4a 40%, #050b1e 100%);
+  opacity: 0;
+  transition: opacity 2.2s ease;
+}
+.auth-body.awake #bg-fade { opacity: 1; }
+
+/* Ondas + particulas */
+#auth-waves {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 2s ease;
+}
+.auth-body.awake #auth-waves { opacity: 1; }
+
+/* Escena central.
+   Con display:flex + #login-box{margin:auto} la caja se centra cuando cabe,
+   y cuando es mas alta que la pantalla el scroll de la pagina la recorre
+   completa sin recortar la parte de arriba (patron seguro de centrado). */
+.stage {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  padding: 2rem 1rem;
+}
+
+/* Logo grande de arranque (fijo y centrado en el viewport) */
+#boot-logo {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  font-size: clamp(2.4rem, 9vw, 3.8rem);
+  font-weight: 200;
+  letter-spacing: clamp(8px, 3vw, 20px);
+  text-transform: uppercase;
+  text-shadow: 0 0 30px rgba(130, 180, 255, 0.6), 0 0 80px rgba(100, 160, 255, 0.3);
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+.auth-body.logo-in #boot-logo { opacity: 1; }
+.auth-body.logo-out #boot-logo { opacity: 0; }
+
+/* Hint */
+#skip-hint {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none; /* invisible = no intercepta clics/scroll */
+  transition: opacity 0.8s ease;
+}
+.auth-body.hint-in #skip-hint { opacity: 1; pointer-events: auto; }
+.auth-body.hint-out #skip-hint { opacity: 0; pointer-events: none; }
+
+/* ==========================================================================
+   Caja de login / registro
+   ========================================================================== */
+
+#login-box {
+  margin: auto;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(150, 190, 255, 0.15);
+  padding: 44px 40px;
+  border-radius: 16px;
+  width: 340px;
+  max-width: calc(100vw - 2rem);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  /* Oculta hasta la fase de login */
+  display: none;
+  opacity: 0;
+  transform: scale(0.88) translateY(16px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+#login-box.visible { opacity: 1; transform: scale(1) translateY(0); }
+
+#login-box h2 {
+  font-weight: 300;
+  font-size: 1rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+  opacity: 0.7;
+}
+
+/* Mensajes de Django */
+.auth-messages {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 22px;
+}
+.auth-messages__item {
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(150, 200, 255, 0.2);
+}
+.auth-messages__item--error {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+}
+.auth-messages__item--success {
+  background: rgba(134, 239, 172, 0.12);
+  border-color: rgba(134, 239, 172, 0.35);
+  color: #bbf7d0;
+}
+
+/* Formularios (login/registro conviven, se alterna con el enlace) */
+.auth-form { display: none; }
+.auth-form--active {
+  display: block;
+  animation: auth-fade-in 0.35s ease;
+}
+@keyframes auth-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.inp-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.inp-wrap { margin-bottom: 18px; position: relative; }
+
+.inp-wrap input,
+.inp-wrap select {
+  width: 100%;
+  padding: 13px 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(150, 200, 255, 0.12);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.88rem;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.3s;
+}
+.inp-wrap select { appearance: none; color: rgba(255, 255, 255, 0.55); }
+.inp-wrap input::placeholder { color: rgba(255, 255, 255, 0.35); }
+
+.inp-wrap input:focus,
+.inp-wrap select:focus {
+  border-color: rgba(150, 200, 255, 0.45);
+  box-shadow: 0 0 16px rgba(120, 170, 255, 0.15);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* Campo con error de validacion */
+.inp-wrap input.is-invalid,
+.inp-wrap select.is-invalid {
+  border-color: rgba(248, 113, 113, 0.6);
+  box-shadow: 0 0 14px rgba(248, 113, 113, 0.12);
+}
+
+.inp-error {
+  display: block;
+  color: #fca5a5;
+  font-size: 0.72rem;
+  margin-top: 6px;
+  min-height: 0.9rem;
+}
+
+.btn-login {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #fff;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 3px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 8px;
+  font-family: inherit;
+}
+.btn-login:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(180, 220, 255, 0.5);
+  box-shadow: 0 0 20px rgba(150, 200, 255, 0.2);
+}
+
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Enlace para alternar login <-> registro */
+.auth-switch {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+.auth-switch a {
+  color: rgba(180, 210, 255, 0.85);
+  text-decoration: none;
+  font-weight: 600;
+}
+.auth-switch a:hover { text-decoration: underline; }
+
+/* --- Pantallas angostas: apila las filas de 2 columnas --- */
+@media (max-width: 420px) {
+  #login-box { padding: 34px 24px; width: 100%; }
+  .inp-row { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* --- Pantallas bajas: compacta el espaciado para que el registro
+       quepa mejor sin depender tanto del scroll --- */
+@media (max-height: 720px) {
+  .stage { padding: 1.25rem 1rem; }
+  #login-box { padding: 30px 32px; }
+  #login-box h2 { margin-bottom: 20px; }
+  .inp-wrap { margin-bottom: 13px; }
+  .auth-switch { margin-top: 14px; }
+}
+
+/* En pantallas muy bajas (o telefono en horizontal) evita el
+   translate del hint pegado al boton y quita centrado vertical rigido. */
+@media (max-height: 560px) {
+  #skip-hint { display: none; }
+}
+
+/* Respeta a quien prefiere menos movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  #bg-fade, #auth-waves, #boot-logo, #skip-hint, #login-box {
+    transition-duration: 0.01ms !important;
+  }
+}

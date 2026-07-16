@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Inicio · OperaCore{% endblock %}
+{% block content %}
+  <section class="hero">
+    <h1>OperaCore CMMS</h1>
+    <p>Sistema de Gestión de Mantenimiento de Maquinaria Industrial.</p>
+  </section>
+
+  <section class="module-grid">
+    <a class="module-card" href="{% url 'maquinaria:index' %}">Maquinaria</a>
+    <a class="module-card" href="{% url 'mantenimiento:index' %}">Mantenimiento</a>
+    <a class="module-card" href="{% url 'fallas:index' %}">Fallas</a>
+    <a class="module-card" href="{% url 'inventario:index' %}">Inventario</a>
+    <a class="module-card" href="{% url 'indicadores:index' %}">Indicadores</a>
+    <a class="module-card" href="{% url 'usuarios:index' %}">Usuarios</a>
+  </section>
+{% endblock %}
