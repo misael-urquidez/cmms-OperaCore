@@ -77,7 +77,10 @@ CREATE TABLE PLANTA (
     codigo          VARCHAR(10)  PRIMARY KEY,
     nombre          VARCHAR(100) NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL,
-    ubicacion       VARCHAR(150) NULL
+    telefono        VARCHAR(15)  NOT NULL UNIQUE,
+    dirCalle        VARCHAR(100) NOT NULL,
+    dirCodigoPostal VARCHAR(5)   NOT NULL,
+    dirNumero       VARCHAR(10)  NOT NULL,
 ) ENGINE=InnoDB;
 
 -- Tabla: MARCA
@@ -270,6 +273,7 @@ CREATE TABLE LINEA (
     codigo          VARCHAR(10)  PRIMARY KEY,
     nombre          VARCHAR(100) NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL,
+    -- telefono        VARCHAR(15)  NOT NULL UNIQUE,
     area            VARCHAR(10)  NOT NULL,
     CONSTRAINT fk_linea_area FOREIGN KEY (area) REFERENCES AREA(codigo)
 ) ENGINE=InnoDB;
@@ -352,7 +356,6 @@ CREATE TABLE PIEZA (
     edo_pieza     VARCHAR(5)  NULL,
     maquina          VARCHAR(10) NULL,
     tipo_pieza       INT NULL,
-    refaccion        INT NULL, -- Eliminar esto
     CONSTRAINT fk_pieza_estado FOREIGN KEY (edo_pieza) REFERENCES EDO_PIEZA(codigo),
     CONSTRAINT fk_pieza_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo),
     CONSTRAINT fk_pieza_tipo FOREIGN KEY (tipo_pieza) REFERENCES TIPO_PIEZA(numeroRegistro),
@@ -419,12 +422,13 @@ CREATE TABLE ORDEN_MANTENIMIENTO (
     descripcion         VARCHAR(500) NOT NULL,
     diagnostico         VARCHAR(500) NULL,
     notas               VARCHAR(500) NULL,
-    fechaProgramada     DATE NOT NULL, -- NULL
+    fechaProgramada     DATE NULL, -- NULL
     fechaCreacion       DATE NOT NULL,
     horaCreacion        TIME NOT NULL,
     fechaCierre         DATE NULL,
     horaCierre          TIME NULL,
     horasIntervenidas   float NULL,
+    porcentaje float null,
     imagen              VARCHAR(255) NULL,
     maquina             VARCHAR(10) NULL,
     trabajador          VARCHAR(15) NULL,
@@ -471,7 +475,6 @@ CREATE TABLE TRABA_ORDE_PERSONAL (
 CREATE TABLE TAREA_ORDEN (
     tarea               INT NOT NULL,
     orden_mantenimiento VARCHAR(15) NOT NULL,
-    porcentaje float null,
     fechaInicio date not null,
     fechaCierre date null,
     horaInicio time not null,

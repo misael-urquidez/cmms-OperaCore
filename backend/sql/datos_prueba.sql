@@ -17,8 +17,8 @@ INSERT INTO CLASIFICACION (codigo, nombre, descripcion) VALUES
 INSERT INTO PROVEEDOR (codigo, rfc, razonSocial, nombreComercial, telefono, email, dirCalle, dirCodigoPostal, dirNumero, contNombre, contApellPat, contApellMat) VALUES
 ('PROV001', 'YAM850101ABC', 'Yamaha Motor de México S.A. de C.V.', 'Yamaha SMT', '5551234567', 'ventas@yamaha-smt.mx', 'Av. Industrial', '02870', '1500', 'Roberto', 'García', 'López');
 
-INSERT INTO PLANTA (codigo, nombre, descripcion, ubicacion) VALUES
-('PLT001', 'Planta EMS Central', 'Planta de ensamble de componentes de cómputo', 'Ciudad de México, México'); --
+INSERT INTO PLANTA (codigo, nombre, descripcion, dirColonia, dirCalle, dirCodigoPostal) VALUES
+('PLT001', 'Planta EMS Central', 'Planta de ensamble de componentes de cómputo', 'Lomas', 'Av. insurgentes', '21211');
 
 INSERT INTO MARCA (clave, nombre, descripcion) VALUES
 ('YAMHA', 'Yamaha', 'Fabricante japonés de máquinas SMT'); 
@@ -94,7 +94,6 @@ INSERT INTO MAQUINA (codigo, numeroSerie, nombre, descripcion, imagen_url, fecha
 INSERT INTO INDICADOR (fechaInicio, fechaFin, mttr, mtbf, porcentajeDispo, maquina) VALUES
 ('2026-01-01', '2026-01-31', 2.5, 104.0, 98, 'MAQ001');
 
---Eliminar refaccion
 INSERT INTO PIEZA (numeroSerie, codigoEtiqueta, nombre, costoInicial, horasOperacion, tiempoVidaUtil, depresacionAnual, valorResidual, fechaInstalacion, fechaGarantia, edo_pieza, maquina, tipo_pieza) VALUES
 ('PS-6205-001', 'ETQ-6205-001', 'Rodamiento Cabezal Principal', 125.50, 2500, 10000, 10.05, 25.00, '2026-06-01', '2028-06-01', 'OPERA', 'MAQ001', 1);
 
@@ -109,10 +108,10 @@ INSERT INTO REPORTE_FALLA (numeroRegistro, asunto, fechaResolucion, fechaCreacio
 
 
 INSERT INTO ORDEN_MANTENIMIENTO (folio, descripcion, diagnostico, notas, fechaProgramada, fechaCreacion, horaCreacion, fechaCierre, horaCierre, horasIntervenidas, imagen, maquina, trabajador, reporte_falla, tipo_mantenimiento, estado_orden) VALUES
-('OM-2026-001', 'Reemplazo de rodamiento en cabezal', 'Rodamiento 6205 con desgaste avanzado', 'Se reemplazó con refacción del almacén', '2026-01-22', '2026-01-20', '09:00:00', '2026-01-22', '11:30:00', 2.5, '/img/ordenes/om_2026_001.jpg', 'MAQ001', 'NOM-001', 1, 'COR', 'PEN'); -- Null en fecha programada
+('OM-2026-001', 'Reemplazo de rodamiento en cabezal', 'Rodamiento 6205 con desgaste avanzado', 'Se reemplazó con refacción del almacén', '2026-01-22', '2026-01-20', '09:00:00', '2026-01-22', '11:30:00', 2.5, '/img/ordenes/om_2026_001.jpg', 'MAQ001', 'NOM-001', 1, 'COR', 'PEN');
 
 INSERT INTO MOVIMIENTO (numeroRegistro, descripcion, fecha, hora, tipoMovimiento, orden_mantenimiento, refaccion, PIEZA) VALUES
-(1, 'Instalación de rodamiento 6205 en cabezal', '2026-01-22', '10:15:00', 'INSTA', 'OM-2026-001', 1, 1); -- Pueden ser nulleables
+(1, 'Instalación de rodamiento 6205 en cabezal', '2026-01-22', '10:15:00', 'INSTA', 'OM-2026-001', 1, 1);
 
 INSERT INTO TRABA_ORDE_PERSONAL (trabajador, orden_mantenimiento) VALUES
 ('NOM-001', 'OM-2026-001');
