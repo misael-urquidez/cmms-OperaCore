@@ -1,0 +1,296 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>OPERACORE | Maquinaria</title>
+
+<style>
+
+body{
+    margin:0;
+    font-family:'Segoe UI',sans-serif;
+    background:linear-gradient(135deg,#0f0f14,#1b0b16,#240b1d);
+    color:white;
+}
+
+/* HEADER */
+
+header{
+    background:linear-gradient(90deg,#5b0017,#8b0030,#c2185b);
+    padding:30px;
+    border-bottom:2px solid #ff4d88;
+    box-shadow:0 0 25px rgba(255,77,136,.45);
+}
+
+header h1{
+    margin:0;
+    color:#fff;
+    font-size:38px;
+    text-shadow:0 0 12px #ff4d88;
+}
+
+header p{
+    margin-top:8px;
+    color:#ffd6e8;
+    font-size:16px;
+}
+
+/* CONTENEDOR */
+
+.container{
+    padding:35px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(330px,1fr));
+    gap:30px;
+}
+
+/* TARJETAS */
+
+.card{
+    background:linear-gradient(180deg,#2b0b1a,#190811);
+    border-radius:20px;
+    padding:25px;
+    border:1px solid #ff4d88;
+    box-shadow:0 0 20px rgba(255,77,136,.15);
+    transition:.35s;
+}
+
+.card:hover{
+    transform:translateY(-10px) scale(1.02);
+    border-color:#ff80ab;
+    box-shadow:0 0 35px rgba(255,77,136,.55);
+}
+
+/* IMAGEN */
+
+.machine-img{
+    height:190px;
+    background:#12040b;
+    border-radius:15px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    overflow:hidden;
+    border:2px solid #ff4d88;
+    margin-bottom:20px;
+}
+
+.machine-img img{
+    max-width:95%;
+    max-height:170px;
+    transition:.4s;
+}
+
+.machine-img img:hover{
+    transform:scale(1.08);
+}
+
+/* TITULO */
+
+h2{
+    color:#ff80ab;
+    text-align:center;
+    margin-bottom:20px;
+    font-size:24px;
+}
+
+/* INFORMACION */
+
+.info{
+    background:#330818;
+    padding:12px 15px;
+    margin:10px 0;
+    border-left:4px solid #ff4d88;
+    border-radius:10px;
+    color:#ffe4ee;
+    transition:.3s;
+}
+
+.info:hover{
+    background:#441022;
+}
+
+.info b{
+    color:white;
+}
+
+/* ESTADO */
+
+.estado{
+    display:inline-block;
+    margin-top:15px;
+    padding:8px 18px;
+    border-radius:25px;
+    background:#ff1744;
+    color:white;
+    font-weight:bold;
+    box-shadow:0 0 15px rgba(255,23,68,.4);
+}
+
+/* BOTON */
+
+.btn{
+    display:block;
+    margin-top:22px;
+    padding:14px;
+    background:linear-gradient(90deg,#ff1744,#ff4d88);
+    color:white;
+    text-decoration:none;
+    text-align:center;
+    font-weight:bold;
+    border-radius:10px;
+    transition:.3s;
+}
+
+.btn:hover{
+    background:linear-gradient(90deg,#ff4d88,#ff80ab);
+    transform:scale(1.03);
+    box-shadow:0 0 20px rgba(255,77,136,.6);
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>⚙ OPERACORE CMMS</h1>
+
+<p>Sistema inteligente de gestión de maquinaria industrial SMT</p>
+
+</header>
+
+<div class="container">
+
+{% for maquina in maquinas %}
+
+<div class="card">
+
+<div class="machine-img">
+
+{% if maquina.imagen_url %}
+
+<img src="{% static maquina.imagen_url %}" alt="{{ maquina.nombre }}">
+
+{% else %}
+
+⚙
+
+{% endif %}
+
+</div>
+
+<h2>{{ maquina.nombre }}</h2>
+
+<div class="info">
+
+Código:
+
+<b>{{ maquina.codigo }}</b>
+
+</div>
+
+<div class="info">
+
+Línea:
+
+{% if maquina.linea %}
+
+{{ maquina.linea }}
+
+{% else %}
+
+Sin línea
+
+{% endif %}
+
+</div>
+
+<div class="info">
+
+Marca:
+
+{% if maquina.marca %}
+
+{{ maquina.marca }}
+
+{% else %}
+
+Sin marca
+
+{% endif %}
+
+</div>
+
+<div class="info">
+
+Modelo:
+
+{% if maquina.modelo %}
+
+{{ maquina.modelo }}
+
+{% else %}
+
+Sin modelo
+
+{% endif %}
+
+</div>
+
+<div class="info">
+
+Tipo de máquina:
+
+{% if maquina.tipo_maquina %}
+
+{{ maquina.tipo_maquina }}
+
+{% else %}
+
+Sin tipo
+
+{% endif %}
+
+</div>
+
+<span class="estado">
+
+{% if maquina.estado_maquina %}
+
+{{ maquina.estado_maquina }}
+
+{% else %}
+
+Sin estado
+
+{% endif %}
+
+</span>
+
+<a class="btn" href="{% url 'maquinaria-detail' maquina.codigo %}">
+    ⚙ Ver detalle
+</a>
+
+</div>
+
+{% empty %}
+
+<h2 style="grid-column:1/-1; text-align:center; color:#ff80ab;">
+    No existen máquinas registradas
+</h2>
+
+{% endfor %}
+
+</div>
+
+</body>
+
+</html>

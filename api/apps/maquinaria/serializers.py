@@ -19,3 +19,62 @@ from . import models
 #     class Meta:
 #         model = models.Maquina
 #         fields = ["nombre", "ubicacion"]
+
+from .models import *
+class PiezaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Pieza
+        fields = "__all__"
+
+
+class RefaccionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Refaccion
+        fields = "__all__"
+
+
+class IndicadorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Indicador
+        fields = "__all__"
+
+
+class ReporteFallaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReporteFalla
+        fields = "__all__"
+
+class ListMaquinaSerializer(serializers.ModelSerializer):
+
+    estado_maquina = serializers.StringRelatedField()
+    tipo_maquina = serializers.StringRelatedField()
+
+    class Meta:
+        model = Maquina
+        fields = (
+            "codigo",
+            "nombre",
+            "linea",
+            "estado_maquina",
+            "marca",
+            "modelo",
+            "tipo_maquina",
+            "imagen_url",
+            "modelo_3d",
+        )
+        
+class OrdenMantenimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrdenMantenimiento
+        fields = "__all__"
+
+class DetailMaquinaSerializer(serializers.ModelSerializer):
+
+    piezas = PiezaSerializer(many=True, read_only=True)
+    indicadores = IndicadorSerializer(many=True, read_only=True)
+    reportes_falla = ReporteFallaSerializer(many=True, read_only=True)
+    ordenes_mantenimiento = OrdenMantenimientoSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Maquina
+        fields = "__all__"
