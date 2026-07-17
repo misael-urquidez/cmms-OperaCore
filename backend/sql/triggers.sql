@@ -1,8 +1,6 @@
 ----------- triggers del proyecto -------------
 
-use operacore;
-
-SELECT * from registro_ops;
+USE operacore;
 
 /*
 Trigger 1
@@ -21,7 +19,6 @@ Si la máquina aún no tiene un registro en INDICADOR, lo crea automáticamente.
 --           responsabilidad de otro proceso externo al trigger.
 */
 
-USE operacore;
 DROP TRIGGER IF EXISTS tg_actualizar_mtbf_registroops;
 
 DELIMITER $$
@@ -85,63 +82,62 @@ DELIMITER ;
 -- Condición clave: solo debe recalcular si la orden se ACABA de
 --           cerrar en este UPDATE (antes NULL, ahora con fecha),
 --           para no recalcular en cada edición menor de la orden.
-
 */
 
-DROP Trigger if EXISTS tg_actualizar_mttr_orden;
+DROP TRIGGER IF EXISTS tg_actualizar_mttr_orden;
 
 DELIMITER $$
 
 CREATE TRIGGER tg_actualizar_mttr_orden
-AFTER UPDATE ON orden_mantenimiento
+AFTER UPDATE ON ORDEN_MANTENIMIENTO
 FOR EACH ROW
 BEGIN
-    DECLARE sumatiempoparo INT;
-    DECLARE numreparaciones INT;
-    DECLARE nuevomttr FLOAT;
-    DECLARE existeperiodoabierto INT;
+    DECLARE sumaTiempoParo INT;
+    DECLARE numReparaciones INT;
+    DECLARE nuevoMTTR FLOAT;
+    DECLARE existePeriodoAbierto INT;
 
     -- filtro: solo actúa si la orden se acaba de cerrar en este UPDATE
     -- (antes no tenía fechaCierre, ahora sí la tiene)
-    IF OLD.fechacierre IS NULL AND NEW.fechacierre IS NOT NULL THEN
+    IF OLD.fechaCierre IS NULL AND NEW.fechaCierre IS NOT NULL THEN
 
         -- 1. suma del tiempo de paro de las fallas de órdenes cerradas de esa máquina
-        SELECT IFNULL(SUM(rf.tiempoparo), 0)
-        INTO sumatiempoparo
-        FROM reporte_falla AS rf
-        INNER JOIN orden_mantenimiento AS om ON rf.numeroregistro = om.reporte_falla
+        SELECT IFNULL(SUM(rf.tiempoParo), 0)
+        INTO sumaTiempoParo
+        FROM REPORTE_FALLA AS rf
+        INNER JOIN ORDEN_MANTENIMIENTO AS om ON rf.numeroRegistro = om.reporte_falla
         WHERE om.maquina = NEW.maquina
-          AND om.fechacierre IS NOT NULL;
+          AND om.fechaCierre IS NOT NULL;
 
         -- 2. número de reparaciones = órdenes cerradas de esa máquina
         SELECT COUNT(*)
-        INTO numreparaciones
-        FROM orden_mantenimiento
+        INTO numReparaciones
+        FROM ORDEN_MANTENIMIENTO
         WHERE maquina = NEW.maquina
-          AND fechacierre IS NOT NULL;
+          AND fechaCierre IS NOT NULL;
 
         -- 3. MTTR = tiempo total de paro / número de reparaciones
-        IF numreparaciones > 0 THEN
-            SET nuevomttr = sumatiempoparo / numreparaciones;
+        IF numReparaciones > 0 THEN
+            SET nuevoMTTR = sumaTiempoParo / numReparaciones;
         ELSE
-            SET nuevomttr = NULL;
+            SET nuevoMTTR = NULL;
         END IF;
 
         -- 4. ¿existe un periodo vigente (fechaFin NULL) en INDICADOR?
         SELECT COUNT(*)
-        INTO existeperiodoabierto
-        FROM indicador
-        WHERE maquina = NEW.maquina AND fechafin IS NULL;
+        INTO existePeriodoAbierto
+        FROM INDICADOR
+        WHERE maquina = NEW.maquina AND fechaFin IS NULL;
 
         -- 5a. no existe -> crear periodo nuevo con el MTTR calculado
-        IF existeperiodoabierto = 0 THEN
-            INSERT INTO indicador (maquina, fechainicio, mttr)
-            VALUES (NEW.maquina, NEW.fechacierre, nuevomttr);
+        IF existePeriodoAbierto = 0 THEN
+            INSERT INTO INDICADOR (maquina, fechaInicio, mttr)
+            VALUES (NEW.maquina, NEW.fechaCierre, nuevoMTTR);
         ELSE
             -- 5b. ya existe -> solo actualizar su MTTR
-            UPDATE indicador
-            SET mttr = nuevomttr
-            WHERE maquina = NEW.maquina AND fechafin IS NULL;
+            UPDATE INDICADOR
+            SET mttr = nuevoMTTR
+            WHERE maquina = NEW.maquina AND fechaFin IS NULL;
         END IF;
 
     END IF;
@@ -149,29 +145,30 @@ END$$
 
 DELIMITER ;
 
-
 /*
 Tercer trigger para calcular la disponibilidad
 */
 
+DROP TRIGGER IF EXISTS tg_actualizar_disponibilidad_indicador;
+
 DELIMITER $$
-CREATE or replace tg_actualizar_disponibilidad_indicador
-before update on indicador
-for EACH ROW
+
+CREATE TRIGGER tg_actualizar_disponibilidad_indicador
+BEFORE UPDATE ON INDICADOR
+FOR EACH ROW
 BEGIN
-    DECLARE nuevaDIsponibilidad INT
+    DECLARE nuevaDisponibilidad INT;
 
-    If(NOT(new.mtbf <=> old.mtbf)) or (not(new.mttr <=> old.mttr)) then
-        IF new.mtbf is not NULL and new.mttr is not NULL and (new.mtbf + new.mttr) > 0 then
-            SET nuevaDIsponibilidad = round((new.mtbf + new.mttr)) * 100
+    IF (NOT(NEW.mtbf <=> OLD.mtbf)) OR (NOT(NEW.mttr <=> OLD.mttr)) THEN
+        IF NEW.mtbf IS NOT NULL AND NEW.mttr IS NOT NULL AND (NEW.mtbf + NEW.mttr) > 0 THEN
+            SET nuevaDisponibilidad = ROUND((NEW.mtbf / (NEW.mtbf + NEW.mttr)) * 100);
         ELSE
-            SET nuevaDIsponibilidad = NULL;
-        END if;
+            SET nuevaDisponibilidad = NULL;
+        END IF;
 
-        SET new.porcentajeDispo =  nuevaDIsponibilidad;
+        SET NEW.porcentajeDispo = nuevaDisponibilidad;
 
-    end if;
+    END IF;
+END$$
 
-
-end $$
-DELIMITER;
+DELIMITER ;
