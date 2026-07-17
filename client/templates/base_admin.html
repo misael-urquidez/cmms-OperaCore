@@ -1,0 +1,91 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include 'favicon.html' %}
+    <title>{% block title %}Panel Admin · OperaCore{% endblock %}</title>
+    <link rel="icon" href="{% static 'img/pre_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
+    <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+    <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="admin-body">
+
+<div class="admin-shell">
+
+    {# ============ SIDEBAR ============ #}
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar__brand">
+            <img src="{% static 'img/pre_logo.png' %}" alt="OperaCore" width="30" height="30">
+            <div class="sidebar__brand-text">
+                <span class="sidebar__brand-name">OperaCore</span>
+                <span class="sidebar__brand-sub">Panel de administración</span>
+            </div>
+            <button type="button" class="sidebar__collapse" id="sidebarCollapse" aria-label="Contraer menú">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+        </div>
+
+        <nav class="sidebar__nav">
+            <p class="sidebar__section">General</p>
+
+            <a class="sidebar__link {% if seccion == 'dashboard' %}is-active{% endif %}" href="{% url 'usuarios:admin_dashboard' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                <span>Dashboard</span>
+            </a>
+
+            {# Aqui iremos agregando las demas secciones conforme esten desarrolladas #}
+        </nav>
+
+        <div class="sidebar__foot">
+            <span class="sidebar__foot-dot"></span>
+            <span class="sidebar__foot-text">API conectada</span>
+        </div>
+    </aside>
+
+    {# ============ ÁREA PRINCIPAL ============ #}
+    <div class="admin-main">
+
+        <header class="admin-topbar">
+            <button type="button" class="admin-topbar__menu" id="sidebarOpen" aria-label="Abrir menú">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            </button>
+
+            <div class="admin-topbar__titles">
+                <p class="admin-topbar__breadcrumb">{% block breadcrumb %}Panel{% endblock %}</p>
+                <h1 class="admin-topbar__title">{% block page_title %}Dashboard{% endblock %}</h1>
+            </div>
+
+            <div class="admin-topbar__right">
+                {% include 'partials/user_menu.html' %}
+            </div>
+        </header>
+
+        <main class="admin-content">
+            {% if messages %}
+                <ul class="messages">
+                    {% for message in messages %}
+                        <li class="messages__item messages__item--{{ message.tags }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+{% include 'partials/config_modal.html' %}
+
+<script src="{% static 'js/navbar.js' %}"></script>
+<script src="{% static 'js/theme.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
