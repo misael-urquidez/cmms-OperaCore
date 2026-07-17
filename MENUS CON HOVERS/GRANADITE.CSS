@@ -1,0 +1,75 @@
+.dashboard{
+
+    display:flex;
+
+    gap:30px;
+
+}
+
+.card{
+
+    flex:1;
+
+    padding:35px;
+
+    border-radius:20px;
+
+    color:white;
+
+    cursor:pointer;
+
+    transition:.4s;
+
+    background:linear-gradient(
+    45deg,
+    #1E3A8A,
+    #2563EB,
+    #60A5FA);
+
+    background-size:300%;
+
+    animation:gradient 6s infinite;
+
+}
+
+.card:hover{
+
+    transform:translateY(-15px);
+
+    background-position:right;
+
+    box-shadow:
+
+    0 15px 40px rgba(37,99,235,.45);
+
+}
+
+.card i{
+
+    font-size:50px;
+
+    margin-bottom:20px;
+
+}
+
+@keyframes gradient{
+
+0%{
+
+background-position:left;
+
+}
+
+50%{
+
+background-position:right;
+
+}
+
+100%{
+
+background-position:left;
+
+}
+
+}
