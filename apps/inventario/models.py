@@ -239,12 +239,10 @@ class Movimiento(models.Model):
     # Cuando la definan, confirmen que la clase se llama "OrdenMantenimiento"
     # y que su PK es "folio" (así está en beta.sql). Si el nombre real es
     # otro, solo hay que cambiar el string de abajo.
-    orden_mantenimiento = models.ForeignKey(
-        'mantenimiento.OrdenMantenimiento',
-        on_delete=models.SET_NULL, null=True, blank=True,
-        db_column='orden_mantenimiento', to_field='folio',
-        related_name='movimientos',
+    orden_mantenimiento = models.IntegerField(
+        db_column='orden_mantenimiento', null=True, blank=True,
     )
+    
     refaccion = models.ForeignKey(
         Refaccion, on_delete=models.SET_NULL, null=True, blank=True,
         db_column='refaccion', related_name='movimientos',
