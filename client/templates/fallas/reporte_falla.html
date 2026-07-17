@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Reporte de Falla · OperaCore{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">{% endblock %}
+{% block content %}
+  <h1>Reporte de Falla</h1>
+
+  <form method="post" action="{% url 'fallas:reporte' %}">
+    {% csrf_token %}
+    <div class="contenedor">
+      <div class="left-side">
+        <label for="asunto">Asunto</label>
+        <input type="text" name="asunto" id="asunto" required maxlength="500" />
+
+        <label for="descripcion">Descripcion</label>
+        <textarea name="descripcion" id="descripcion" maxlength="500"></textarea>
+
+        <label for="causaRaiz">Causa raiz</label>
+        <input type="text" name="causaRaiz" id="causaRaiz" required maxlength="500" />
+
+        <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas)</label>
+        <input type="number" name="tiempoParo" id="tiempoParo" min="0" />
+
+        <label for="tipo_severidad">Severidad</label>
+        <select name="tipo_severidad" id="tipo_severidad" required>
+          <option value="">Seleccione...</option>
+          {% for s in severidades %}
+            <option value="{{ s.codigo }}">{{ s.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="tipo_falla">Tipo de falla</label>
+        <select name="tipo_falla" id="tipo_falla" required>
+          <option value="">Seleccione...</option>
+          {% for tf in tipos_falla %}
+            <option value="{{ tf.numeroRegistro }}">{{ tf.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="right-side">
+        <button type="submit">Reportar falla</button>
+        <a class="btn-cancel" href="{% url 'fallas:lista' %}">Cancelar</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Reportes de Falla · OperaCore{% endblock %}
+{% block content %}
+  <h1>Reportes de Falla</h1>
+  <p><a href="{% url 'fallas:reporte' %}">+ Nuevo reporte</a></p>
+
+  {% if reportes %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Asunto</th>
+          <th>Fecha</th>
+          <th>Severidad</th>
+          <th>Tipo</th>
+          <th>Maquina</th>
+          <th>Trabajador</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reportes %}
+          <tr>
+            <td>{{ r.numeroRegistro }}</td>
+            <td>{{ r.asunto }}</td>
+            <td>{{ r.fechaCreacion }}</td>
+            <td>{{ r.tipo_severidad_nombre|default:"-" }}</td>
+            <td>{{ r.tipo_falla_nombre|default:"-" }}</td>
+            <td>{{ r.maquina_nombre|default:"-" }}</td>
+            <td>{{ r.trabajador_nombre|default:"-" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No hay reportes de falla registrados.</p>
+  {% endif %}
+{% endblock %}
