@@ -4,8 +4,11 @@ INSERT INTO TIPO_PIEZA (nombre, descripcion) VALUES
 
 
 INSERT INTO EDO_PIEZA (codigo, nombre, descripcion) VALUES
-('OPERA', 'Operativa', 'Pieza en condiciones normales de funcionamiento');
-('ESPER', '')
+('OPERA', 'Operativa', 'Pieza en condiciones normales de funcionamiento')
+('DEGRA', 'Degradada', 'Instalada pero con desgaste visible, próxima a reemplazarse')
+('FALLI', 'Fallida', 'Dejó de funcionar, genera reporte de falla')
+('ENREH', 'En Rehabilitacion', 'Desmontada y en proceso de reparación en taller')
+('BAJA', 'Baja', 'Sin funcionalidad, se desecha o chatarrea')
 
 INSERT INTO EDO_REFACCION (codigo, nombre, descripcion) VALUES
 ('DISPO', 'Disponible', 'Refacción disponible en almacén'), 
@@ -52,11 +55,16 @@ INSERT INTO TIPO_FALLA (nombre, descripcion) VALUES
 INSERT INTO TIPO_SEVERIDAD (codigo, nombre, descripcion) VALUES
 ('BAJA', 'Baja', 'Anomalia menor que no afecta la prudcción'),
 ('MEDIA', 'Media', 'Fallo que afecta parcialmente la operación, pero no detiene la producción'),
-('ALTA', 'Alta', 'La máquina sigue funcionando, pero de manera deficiente o con capacidad muy reducida');
+('ALTA', 'Alta', 'La máquina sigue funcionando, pero de manera deficiente o con capacidad muy reducida'),
 ('CRITI', 'Crítrica', 'La máquina dejó de funcionar por completo. Alto riesgo de accidentes');
 
 INSERT INTO EDO_REPORTE (codigo, nombre, descripcion) VALUES
-('ABIER', 'Abierto', 'Reporte recién o parcialmente creado, sin atención');
+('ABIER', 'Abierto', 'Reporte recién o parcialmente creado, sin atención'),
+('ENATE', 'En Atención', 'El reporte esta siendo evaluado y se procedera con el mantenimiento correspondiente'),
+('ENESP', 'En Espera', 'El diagnóstico esta listo, se requiere la asignacion de refacción, herramienta o técnico disponible'),
+('RESUE', 'Resuelto', 'La falla fue atendida'),
+('CERRA', 'Cerrado', 'Verificado y documentado completamente'),
+('CANCE', 'Cancelado', 'Se determinó que no era una falla real o fue un falso positivo'),
 
 INSERT INTO TIPO_MANTENIMIENTO (codigo, nombre, descripcion) VALUES
 ('CORRE', 'Correctivo', 'Mantenimiento para corregir una falla existente');
