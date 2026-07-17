@@ -190,7 +190,7 @@ body:not(.admin-body) .config-appearance__row--admin { display: none; }
 }
 .theme-toggle button.is-active {
     background: var(--color-primary);
-    color: #fff;
+    color: var(--color-primary-contrast, #fff);
     font-weight: 700;
 }
 
@@ -269,3 +269,17 @@ body:not(.admin-body) .config-appearance__row--admin { display: none; }
     transition: color 0.15s ease, border-color 0.15s ease;
 }
 .config-appearance__reset:hover { color: var(--color-primary); border-color: var(--color-primary); }
+
+/* ---------------- ADVERTENCIA de contraste/inconsistencias ---------------- */
+.config-appearance__warning {
+    display: none;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+    border-radius: 0.5rem;
+    font-size: 0.76rem;
+    line-height: 1.4;
+}
+.config-appearance__warning.is-visible { display: block; }
