@@ -1,14 +1,3 @@
--- =====================================================================
---  OPERACORE - CMMS (Computerized Maintenance Management System)
---  Motor: MySQL 8.0 / MariaDB 10.x (InnoDB, utf8mb4)
---  VERSIÓN 2: estructura actualizada para coincidir con el diccionario
---  de datos (Copia_de_DD_OPERACORE_final.xlsx)
--- =====================================================================
--- NOTA: quedan 2 puntos [REVISAR CON EL EQUIPO] porque el diccionario
--- tiene inconsistencias internas que romperían la integridad referencial
--- si se aplican tal cual. Ver comentarios en HERRAMIENTA y ESTADO_PIEZA.
--- =====================================================================
-
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -80,7 +69,7 @@ CREATE TABLE PLANTA (
     telefono        VARCHAR(15)  NOT NULL UNIQUE,
     dirCalle        VARCHAR(100) NOT NULL,
     dirCodigoPostal VARCHAR(5)   NOT NULL,
-    dirNumero       VARCHAR(10)  NOT NULL,
+    dirNumero       VARCHAR(10)  NOT NULL
 ) ENGINE=InnoDB;
 
 -- Tabla: MARCA
@@ -358,8 +347,7 @@ CREATE TABLE PIEZA (
     tipo_pieza       INT NULL,
     CONSTRAINT fk_pieza_estado FOREIGN KEY (edo_pieza) REFERENCES EDO_PIEZA(codigo),
     CONSTRAINT fk_pieza_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo),
-    CONSTRAINT fk_pieza_tipo FOREIGN KEY (tipo_pieza) REFERENCES TIPO_PIEZA(numeroRegistro),
-    CONSTRAINT fk_pieza_refaccion FOREIGN KEY (refaccion) REFERENCES REFACCION(numeroRegistro)
+    CONSTRAINT fk_pieza_tipo FOREIGN KEY (tipo_pieza) REFERENCES TIPO_PIEZA(numeroRegistro)
 ) ENGINE=InnoDB;
 
 
@@ -408,6 +396,14 @@ CREATE TABLE REPORTE_FALLA (
     CONSTRAINT fk_repfalla_trabajador FOREIGN KEY (trabajador) REFERENCES TRABAJADOR(numeroNomina),
     CONSTRAINT fk_repfalla_tipofalla FOREIGN KEY (tipo_falla) REFERENCES TIPO_FALLA(numeroRegistro),
     CONSTRAINT fk_repfalla_severidad FOREIGN KEY (tipo_severidad) REFERENCES TIPO_SEVERIDAD(codigo)
+) ENGINE=InnoDB;
+
+CREATE TABLE TIPO_REPORTE (
+    tipo_falla      INT NOT NULL,
+    reporte_falla  INT  NOT NULL,
+    PRIMARY KEY (tipo_falla, reporte_falla),
+    CONSTRAINT fk_tiporep_tipofalla FOREIGN KEY (tipo_falla) REFERENCES TIPO_FALLA(numeroRegistro),
+    CONSTRAINT fk_tiporep_reportefalla FOREIGN KEY (reporte_falla) REFERENCES REPORTE_FALLA(numeroRegistro)
 ) ENGINE=InnoDB;
 
 -- =====================================================================

@@ -2,17 +2,24 @@
 INSERT INTO TIPO_PIEZA (nombre, descripcion) VALUES
 ('Cabezal', 'Cabezal de pickup para colocar componentes en PCB');
 
+
 INSERT INTO EDO_PIEZA (codigo, nombre, descripcion) VALUES
 ('OPERA', 'Operativa', 'Pieza en condiciones normales de funcionamiento');
+('ESPER', '')
 
 INSERT INTO EDO_REFACCION (codigo, nombre, descripcion) VALUES
-('DISPO', 'Disponible', 'Refacción disponible en almacén'); 
+('DISPO', 'Disponible', 'Refacción disponible en almacén'), 
+('ENREP', 'En Reparacion', 'El repuesto esta dañado o averiado, se encuentra siendo evaluado para volver a estar operando'), 
+('BAJA', 'Baja', 'El repuesto sufrió daños irreparables o quedó obsoleta'), 
+('CANIB', 'Canibalizada', 'La pieza que fue extraida de un equipo para ser utilizada temporalmente en otro equipo'); -- 
 
 INSERT INTO TIPO_REFACCION (nombre, descripcion) VALUES
 ('Rodamiento', 'Rodamiento para ejes y motores');
 
 INSERT INTO CLASIFICACION (codigo, nombre, descripcion) VALUES
-('ALTA', 'Alta', 'Su falta afecta el rendimiento de la máquina pero no la detiene completamente');
+('ALTAC', 'Alta Criticidad', 'Componentes esenciales para el funcionamiento de los equipos principales y cuya falla detiene por completo el proceso de producción');
+('MECRI', 'Mediana criticidad', 'Son componentes importantes para la operación, pero el equipo cuenta con redundancias (máquinas de respaldo) o existen soluciones alternativas en caso de avería');
+('BAJAC', 'Baja criticidad', 'Son artículos de apoyo no esenciales, repuestos de desgaste rápido o piezas de uso estándar que no impactan la producción');
 
 INSERT INTO PROVEEDOR (codigo, rfc, razonSocial, nombreComercial, telefono, email, dirCalle, dirCodigoPostal, dirNumero, contNombre, contApellPat, contApellMat) VALUES
 ('PROV001', 'YAM850101ABC', 'Yamaha Motor de México S.A. de C.V.', 'Yamaha SMT', '5551234567', 'ventas@yamaha-smt.mx', 'Av. Industrial', '02870', '1500', 'Roberto', 'García', 'López');
@@ -27,7 +34,11 @@ INSERT INTO TIPO_MAQUINA (nombre, descripcion) VALUES
 ('Pick & Place', 'Máquina para colocar componentes electrónicos en PCB');
 
 INSERT INTO EDO_MAQUINA (codigo, nombre, descripcion) VALUES
-('OPERA', 'Operativa', 'Máquina en condiciones normales de funcionamiento');
+('OPERA', 'Operativa', 'Máquina en condiciones normales de funcionamiento'),
+('ESPER', 'En Espera', 'La máquina se encuentra en condiciones para operar, pero se requiere la intervencion del operador'),
+('DESHA', 'Deshabilitada', 'La máquina se encuentra apagada o desconectada intencionalmente'),
+('MANTE', 'En Mantenimiento', 'La máquina está detenida porque los técnicos estan realizando ajustes'),
+('FALLO', 'En Falla', 'La máquina se detuvo de manera no planificada debido a un error');
 
 INSERT INTO ROL (codigo, nombre, descripcion) VALUES
 ('TECNI', 'Técnico', 'Técnico de mantenimiento');
@@ -39,7 +50,10 @@ INSERT INTO TIPO_FALLA (nombre, descripcion) VALUES
 ('Mecánica', 'Fallo en componentes mecánicos');
 
 INSERT INTO TIPO_SEVERIDAD (codigo, nombre, descripcion) VALUES
-('MEDIA', 'Media', 'Fallo que afecta parcialmente la operación');
+('BAJA', 'Baja', 'Anomalia menor que no afecta la prudcción'),
+('MEDIA', 'Media', 'Fallo que afecta parcialmente la operación, pero no detiene la producción'),
+('ALTA', 'Alta', 'La máquina sigue funcionando, pero de manera deficiente o con capacidad muy reducida');
+('CRITI', 'Crítrica', 'La máquina dejó de funcionar por completo. Alto riesgo de accidentes');
 
 INSERT INTO EDO_REPORTE (codigo, nombre, descripcion) VALUES
 ('ABIER', 'Abierto', 'Reporte recién o parcialmente creado, sin atención');
@@ -48,6 +62,14 @@ INSERT INTO TIPO_MANTENIMIENTO (codigo, nombre, descripcion) VALUES
 ('CORRE', 'Correctivo', 'Mantenimiento para corregir una falla existente');
 
 INSERT INTO ESTADO_ORDEN (codigo, nombre, descripcion) VALUES
+('SOLIC', 'Solicitada', 'Orden solicitada, la orden ha sido generada, pero aún no ha sido evaluada ni aprobada'),
+('APROB', 'Aprobada', 'Orden aprobada, la solicitud ha sido revisada, se han evaluado las prioridades, y se han asignado los recursos necesarios'),
+('PROGR', 'Programada', 'Orden programada, La orden cuenta con una fecha y hora especifica de inicio y finalización'),
+('ENPRO', 'En Progreso', 'Orden en progreso', 'Los técnicos o especialistas han comenzada a ejecutar la intervención física en el equipo'),
+('ESESP', 'En Espera', 'Orden en espera', 'El trabajo se ha detenido temporalmente'),
+('EJECU', 'Ejecutada', 'Orden ejecutada, el trabajo físico ha terminado'),
+('CERRA', 'Cerrada', 'Orden cerrada, la orden está finalizada, revisada y archivada'),
+('CANCE', 'Cancelada', 'Orden candelada, la orden fue anulada por decisión operativa'),
 ('PENDI', 'Pendiente', 'Orden creada, pendiente de ejecución');
 
 INSERT INTO TIPO_MOVIMIENTO (codigo, descripcion) VALUES
