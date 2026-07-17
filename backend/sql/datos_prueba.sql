@@ -140,6 +140,7 @@ INSERT INTO EDO_HERRAMIENTA (codigo, nombre, descripcion) VALUES
 
 INSERT INTO EDO_HERRAMIENTA (codigo, nombre, descripcion) VALUES
 ('ENRE', 'En Reparación', 'Herramienta dañada, en proceso de reparación'),
+('ENUSO', 'En Uso', 'La herramienta se encuentra ocupada'),
 ('BAJA', 'Baja', 'Herramienta sin posibilidad de reparación');
 
 INSERT INTO TIPO_HERRAMIENTA (nombre, descripcion) VALUES
