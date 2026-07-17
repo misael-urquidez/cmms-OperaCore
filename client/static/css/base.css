@@ -53,6 +53,7 @@ body {
 .content { padding: 2rem; max-width: 1100px; margin: 0 auto; }
 
 .hero { margin-bottom: 2rem; }
+.hero__eyebrow { margin: 0 0 0.3rem; color: var(--color-primary); font-size: 0.85rem; font-weight: 600; }
 .hero h1 { margin-bottom: 0.25rem; }
 .hero p { color: var(--color-muted); }
 

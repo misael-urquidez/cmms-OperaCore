@@ -4,9 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include 'favicon.html' %}
     <title>{% block title %}OperaCore CMMS{% endblock %}</title>
     <link rel="icon" href="{% static 'img/pre_logo.png' %}">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -25,13 +27,111 @@
         </nav>
         <div class="navbar__auth">
             {% if request.session.usuario %}
-                <span class="navbar__user">{{ request.session.usuario.nombre|default:request.session.usuario.usuario }}</span>
-                <a href="{% url 'usuarios:logout' %}">Salir</a>
+                <div class="user-menu" id="userMenu"
+                     data-username="{{ request.session.usuario.usuario }}"
+                     data-nombre="{{ request.session.usuario.nombre|default:request.session.usuario.usuario }}">
+                    <button type="button" class="user-menu__trigger" id="userMenuTrigger" aria-haspopup="true" aria-expanded="false">
+                        <span class="user-menu__avatar" data-avatar-node></span>
+                        <span class="user-menu__name" data-display-nombre>{{ request.session.usuario.nombre|default:request.session.usuario.usuario }}</span>
+                        <svg class="user-menu__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+
+                    <div class="user-menu__dropdown" id="userMenuDropdown" role="menu">
+                        <div class="user-menu__header">
+                            <span class="user-menu__avatar user-menu__avatar--lg" data-avatar-node></span>
+                            <div>
+                                <p class="user-menu__fullname" data-display-nombre>{{ request.session.usuario.nombre|default:request.session.usuario.usuario }}</p>
+                                <p class="user-menu__username" data-display-usuario>@{{ request.session.usuario.usuario }}</p>
+                            </div>
+                        </div>
+
+                        <button type="button" class="user-menu__item" id="openConfigBtn" role="menuitem">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M19.4 13a7.97 7.97 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a8 8 0 0 0-1.7-1L14.9 3h-4l-.4 2.5a8 8 0 0 0-1.7 1l-2.5-1-2 3.4L6.4 11a7.97 7.97 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1a8 8 0 0 0 1.7 1l.4 2.5h4l.4-2.5a8 8 0 0 0 1.7-1l2.5 1 2-3.4-2.1-1.6Z"></path>
+                            </svg>
+                            Configuración
+                        </button>
+
+                        <div class="user-menu__divider"></div>
+
+                        <a class="user-menu__item user-menu__item--danger" role="menuitem" href="{% url 'usuarios:logout' %}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                <path d="M16 17l5-5-5-5"></path>
+                                <path d="M21 12H9"></path>
+                            </svg>
+                            Cerrar sesión
+                        </a>
+                    </div>
+                </div>
             {% else %}
                 <a href="{% url 'usuarios:index' %}">Iniciar sesión</a>
             {% endif %}
         </div>
     </header>
+
+    {% if request.session.usuario %}
+    <div class="config-modal" id="configModal" aria-hidden="true">
+        <div class="config-modal__backdrop"></div>
+        <div class="config-modal__panel" role="dialog" aria-modal="true" aria-labelledby="configModalTitle">
+            <div class="config-modal__head">
+                <div>
+                    <h2 id="configModalTitle">Configuración de cuenta</h2>
+                    <p>Actualiza tu información y foto de perfil.</p>
+                </div>
+                <button type="button" class="config-modal__close" id="configModalClose" aria-label="Cerrar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="config-avatar-picker">
+                <span class="config-avatar-picker__preview" data-avatar-node></span>
+                <div class="config-avatar-picker__actions">
+                    <label class="config-avatar-picker__btn" for="avatarInput">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 0 1 2.828 0L16 16m-2-2 1.586-1.586a2 2 0 0 1 2.828 0L20 14M4 8h16"/></svg>
+                        Cambiar foto
+                    </label>
+                    <input type="file" id="avatarInput" accept="image/*" hidden>
+                    <button type="button" class="config-avatar-picker__remove" id="avatarRemoveBtn">Quitar foto</button>
+                    <p class="config-avatar-picker__hint">JPG o PNG, ideal cuadrada.</p>
+                </div>
+            </div>
+
+            <form id="configForm">
+                <div class="config-field">
+                    <label for="cfgNombre">Nombre</label>
+                    <input type="text" id="cfgNombre" name="nombre" value="{{ request.session.usuario.nombre|default:'' }}" placeholder="Tu nombre">
+                </div>
+                <div class="config-field">
+                    <label for="cfgUsuario">Usuario</label>
+                    <input type="text" id="cfgUsuario" name="usuario" value="{{ request.session.usuario.usuario|default:'' }}" disabled>
+                </div>
+                <div class="config-field">
+                    <label for="cfgCorreo">Correo</label>
+                    <input type="email" id="cfgCorreo" name="correo" value="{{ request.session.usuario.correo|default:'' }}" placeholder="tu@correo.com">
+                </div>
+                <div class="config-field">
+                    <label for="cfgTelefono">Teléfono</label>
+                    <input type="tel" id="cfgTelefono" name="telefono" value="{{ request.session.usuario.telefono|default:'' }}" placeholder="10 dígitos">
+                </div>
+
+                <div class="config-modal__note">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                    <span>Prototipo: estos cambios se guardan solo en este navegador, aún no se conectan al api/.</span>
+                </div>
+
+                <div class="config-modal__actions">
+                    <button type="button" class="config-modal__btn config-modal__btn--ghost" id="configModalCancel">Cancelar</button>
+                    <button type="submit" class="config-modal__btn config-modal__btn--primary">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="config-toast" id="configToast"></div>
+    {% endif %}
 
     <main class="content">
         {% if messages %}
@@ -49,6 +149,7 @@
         <p>OperaCore CMMS &middot; UTT · Proyecto Integrador</p>
     </footer>
 
+    <script src="{% static 'js/navbar.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
