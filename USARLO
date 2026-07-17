@@ -1,0 +1,8 @@
+EL SUPER USUARIO ES
+SAUL 
+CONTRASEÑA: comida3214     
+    http://127.0.0.1:8000/admin/inventario/refaccion/
+    http://127.0.0.1:8000/api/inventario/v1/refacciones/list/
+    http://127.0.0.1:8000/api/inventario/v1/herramientas/list/
+    http://127.0.0.1:8000/inventario/
+    http://127.0.0.1:8000/inventario/movimiento/nuevo/
