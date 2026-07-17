@@ -1,0 +1,95 @@
+{% extends "base_admin.html" %}
+{% block title %}Dashboard · Panel Admin{% endblock %}
+{% block breadcrumb %}Panel de administración{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+  <section class="hero" style="margin-bottom:1.5rem;">
+    <p class="hero__eyebrow">Hola, {{ request.session.usuario.nombre|default:request.session.usuario.usuario }} 👋</p>
+    <p style="color:var(--color-muted); margin:0;">Resumen general del sistema de mantenimiento.</p>
+  </section>
+
+  {# ---- tarjetas de estadísticas (por ahora datos de muestra; luego se ---- #}
+  {# ---- llenan desde el api/ en AdminDashboardView) ---- #}
+  <section class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--sky">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div>
+        <p class="stat-card__label">Máquinas</p>
+        <p class="stat-card__value">{{ stats.maquinas|default:"—" }}</p>
+        <p class="stat-card__hint">{{ stats.maquinas_operativas|default:"—" }} operativas</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+      </div>
+      <div>
+        <p class="stat-card__label">Fallas abiertas</p>
+        <p class="stat-card__value">{{ stats.fallas_abiertas|default:"—" }}</p>
+        <p class="stat-card__hint">reportes sin resolver</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.8-2.8 2.4-2.8Z"/></svg>
+      </div>
+      <div>
+        <p class="stat-card__label">Órdenes activas</p>
+        <p class="stat-card__value">{{ stats.ordenes_activas|default:"—" }}</p>
+        <p class="stat-card__hint">mantenimientos en curso</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--rose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div>
+        <p class="stat-card__label">Trabajadores</p>
+        <p class="stat-card__value">{{ stats.trabajadores|default:"—" }}</p>
+        <p class="stat-card__hint">{{ stats.trabajadores_activos|default:"—" }} activos</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel-grid">
+    <div class="panel">
+      <div class="panel__head">
+        <h2 class="panel__title">Acciones rápidas</h2>
+      </div>
+      <div class="quick-actions">
+        <a class="quick-action" href="{% url 'maquinaria:index' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Registrar máquina
+        </a>
+        <a class="quick-action" href="{% url 'fallas:index' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+          Nuevo reporte de falla
+        </a>
+        <a class="quick-action" href="{% url 'mantenimiento:index' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Programar mantenimiento
+        </a>
+        <a class="quick-action" href="{% url 'usuarios:index' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+          Gestionar usuarios
+        </a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__head">
+        <h2 class="panel__title">Últimas fallas reportadas</h2>
+        <a class="panel__link" href="{% url 'fallas:index' %}">Ver todas →</a>
+      </div>
+      <p class="panel__empty">Aquí se listarán los reportes recientes cuando conectemos este panel al api/.</p>
+    </div>
+  </section>
+
+{% endblock %}

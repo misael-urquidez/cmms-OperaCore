@@ -1,0 +1,153 @@
+{# Modal de "Configuracion" con dos apartados: Cuenta y Apariencia. Prototipo: guarda en localStorage (ver navbar.js y theme.js) #}
+{% if request.session.usuario %}
+<div class="config-modal" id="configModal" aria-hidden="true">
+    <div class="config-modal__backdrop"></div>
+    <div class="config-modal__panel" role="dialog" aria-modal="true" aria-labelledby="configModalTitle">
+        <div class="config-modal__head">
+            <div>
+                <h2 id="configModalTitle">Configuración</h2>
+                <p>Tu cuenta y la apariencia del sitio.</p>
+            </div>
+            <button type="button" class="config-modal__close" id="configModalClose" aria-label="Cerrar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        {# ---- pestañas ---- #}
+        <div class="config-tabs" role="tablist">
+            <button type="button" class="config-tabs__btn is-active" data-cfg-tab="cuenta" role="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Cuenta
+            </button>
+            <button type="button" class="config-tabs__btn" data-cfg-tab="apariencia" role="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22a10 10 0 1 1 10-10c0 2.2-1.8 3-3.5 3H16a2 2 0 0 0-2 2c0 .6.2 1 .5 1.5.3.4.5.9.5 1.5a2 2 0 0 1-2 2Z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>
+                Apariencia
+            </button>
+        </div>
+
+        {# ================= APARTADO: CUENTA ================= #}
+        <div class="config-tabpanel is-active" data-cfg-panel="cuenta">
+            <div class="config-avatar-picker">
+                <span class="config-avatar-picker__preview" data-avatar-node></span>
+                <div class="config-avatar-picker__actions">
+                    <label class="config-avatar-picker__btn" for="avatarInput">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 0 1 2.828 0L16 16m-2-2 1.586-1.586a2 2 0 0 1 2.828 0L20 14M4 8h16"/></svg>
+                        Cambiar foto
+                    </label>
+                    <input type="file" id="avatarInput" accept="image/*" hidden>
+                    <button type="button" class="config-avatar-picker__remove" id="avatarRemoveBtn">Quitar foto</button>
+                    <p class="config-avatar-picker__hint">JPG o PNG, ideal cuadrada.</p>
+                </div>
+            </div>
+
+            <form id="configForm">
+                <div class="config-field">
+                    <label for="cfgNombre">Nombre</label>
+                    <input type="text" id="cfgNombre" name="nombre" value="{{ request.session.usuario.nombre|default:'' }}" placeholder="Tu nombre">
+                </div>
+                <div class="config-field">
+                    <label for="cfgUsuario">Usuario</label>
+                    <input type="text" id="cfgUsuario" name="usuario" value="{{ request.session.usuario.usuario|default:'' }}" disabled>
+                </div>
+                <div class="config-field">
+                    <label for="cfgCorreo">Correo</label>
+                    <input type="email" id="cfgCorreo" name="correo" value="{{ request.session.usuario.correo|default:'' }}" placeholder="tu@correo.com">
+                </div>
+                <div class="config-field">
+                    <label for="cfgTelefono">Teléfono</label>
+                    <input type="tel" id="cfgTelefono" name="telefono" value="{{ request.session.usuario.telefono|default:'' }}" placeholder="10 dígitos">
+                </div>
+
+                <div class="config-modal__note">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                    <span>Prototipo: estos cambios se guardan solo en este navegador, aún no se conectan al api/.</span>
+                </div>
+
+                <div class="config-modal__actions">
+                    <button type="button" class="config-modal__btn config-modal__btn--ghost" id="configModalCancel">Cancelar</button>
+                    <button type="submit" class="config-modal__btn config-modal__btn--primary">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+
+        {# ================= APARTADO: APARIENCIA ================= #}
+        <div class="config-tabpanel" data-cfg-panel="apariencia">
+            <div class="config-appearance" id="appearanceSection">
+                <div class="config-appearance__row">
+                    <span class="config-appearance__label">Tema</span>
+                    <div class="theme-toggle" id="themeToggle">
+                        <button type="button" data-theme-value="dark">Oscuro</button>
+                        <button type="button" data-theme-value="light">Claro</button>
+                        <button type="button" data-theme-value="plain">Plano</button>
+                    </div>
+                </div>
+
+                <div class="config-appearance__row" id="bgColorRow">
+                    <span class="config-appearance__label">Fondo de página</span>
+                    <div class="accent-swatches" id="bgSwatches">
+                        <button type="button" data-bg-color="" style="--sw:linear-gradient(135deg,#0f172a,#334155)" aria-label="Por defecto"></button>
+                        <button type="button" data-bg-color="#101726" style="--sw:#101726" aria-label="Azul noche"></button>
+                        <button type="button" data-bg-color="#141420" style="--sw:#141420" aria-label="Violeta noche"></button>
+                        <button type="button" data-bg-color="#0e1a16" style="--sw:#0e1a16" aria-label="Verde bosque"></button>
+                        <input type="color" class="color-input" id="bgCustom" value="#0f172a" aria-label="Fondo personalizado">
+                    </div>
+                </div>
+
+                <div class="config-appearance__row" id="bgGradientRow">
+                    <span class="config-appearance__label">Fondo con degradado</span>
+                    <label class="switch">
+                        <input type="checkbox" id="bgGradientSwitch">
+                        <span class="switch__slider"></span>
+                    </label>
+                </div>
+
+                <div class="config-appearance__row">
+                    <span class="config-appearance__label">Personalización avanzada</span>
+                    <label class="switch">
+                        <input type="checkbox" id="advancedSwitch">
+                        <span class="switch__slider"></span>
+                    </label>
+                </div>
+
+                {# ---- colores finos: solo con el switch de arriba activado ---- #}
+                <div class="config-appearance__advanced" id="advancedBlock">
+                    <div class="config-appearance__row">
+                        <span class="config-appearance__label">Color de acento</span>
+                        <div class="accent-swatches" id="accentSwatches">
+                            <button type="button" data-accent="#38bdf8" style="--sw:#38bdf8" aria-label="Azul cielo"></button>
+                            <button type="button" data-accent="#34d399" style="--sw:#34d399" aria-label="Verde"></button>
+                            <button type="button" data-accent="#a78bfa" style="--sw:#a78bfa" aria-label="Morado"></button>
+                            <button type="button" data-accent="#fb7185" style="--sw:#fb7185" aria-label="Rosa"></button>
+                            <button type="button" data-accent="#fbbf24" style="--sw:#fbbf24" aria-label="Ámbar"></button>
+                            <input type="color" class="color-input" id="accentCustom" value="#38bdf8" aria-label="Acento personalizado">
+                        </div>
+                    </div>
+
+                    <div class="config-appearance__row config-appearance__row--admin">
+                        <span class="config-appearance__label">Fondo de barra lateral</span>
+                        <input type="color" class="color-input" id="sidebarBgInput" value="#131c31" aria-label="Color de la barra lateral">
+                    </div>
+
+                    <div class="config-appearance__row config-appearance__row--admin">
+                        <span class="config-appearance__label">Texto de barra lateral</span>
+                        <input type="color" class="color-input" id="sidebarTextInput" value="#94a3b8" aria-label="Color del texto de la barra">
+                    </div>
+
+                    <div class="config-appearance__row">
+                        <span class="config-appearance__label">Color de textos</span>
+                        <input type="color" class="color-input" id="textColorInput" value="#e2e8f0" aria-label="Color de textos generales">
+                    </div>
+                </div>
+
+                <div class="config-modal__note">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                    <span id="appearanceNote">Los cambios se aplican al instante y se recuerdan en este navegador.</span>
+                </div>
+
+                <button type="button" class="config-appearance__reset" id="appearanceReset">Restablecer apariencia</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="config-toast" id="configToast"></div>
+{% endif %}
