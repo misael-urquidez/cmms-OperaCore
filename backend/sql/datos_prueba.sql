@@ -27,8 +27,8 @@ INSERT INTO CLASIFICACION (codigo, nombre, descripcion) VALUES
 INSERT INTO PROVEEDOR (codigo, rfc, razonSocial, nombreComercial, telefono, email, dirCalle, dirCodigoPostal, dirNumero, contNombre, contApellPat, contApellMat) VALUES
 ('PROV001', 'YAM850101ABC', 'Yamaha Motor de México S.A. de C.V.', 'Yamaha SMT', '5551234567', 'ventas@yamaha-smt.mx', 'Av. Industrial', '02870', '1500', 'Roberto', 'García', 'López');
 
-INSERT INTO PLANTA (codigo, nombre, descripcion, dirColonia, dirCalle, dirCodigoPostal) VALUES
-('PLT001', 'Planta EMS Central', 'Planta de ensamble de componentes de cómputo', 'Lomas', 'Av. insurgentes', '21211');
+INSERT INTO PLANTA (codigo, nombre, descripcion, telefono, dirCalle, dirCodigoPostal, dirNumero) VALUES
+('PLT001', 'Planta EMS Central', 'Planta de ensamble de componentes de cómputo', '5551234500', 'Av. Insurgentes', '21211', '1500');
 
 INSERT INTO MARCA (clave, nombre, descripcion) VALUES
 ('YAMHA', 'Yamaha', 'Fabricante japonés de máquinas SMT'); 
@@ -73,8 +73,8 @@ INSERT INTO ESTADO_ORDEN (codigo, nombre, descripcion) VALUES
 ('SOLIC', 'Solicitada', 'Orden solicitada, la orden ha sido generada, pero aún no ha sido evaluada ni aprobada'),
 ('APROB', 'Aprobada', 'Orden aprobada, la solicitud ha sido revisada, se han evaluado las prioridades, y se han asignado los recursos necesarios'),
 ('PROGR', 'Programada', 'Orden programada, La orden cuenta con una fecha y hora especifica de inicio y finalización'),
-('ENPRO', 'En Progreso', 'Orden en progreso', 'Los técnicos o especialistas han comenzada a ejecutar la intervención física en el equipo'),
-('ESESP', 'En Espera', 'Orden en espera', 'El trabajo se ha detenido temporalmente'),
+('ENPRO', 'En Progreso', 'Orden en progreso, Los técnicos o especialistas han comenzada a ejecutar la intervención física en el equipo'),
+('ESESP', 'En Espera', 'Orden en espera, El trabajo se ha detenido temporalmente'),
 ('EJECU', 'Ejecutada', 'Orden ejecutada, el trabajo físico ha terminado'),
 ('CERRA', 'Cerrada', 'Orden cerrada, la orden está finalizada, revisada y archivada'),
 ('CANCE', 'Cancelada', 'Orden candelada, la orden fue anulada por decisión operativa'),
@@ -134,11 +134,13 @@ INSERT INTO REFACC_MAQUI (maquina, refaccion) VALUES
 ('MAQ001', 1);
 
 INSERT INTO REPORTE_FALLA (numeroRegistro, asunto, fechaResolucion, fechaCreacion, horaCreacion, tiempoParo, causaRaiz, descripcion, imagen, maquina, trabajador, tipo_falla, tipo_severidad) VALUES
-(1, 'Ruido anormal en cabezal de pickup', '2026-01-20', '2026-01-20', '08:30:00', 2, 'Desgaste de rodamiento del eje principal', 'Se detectó ruido metálico al operar el cabezal a alta velocidad', '/img/reportes/ruido_cabezal.jpg', 'MAQ001', 'NOM-001', 1, 'MEDIA'); -- fecha cierre
+(1, 'Ruido anormal en cabezal de pickup', '2026-01-20', '2026-01-20', '08:30:00', 2, 'Desgaste de rodamiento del eje principal', 'Se detectó ruido metálico al operar el cabezal a alta velocidad', '/img/reportes/ruido_cabezal.jpg', 'MAQ001', 'NOM-001', 1, 'MEDIA');
 
+INSERT INTO TIPO_REPORTE (tipo_falla, reporte_falla) VALUES
+(1, 1);
 
-INSERT INTO ORDEN_MANTENIMIENTO (folio, descripcion, diagnostico, notas, fechaProgramada, fechaCreacion, horaCreacion, fechaCierre, horaCierre, horasIntervenidas, imagen, maquina, trabajador, reporte_falla, tipo_mantenimiento, estado_orden) VALUES
-('OM-2026-001', 'Reemplazo de rodamiento en cabezal', 'Rodamiento 6205 con desgaste avanzado', 'Se reemplazó con refacción del almacén', '2026-01-22', '2026-01-20', '09:00:00', '2026-01-22', '11:30:00', 2.5, '/img/ordenes/om_2026_001.jpg', 'MAQ001', 'NOM-001', 1, 'COR', 'PEN');
+INSERT INTO ORDEN_MANTENIMIENTO (folio, descripcion, diagnostico, notas, fechaProgramada, fechaCreacion, horaCreacion, fechaCierre, horaCierre, horasIntervenidas, porcentaje, imagen, maquina, trabajador, reporte_falla, tipo_mantenimiento, estado_orden) VALUES
+('OM-2026-001', 'Reemplazo de rodamiento en cabezal', 'Rodamiento 6205 con desgaste avanzado', 'Se reemplazó con refacción del almacén', '2026-01-22', '2026-01-20', '09:00:00', '2026-01-22', '11:30:00', 2.5, 100.00, '/img/ordenes/om_2026_001.jpg', 'MAQ001', 'NOM-001', 1, 'CORRE', 'PENDI');
 
 INSERT INTO MOVIMIENTO (numeroRegistro, descripcion, fecha, hora, tipoMovimiento, orden_mantenimiento, refaccion, PIEZA) VALUES
 (1, 'Instalación de rodamiento 6205 en cabezal', '2026-01-22', '10:15:00', 'INSTA', 'OM-2026-001', 1, 1);
@@ -146,8 +148,8 @@ INSERT INTO MOVIMIENTO (numeroRegistro, descripcion, fecha, hora, tipoMovimiento
 INSERT INTO TRABA_ORDE_PERSONAL (trabajador, orden_mantenimiento) VALUES
 ('NOM-001', 'OM-2026-001');
 
-INSERT INTO TAREA_ORDEN (tarea, orden_mantenimiento, porcentaje, fechaInicio, fechaCierre, horaInicio, horafin, verificacion, observaciones) VALUES
-(1, 'OM-2026-001', 100.00, '2026-01-22', '2026-01-22', '09:30:00', '11:00:00', TRUE, 'Verificación exitosa, alineación correcta'); 
+INSERT INTO TAREA_ORDEN (tarea, orden_mantenimiento, fechaInicio, fechaCierre, horaInicio, horafin, verificacion, observaciones) VALUES
+(1, 'OM-2026-001', '2026-01-22', '2026-01-22', '09:30:00', '11:00:00', TRUE, 'Verificación exitosa, alineación correcta'); 
 
 INSERT INTO HERRA_ORDEN (herramienta, orden_mantenimiento) VALUES
 (1, 'OM-2026-001');
