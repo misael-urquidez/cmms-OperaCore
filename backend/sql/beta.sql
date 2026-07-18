@@ -381,22 +381,28 @@ CREATE TABLE REFACC_MAQUI (
 CREATE TABLE REPORTE_FALLA (
     numeroRegistro  INT AUTO_INCREMENT PRIMARY KEY,
     asunto          VARCHAR(500) NOT NULL,
-    fechaResolucion DATE NOT NULL,
+    fechaResolucion DATE NULL,
     fechaCreacion   DATE NOT NULL,
     horaCreacion    TIME NOT NULL,
     tiempoParo      INT NULL,
     causaRaiz       VARCHAR(500) NOT NULL,
     descripcion     VARCHAR(500) NULL,
     imagen          VARCHAR(255) NULL,
-    maquina         VARCHAR(10) NULL,
-    trabajador      VARCHAR(15) NULL,
-    tipo_falla      INT  NULL,
-    tipo_severidad  VARCHAR(5)  NULL,
+    maquina         VARCHAR(10) NOT NULL,
+    trabajador      VARCHAR(15) NOT NULL,
+    tipo_falla      INT  NOT NULL,
+    tipo_severidad  VARCHAR(5)  NOT NULL,
+    estado_reporte VARCHAR(5)  NOT NULL,
     CONSTRAINT fk_repfalla_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo),
     CONSTRAINT fk_repfalla_trabajador FOREIGN KEY (trabajador) REFERENCES TRABAJADOR(numeroNomina),
     CONSTRAINT fk_repfalla_tipofalla FOREIGN KEY (tipo_falla) REFERENCES TIPO_FALLA(numeroRegistro),
     CONSTRAINT fk_repfalla_severidad FOREIGN KEY (tipo_severidad) REFERENCES TIPO_SEVERIDAD(codigo)
+    CONSTRAINT fk_estado_reporte  FOREIGN KEY (estado_reporte) REFERENCES EDO_REPORTE(codigo); */
+
 ) ENGINE=InnoDB;
+
+/* ALTER TABLE REPORTE_FALLA ADD COLUMN estado_reporte VARCHAR(5) NULL;
+ALTER TABLE REPORTE_FALLA ADD FOREIGN KEY (estado_reporte) REFERENCES EDO_REPORTE(codigo); */
 
 CREATE TABLE TIPO_REPORTE (
     tipo_falla      INT NOT NULL,
@@ -448,10 +454,10 @@ CREATE TABLE MOVIMIENTO (
     tipoMovimiento      VARCHAR(20) NOT NULL,
     orden_mantenimiento VARCHAR(15) NULL,
     refaccion           INT NULL,
-    PIEZA               INT NULL,
+    pieza               VARCHAR(30) NULL,
     CONSTRAINT fk_mov_orden FOREIGN KEY (orden_mantenimiento) REFERENCES ORDEN_MANTENIMIENTO(folio),
     CONSTRAINT fk_mov_refaccion FOREIGN KEY (refaccion) REFERENCES REFACCION(numeroRegistro),
-    CONSTRAINT fk_mov_PIEZA FOREIGN KEY (PIEZA) REFERENCES REFACCION(numeroRegistro)
+    CONSTRAINT fk_mov_pieza FOREIGN KEY (pieza) REFERENCES PIEZA(numeroSerie)
 ) ENGINE=InnoDB;
 
 -- =====================================================================

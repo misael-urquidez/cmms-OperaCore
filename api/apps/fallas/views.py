@@ -1,33 +1,61 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import generics, status
-from . import models
-from . import serializers
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from . import models, serializers
 
 
 class PingAPIView(APIView):
-    """Endpoint de prueba: confirma que el modulo Fallas responde."""
 
     def get(self, request):
         return Response({"modulo": "fallas", "status": "ok"}, status=status.HTTP_200_OK)
 
 
-# A partir de aqui sigue el patron de tu maestro cuando agregues modelos reales:
-#
-# class ListFallasAPIView(generics.ListAPIView):
-#     queryset = models.MiModelo.objects.all()
-#     serializer_class = serializers.ListMaquinaSerializer
-#
-# class DetailFallasAPIView(generics.RetrieveAPIView):
-#     queryset = models.MiModelo.objects.all()
-#     serializer_class = serializers.DetailMaquinaSerializer
-#
-# class CreateFallasAPIView(generics.CreateAPIView):
-#     serializer_class = serializers.CreateMaquinaSerializer
-#
-# class UpdateFallasAPIView(generics.UpdateAPIView):
-#     queryset = models.MiModelo.objects.all()
-#     serializer_class = serializers.CreateMaquinaSerializer
-#
-# class DeleteFallasAPIView(generics.DestroyAPIView):
-#     queryset = models.MiModelo.objects.all()
+class TipoSeveridadListAPIView(generics.ListAPIView):
+
+    queryset = models.TipoSeveridad.objects.all()
+    serializer_class = serializers.TipoSeveridadSerializer
+
+
+class TipoFallaListAPIView(generics.ListAPIView):
+
+    queryset = models.TipoFalla.objects.all()
+    serializer_class = serializers.TipoFallaSerializer
+
+
+class MaquinaListAPIView(generics.ListAPIView):
+
+    queryset = models.Maquina.objects.all()
+    serializer_class = serializers.MaquinaSerializer
+
+
+class EstadoReporteListAPIView(generics.ListAPIView):
+
+    queryset = models.EstadoReporte.objects.all()
+    serializer_class = serializers.EstadoReporteSerializer
+
+
+class ReporteFallaListAPIView(generics.ListAPIView):
+
+
+    queryset = models.ReporteFalla.objects.all().order_by("-fechaCreacion", "-horaCreacion")
+    serializer_class = serializers.ReporteFallaListSerializer
+
+
+class ReporteFallaDetailAPIView(generics.RetrieveAPIView):
+
+
+    queryset = models.ReporteFalla.objects.all()
+    serializer_class = serializers.ReporteFallaDetailSerializer
+
+
+class ReporteFallaCreateAPIView(generics.CreateAPIView):
+
+    serializer_class = serializers.ReporteFallaCreateSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        reporte = serializer.save()
+        data = serializers.ReporteFallaDetailSerializer(reporte).data
+        return Response(data, status=status.HTTP_201_CREATED)
