@@ -10,78 +10,82 @@ class PingAPIView(APIView):
     def get(self, request):
         return Response({"modulo": "fallas", "status": "ok"}, status=status.HTTP_200_OK)
 
+#------------TIPO FALLA ----------------------------------------------------
+class ListarReportesFallasAPIView(generics.ListAPIView):
+    queryset = models.ReporteFalla.objects.all()
+    serializer_class = serializers.ListReporteFallaSerializer
 
-class TipoSeveridadListAPIView(generics.ListAPIView):
+class DetailReporteFallaAPIView(generics.RetrieveAPIView):
+    queryset = models.ReporteFalla.objects.all()
+    serializer_class = serializers.DetailReporteFallaSerializer
 
+class CrearReporteFallaAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateReporteFallaSerializer
+
+class UpdateReporteFallaAPIView(generics.UpdateAPIView):
+    queryset = models.ReporteFalla.objects.all()
+    serializer_class = serializers.UpdateReporteFallaSerializer
+
+#------------TIPO SEVERIDAD ----------------------------------------------------
+class ListarTipoSeveridadAPIView(generics.ListAPIView):
     queryset = models.TipoSeveridad.objects.all()
-    serializer_class = serializers.TipoSeveridadSerializer
+    serializer_class = serializers.ListTipoSeveridadSerializer
 
+class DetailTipoSeveridadAPIView(generics.RetrieveAPIView):
+    queryset = models.TipoSeveridad.objects.all()
+    serializer_class = serializers.DetailTipoSeveridadSerializer
 
-class TipoFallaListAPIView(generics.ListAPIView):
+class CrearTipoSeveridadAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateTipoSeveridadSerializer
 
-    queryset = models.TipoFalla.objects.all()
-    serializer_class = serializers.TipoFallaSerializer
+class UpdateTipoSeveridadAPIView(generics.UpdateAPIView):
+    queryset = models.TipoSeveridad.objects.all()
+    serializer_class = serializers.UpdateTipoSeveridadSerializer
 
+#------------EDO REPORTE ----------------------------------------------------
+class ListarEdoReporteAPIView(generics.ListAPIView):
+    queryset = models.EdoReporte.objects.all()
+    serializer_class = serializers.ListEdoReporteSerializer
 
-class MaquinaListAPIView(generics.ListAPIView):
+class DetailEdoReporteAPIView(generics.RetrieveAPIView):
+    queryset = models.EdoReporte.objects.all()
+    serializer_class = serializers.DetailEdoReporteSerializer
 
-    queryset = models.Maquina.objects.all()
-    serializer_class = serializers.MaquinaSerializer
+class CrearEdoReporteAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateEdoReporteSerializer
 
+class UpdateEdoReporteAPIView(generics.UpdateAPIView):
+    queryset = models.EdoReporte.objects.all()
+    serializer_class = serializers.UpdateEdoReporteSerializer
 
-class EstadoReporteListAPIView(generics.ListAPIView):
+#------------TIPO REPORTE ----------------------------------------------------
+class ListarTipoReporteAPIView(generics.ListAPIView):
+    queryset = models.TipoReporte.objects.all()
+    serializer_class = serializers.ListTipoReporteSerializer
 
-    queryset = models.EstadoReporte.objects.all()
-    serializer_class = serializers.EstadoReporteSerializer
+class DetailTipoReporteAPIView(generics.RetrieveAPIView):
+    queryset = models.TipoReporte.objects.all()
+    serializer_class = serializers.DetailTipoReporteSerializer
 
+class CrearTipoReporteAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateTipoReporteSerializer
 
-class ReporteFallaListAPIView(generics.ListAPIView):
+class UpdateTipoReporteAPIView(generics.UpdateAPIView):
+    queryset = models.TipoReporte.objects.all()
+    serializer_class = serializers.UpdateTipoReporteSerializer
 
-    queryset = (
-        models.ReporteFalla.objects
-        .select_related("maquina", "trabajador", "tipo_falla", "tipo_severidad")
-        .order_by("-fechaCreacion", "-horaCreacion")
-    )
-    serializer_class = serializers.ReporteFallaListSerializer
+#------------REPORTE FALLA ----------------------------------------------------
+class ListarReporteFallaAPIView(generics.ListAPIView):
+    queryset = models.ReporteFalla.objects.all()
+    serializer_class = serializers.ListReporteFallaSerializer
 
+class DetailReporteFallaAPIView(generics.RetrieveAPIView):
+    queryset = models.ReporteFalla.objects.all()
+    serializer_class = serializers.DetailReporteFallaSerializer
 
-class ReporteFallaDetailAPIView(generics.RetrieveAPIView):
+class CrearReporteFallaAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateReporteFallaSerializer
 
-    queryset = models.ReporteFalla.objects.select_related(
-        "maquina", "trabajador", "tipo_falla", "tipo_severidad"
-    )
-    serializer_class = serializers.ReporteFallaDetailSerializer
-
-
-class ReporteFallaCreateAPIView(generics.CreateAPIView):
-
-    serializer_class = serializers.ReporteFallaCreateSerializer
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        reporte = serializer.save()
-        data = serializers.ReporteFallaDetailSerializer(reporte).data
-        return Response(data, status=status.HTTP_201_CREATED)
-    
-class CatalogosReporteAPIView(APIView):
-    """Junta los 4 catalogos que usa el formulario de 'Reportar Falla' en
-    una sola respuesta, para que el client no tenga que hacer 4 llamadas
-    HTTP separadas y secuenciales cada vez que carga la pagina."""
-
-    def get(self, request):
-        data = {
-            "severidades": serializers.TipoSeveridadSerializer(
-                models.TipoSeveridad.objects.all(), many=True
-            ).data,
-            "tipos_falla": serializers.TipoFallaSerializer(
-                models.TipoFalla.objects.all(), many=True
-            ).data,
-            "maquinas": serializers.MaquinaSerializer(
-                models.Maquina.objects.all(), many=True
-            ).data,
-            "estados": serializers.EstadoReporteSerializer(
-                models.EstadoReporte.objects.all(), many=True
-            ).data,
-        }
-        return Response(data, status=status.HTTP_200_OK)
+class UpdateReporteFallaAPIView(generics.UpdateAPIView):
+    queryset = models.ReporteFalla.objects.all()
+    serializer_class = serializers.UpdateReporteFallaSerializer
