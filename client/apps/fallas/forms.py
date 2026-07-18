@@ -1,5 +1,5 @@
 from django import forms
-from apps.fallas.models import EdoReporte, TipoFalla, ReporteFalla, TipoSeveridad
+from api.apps.fallas.models import EdoReporte, TipoFalla, ReporteFalla, TipoSeveridad
 from api.apps.maquinaria.models import Maquina
 from api.apps.usuarios.models import Trabajador
 
