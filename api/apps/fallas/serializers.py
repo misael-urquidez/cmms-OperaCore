@@ -6,7 +6,7 @@ class ListTipoFallaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoFalla
         fields = [
-            "numeroRegistro",
+            "numeroregistro",
             "nombre",
             "descripcion"
         ]
@@ -135,11 +135,11 @@ class ListReporteFallaSerializer(serializers.ModelSerializer):
         fields = [
             "numeroRegistro",
             "asunto",
-            "fechaResolucion",
-            "fechaCreacion",
-            "horaCreacion",
-            "tiempoParo",
-            "causaRaiz",
+            "fecharesolucion",
+            "fechacreacion",
+            "horacreacion",
+            "tiempoparo",
+            "causaraiz",
             "descripcion",
             "imagen",
             "maquina",
@@ -158,11 +158,11 @@ class CreateReporteFallaSerializer(serializers.ModelSerializer):
         model = models.ReporteFalla
         fields = [
             "asunto",
-            "fechaResolucion",
-            "fechaCreacion",
-            "horaCreacion",
-            "tiempoParo",
-            "causaRaiz",
+            "fecharesolucion",
+            "fechacreacion",
+            "horacreacion",
+            "tiempoparo",
+            "causaraiz",
             "descripcion",
             "imagen",
             "maquina",
@@ -176,11 +176,11 @@ class UpdateReporteFallaSerializer(serializers.ModelSerializer):
         model = models.ReporteFalla
         fields = [
             "asunto",
-            "fechaResolucion",
-            "fechaCreacion",
-            "horaCreacion",
-            "tiempoParo",
-            "causaRaiz",
+            "fecharesolucion",
+            "fechacreacion",
+            "horacreacion",
+            "tiempoparo",
+            "causaraiz",
             "descripcion",
             "imagen",
             "maquina",
