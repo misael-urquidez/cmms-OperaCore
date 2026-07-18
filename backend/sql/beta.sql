@@ -1,14 +1,3 @@
--- =====================================================================
---  OPERACORE - CMMS (Computerized Maintenance Management System)
---  Motor: MySQL 8.0 / MariaDB 10.x (InnoDB, utf8mb4)
---  VERSIÓN 2: estructura actualizada para coincidir con el diccionario
---  de datos (Copia_de_DD_OPERACORE_final.xlsx)
--- =====================================================================
--- NOTA: quedan 2 puntos [REVISAR CON EL EQUIPO] porque el diccionario
--- tiene inconsistencias internas que romperían la integridad referencial
--- si se aplican tal cual. Ver comentarios en HERRAMIENTA y ESTADO_PIEZA.
--- =====================================================================
-
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -77,7 +66,10 @@ CREATE TABLE PLANTA (
     codigo          VARCHAR(10)  PRIMARY KEY,
     nombre          VARCHAR(100) NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL,
-    ubicacion       VARCHAR(150) NULL
+    telefono        VARCHAR(15)  NOT NULL UNIQUE,
+    dirCalle        VARCHAR(100) NOT NULL,
+    dirCodigoPostal VARCHAR(5)   NOT NULL,
+    dirNumero       VARCHAR(10)  NOT NULL
 ) ENGINE=InnoDB;
 
 -- Tabla: MARCA
@@ -270,6 +262,7 @@ CREATE TABLE LINEA (
     codigo          VARCHAR(10)  PRIMARY KEY,
     nombre          VARCHAR(100) NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL,
+    -- telefono        VARCHAR(15)  NOT NULL UNIQUE,
     area            VARCHAR(10)  NOT NULL,
     CONSTRAINT fk_linea_area FOREIGN KEY (area) REFERENCES AREA(codigo)
 ) ENGINE=InnoDB;
@@ -352,11 +345,9 @@ CREATE TABLE PIEZA (
     edo_pieza     VARCHAR(5)  NULL,
     maquina          VARCHAR(10) NULL,
     tipo_pieza       INT NULL,
-    refaccion        INT NULL,
     CONSTRAINT fk_pieza_estado FOREIGN KEY (edo_pieza) REFERENCES EDO_PIEZA(codigo),
     CONSTRAINT fk_pieza_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo),
-    CONSTRAINT fk_pieza_tipo FOREIGN KEY (tipo_pieza) REFERENCES TIPO_PIEZA(numeroRegistro),
-    CONSTRAINT fk_pieza_refaccion FOREIGN KEY (refaccion) REFERENCES REFACCION(numeroRegistro)
+    CONSTRAINT fk_pieza_tipo FOREIGN KEY (tipo_pieza) REFERENCES TIPO_PIEZA(numeroRegistro)
 ) ENGINE=InnoDB;
 
 
@@ -407,6 +398,14 @@ CREATE TABLE REPORTE_FALLA (
     CONSTRAINT fk_repfalla_severidad FOREIGN KEY (tipo_severidad) REFERENCES TIPO_SEVERIDAD(codigo)
 ) ENGINE=InnoDB;
 
+CREATE TABLE TIPO_REPORTE (
+    tipo_falla      INT NOT NULL,
+    reporte_falla  INT  NOT NULL,
+    PRIMARY KEY (tipo_falla, reporte_falla),
+    CONSTRAINT fk_tiporep_tipofalla FOREIGN KEY (tipo_falla) REFERENCES TIPO_FALLA(numeroRegistro),
+    CONSTRAINT fk_tiporep_reportefalla FOREIGN KEY (reporte_falla) REFERENCES REPORTE_FALLA(numeroRegistro)
+) ENGINE=InnoDB;
+
 -- =====================================================================
 -- 6. TABLAS DE NIVEL 5 (dependen de tablas de nivel 4)
 -- =====================================================================
@@ -419,18 +418,19 @@ CREATE TABLE ORDEN_MANTENIMIENTO (
     descripcion         VARCHAR(500) NOT NULL,
     diagnostico         VARCHAR(500) NULL,
     notas               VARCHAR(500) NULL,
-    fechaProgramada     DATE NOT NULL,
+    fechaProgramada     DATE NULL, -- NULL
     fechaCreacion       DATE NOT NULL,
     horaCreacion        TIME NOT NULL,
     fechaCierre         DATE NULL,
     horaCierre          TIME NULL,
     horasIntervenidas   float NULL,
+    porcentaje float null,
     imagen              VARCHAR(255) NULL,
     maquina             VARCHAR(10) NULL,
     trabajador          VARCHAR(15) NULL,
     reporte_falla       INT NULL,
     tipo_mantenimiento  VARCHAR(5)  NULL,
-    estado_orden        VARCHAR(5)  NULL,
+    estado_orden        VARCHAR(5)  NULL, -- Falta porcentaje
     CONSTRAINT fk_orden_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo),
     CONSTRAINT fk_orden_trabajador FOREIGN KEY (trabajador) REFERENCES TRABAJADOR(numeroNomina),
     CONSTRAINT fk_orden_reportefalla FOREIGN KEY (reporte_falla) REFERENCES REPORTE_FALLA(numeroRegistro),
@@ -471,7 +471,6 @@ CREATE TABLE TRABA_ORDE_PERSONAL (
 CREATE TABLE TAREA_ORDEN (
     tarea               INT NOT NULL,
     orden_mantenimiento VARCHAR(15) NOT NULL,
-    porcentaje float null,
     fechaInicio date not null,
     fechaCierre date null,
     horaInicio time not null,

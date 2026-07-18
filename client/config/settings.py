@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "apps.fallas",
     "apps.inventario",
     "apps.indicadores",
+    "apps.elipse",
 ]
 
 MIDDLEWARE = [
@@ -76,7 +77,7 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
-        "LOCATION": BASE_DIR / "cache",
+           "LOCATION": "usuarios-cache",
         "TIMEOUT": 600,  # 10 minutos por defecto
     }
 }
