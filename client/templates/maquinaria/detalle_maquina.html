@@ -1,0 +1,299 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>OPERACORE | Maquinaria</title>
+    <style>
+        /* ==========================================================================
+           VARIABLES GLOBALES Y CONFIGURACIÓN (Fácil mantenimiento)
+           ========================================================================== */
+        :root {
+            /* Paleta de Colores Terciarios e Industriales */
+            --bg-main: #0f1115;          /* Fondo oscuro profundo */
+            --bg-card: #161920;          /* Fondo de tarjetas (Gris azulado industrial) */
+            --bg-info: #1f242e;          /* Fondo de contenedores de datos */
+            --border-color: #2a313e;     /* Bordes sutiles estándar */
+            
+            /* Colores de Acento (Estilo Tech/CMMS) */
+            --accent: #00adb5;           /* Cian/Aqua para elementos interactivos y títulos */
+            --accent-hover: #00f5ff;     /* Brillo de interacción */
+            --text-main: #e3e8f0;        /* Texto principal claro */
+            --text-muted: #94a3b8;       /* Texto secundario/etiquetas */
+            
+            /* Estados de Mantenimiento (Ejemplo dinámico o base) */
+            --status-bg: #1e293b;
+            --status-text: #38bdf8;
+            
+            /* Animaciones */
+            --transition: all 0.25s ease-in-out;
+        }
+
+        /* ==========================================================================
+           ESTILOS GENERALES
+           ========================================================================== */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.5;
+        }
+
+        /* ==========================================================================
+           HEADER (Panel de Control Superior)
+           ========================================================================== */
+        header {
+            background-color: var(--bg-card);
+            padding: 24px 40px;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        header h1 {
+            margin: 0;
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        header p {
+            margin: 6px 0 0 0;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* ==========================================================================
+           CONTENEDOR PRINCIPAL (Grid Responsivo)
+           ========================================================================== */
+        .container {
+            padding: 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* ==========================================================================
+           TARJETAS DE MAQUINARIA (Dashboard Style)
+           ========================================================================== */
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 12px 20px -5px rgba(0, 173, 181, 0.15);
+        }
+
+        /* ==========================================================================
+           CONTENEDOR DE IMAGEN (Viewport del Componente)
+           ========================================================================== */
+        .machine-img {
+            height: 180px;
+            background-color: var(--bg-main);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        /* Icono fallback cuando no hay imagen */
+        .machine-img font-fallback {
+            font-size: 48px;
+            color: var(--text-muted);
+        }
+
+        .machine-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Mantiene la proporción del equipo SMT sin deformar */
+            padding: 10px;
+            transition: var(--transition);
+        }
+
+        .card:hover .machine-img img {
+            transform: scale(1.04);
+        }
+
+        /* ==========================================================================
+           DETALLES Y TEXTOS
+           ========================================================================== */
+        h2 {
+            color: #ffffff;
+            margin: 0 0 16px 0;
+            font-size: 20px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        /* Filas de Información Técnica */
+        .info {
+            background-color: var(--bg-info);
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between; /* Alinea etiqueta a la izquierda y valor a la derecha */
+            align-items: center;
+            border: 1px solid transparent;
+            transition: var(--transition);
+        }
+
+        .info:hover {
+            border-color: var(--border-color);
+            background-color: rgba(31, 36, 46, 0.7);
+        }
+
+        .info b {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        /* Etiqueta de Estado de la Máquina */
+        .estado {
+            display: inline-flex;
+            align-self: flex-start; /* Evita que ocupe todo el ancho */
+            margin-top: 12px;
+            padding: 4px 12px;
+            border-radius: 4px;
+            background-color: var(--status-bg);
+            color: var(--status-text);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        /* ==========================================================================
+           BOTÓN DE ACCIÓN (Mantenimiento / Detalles)
+           ========================================================================== */
+        .btn {
+            display: block;
+            margin-top: auto; /* Empuja el botón al fondo si las tarjetas tienen alturas distintas */
+            padding: 12px;
+            background-color: transparent;
+            color: var(--accent);
+            text-decoration: none;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 1px solid var(--accent);
+            transition: var(--transition);
+            box-sizing: border-box;
+        }
+
+        .btn:hover {
+            background-color: var(--accent);
+            color: var(--bg-main);
+            box-shadow: 0 4px 12px rgba(0, 173, 181, 0.2);
+        }
+        
+        /* Mensaje de error / vacío */
+        .no-data {
+            grid-column: 1 / -1; 
+            text-align: center; 
+            color: var(--text-muted);
+            padding: 60px 0;
+            font-weight: 400;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Panel Superior -->
+    <header>
+        <h1>⚙ OPERACORE CMMS</h1>
+        <p>Sistema inteligente de gestión de maquinaria industrial SMT</p>
+    </header>
+
+    <!-- Grilla de Equipos -->
+    <div class="container">
+        {% for maquina in maquinas %}
+        <div class="card">
+            
+            <!-- Imagen del Equipo -->
+            <div class="machine-img">
+                {% if maquina.imagen_url %}
+                    <img src="{% static maquina.imagen_url %}" alt="{{ maquina.nombre }}">
+                {% else %}
+                    <span class="font-fallback">⚙</span>
+                {% endif %}
+            </div>
+
+            <!-- Título del Dispositivo -->
+            <h2>{{ maquina.nombre }}</h2>
+
+            <!-- Fichas Técnicas Informativas -->
+            <div class="info">
+                <span>Código:</span>
+                <b>{{ maquina.codigo }}</b>
+            </div>
+
+            <div class="info">
+                <span>Línea:</span>
+                <b>{% if maquina.linea %}{{ maquina.linea }}{% else %}Sin línea{% endif %}</b>
+            </div>
+
+            <div class="info">
+                <span>Marca:</span>
+                <b>{% if maquina.marca %}{{ maquina.marca }}{% else %}Sin marca{% endif %}</b>
+            </div>
+
+            <div class="info">
+                <span>Modelo:</span>
+                <b>{% if maquina.modelo %}{{ maquina.modelo }}{% else %}Sin modelo{% endif %}</b>
+            </div>
+
+            <div class="info">
+                <span>Tipo de máquina:</span>
+                <b>{% if maquina.tipo_maquina %}{{ maquina.tipo_maquina }}{% else %}Sin tipo{% endif %}</b>
+            </div>
+
+            <!-- Estatus Operativo -->
+            <span class="estado">
+                {% if maquina.estado_maquina %}
+                    {{ maquina.estado_maquina }}
+                {% else %}
+                    Sin estado
+                {% endif %}
+            </span>
+
+            <!-- Enlace Técnico -->
+            <a class="btn" href="{% url 'maquinaria-detail' maquina.codigo %}">
+                ⚙ Ver detalle
+            </a>
+        </div>
+        {% empty %}
+        <!-- Estado Vacío -->
+        <h3 class="no-data">
+            No existen máquinas registradas en el sistema.
+        </h3>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
