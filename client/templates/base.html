@@ -134,11 +134,14 @@
 
     <main class="content">
         {% if messages %}
-            <ul class="messages">
+            <div class="toast-container" id="toastContainer">
                 {% for message in messages %}
-                    <li class="messages__item messages__item--{{ message.tags }}">{{ message }}</li>
+                    <div class="toast toast--{{ message.tags }}" role="alert">
+                        <span class="toast__msg">{{ message }}</span>
+                        <button type="button" class="toast__close" aria-label="Cerrar">&times;</button>
+                    </div>
                 {% endfor %}
-            </ul>
+            </div>
         {% endif %}
 
         {% block content %}{% endblock %}
@@ -149,6 +152,17 @@
     </footer>
 
     <script src="{% static 'js/navbar.js' %}"></script>
+    
+    <script>
+    (function(){
+        var c = document.getElementById('toastContainer');
+        if(!c) return;
+        c.querySelectorAll('.toast').forEach(function(t){
+            t.querySelector('.toast__close').addEventListener('click', function(){ t.remove(); });
+            setTimeout(function(){ t.classList.add('toast--hide'); t.addEventListener('transitionend', function(){ t.remove(); }); }, 4000);
+        });
+    })();
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

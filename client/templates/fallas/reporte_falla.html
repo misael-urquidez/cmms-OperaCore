@@ -22,7 +22,7 @@
     </details>
   </div>
 
-  <form method="post" action="{% url 'fallas:reporte' %}">
+  <form method="post" action="{% url 'fallas:reporte' %}" enctype="multipart/form-data">
     {% csrf_token %}
     <div class="contenedor">
       <div class="left-side">
@@ -81,7 +81,7 @@
               <p>Haz clic</p>
               <span>Sube la imagen</span>
             </label>
-            <input type="file" id="fileDrag" accept="image/*">
+            <input type="file" id="fileDrag" name="imagen" accept="image/*">
             <div class="preview-box" id="previewDrag">
               <span class="placeholder">Vista previa</span>
             </div>

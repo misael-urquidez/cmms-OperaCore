@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.views import generic
+from django.contrib import messages
 import requests
 
 from django.conf import settings
@@ -41,10 +42,20 @@ class ReporteFalla(generic.View):
             "maquina": request.POST.get("maquina"),
             "tipo_falla": request.POST.get("tipo_falla"),
             "tipo_severidad": request.POST.get("tipo_severidad"),
-            "estado_reporte": request.POST.get("estado_reporte"),
+                        "estado_reporte": request.POST.get("estado_reporte")
+
         }
-        self.response = requests.post(url=self.url_create, data=self.payload)
-        return redirect("fallas:lista")
+
+
+        archivo = request.FILES.get("imagen")
+        files = {"imagen": archivo} if archivo else None
+        self.response = requests.post(url=self.url_create, data=self.payload, files=files)
+        if self.response.status_code == 201:
+            messages.success(request, "El reporte de falla ha sido registrado")
+            return redirect("fallas:lista")
+        else:
+            messages.warning(request, "Error al registrar el reporte")
+
 
 
 class ListaReportes(generic.View):
