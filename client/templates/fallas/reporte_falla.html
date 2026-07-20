@@ -1,6 +1,8 @@
-{% extends "base.html" %}
+{% extends "base_admin.html" %}
 {% load static %}
 {% block title %}Reporte de Falla · OperaCore{% endblock %}
+{% block breadcrumb %}Fallas{% endblock %}
+{% block page_title %}Nuevo reporte de falla{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">{% endblock %}
 {% block content %}
   <h1>Reporte de Falla</h1>

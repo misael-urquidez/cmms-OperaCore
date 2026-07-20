@@ -336,7 +336,61 @@
 .quick-action svg { width: 18px; height: 18px; color: var(--color-primary); }
 
 /* ============ RESPONSIVE ============ */
+/* ============ TABLA DE DATOS (listados: fallas, y los que sigan) ============ */
 
+.panel__actions { display: flex; gap: 0.6rem; align-items: center; }
+
+.btn-primary-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    background: var(--color-primary);
+    color: var(--color-bg, #08131f);
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+}
+.btn-primary-sm:hover { opacity: 0.85; }
+.btn-primary-sm svg { width: 15px; height: 15px; }
+
+.data-table-wrap { overflow-x: auto; }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.data-table th {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    color: var(--color-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--admin-border);
+    white-space: nowrap;
+}
+.data-table td {
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--admin-border);
+    color: var(--color-text);
+    vertical-align: middle;
+}
+.data-table tbody tr:hover { background: var(--admin-hover); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: var(--admin-hover);
+    color: var(--color-primary);
+    white-space: nowrap;
+}
 @media (max-width: 900px) {
     .sidebar {
         position: fixed;
@@ -438,3 +492,6 @@
     font-weight: 700;
     cursor: pointer;
 }
+
+.sidebar__submenu a.is-active { color: var(--color-primary); background: var(--admin-hover); font-weight: 600; }
+.sidebar__submenu a.is-active::before { opacity: 1; }

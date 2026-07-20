@@ -68,7 +68,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
           Registrar máquina
         </a>
-        <a class="quick-action" href="{% url 'fallas:index' %}">
+        <a class="quick-action" href="{% url 'fallas:reporte' %}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
           Nuevo reporte de falla
         </a>
@@ -88,7 +88,30 @@
         <h2 class="panel__title">Últimas fallas reportadas</h2>
         <a class="panel__link" href="{% url 'fallas:index' %}">Ver todas →</a>
       </div>
-      <p class="panel__empty">Aquí se listarán los reportes recientes cuando conectemos este panel al api/.</p>
+      {% if ultimas_fallas %}
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Asunto</th>
+          <th>Fecha</th>
+          <th>Severidad</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in ultimas_fallas %}
+          <tr>
+            <td>{{ r.asunto }}</td>
+            <td>{{ r.fechaCreacion }}</td>
+            <td><span class="badge">{{ r.tipo_severidad_nombre|default:"-" }}</span></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="panel__empty">Aún no hay reportes de falla registrados.</p>
+{% endif %}
     </div>
   </section>
 
