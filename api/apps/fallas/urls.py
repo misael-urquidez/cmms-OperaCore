@@ -11,8 +11,9 @@ urlpatterns = [
     path("v1/tipos-falla/", views.TipoFallaListAPIView.as_view(), name="tipos-falla"),
     path("v1/maquinas/", views.MaquinaListAPIView.as_view(), name="maquinas"),
     path("v1/estados-reporte/", views.EstadoReporteListAPIView.as_view(), name="estados-reporte"),
+    path("v1/catalogos-reporte/", views.CatalogosReporteAPIView.as_view(), name="catalogos-reporte"),
     path("v1/reportes/list/", views.ReporteFallaListAPIView.as_view(), name="reportes-list"),
-    path("v1/reportes/<int:pk>/", views.ReporteFallaDetailAPIView.as_view(), name="reportes-detail"),
     # v2 - escritura
     path("v2/reportes/create/", views.ReporteFallaCreateAPIView.as_view(), name="reportes-create"),
+    
 ]

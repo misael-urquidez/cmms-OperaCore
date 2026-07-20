@@ -37,15 +37,19 @@ class EstadoReporteListAPIView(generics.ListAPIView):
 
 class ReporteFallaListAPIView(generics.ListAPIView):
 
-
-    queryset = models.ReporteFalla.objects.all().order_by("-fechaCreacion", "-horaCreacion")
+    queryset = (
+        models.ReporteFalla.objects
+        .select_related("maquina", "trabajador", "tipo_falla", "tipo_severidad")
+        .order_by("-fechaCreacion", "-horaCreacion")
+    )
     serializer_class = serializers.ReporteFallaListSerializer
 
 
 class ReporteFallaDetailAPIView(generics.RetrieveAPIView):
 
-
-    queryset = models.ReporteFalla.objects.all()
+    queryset = models.ReporteFalla.objects.select_related(
+        "maquina", "trabajador", "tipo_falla", "tipo_severidad"
+    )
     serializer_class = serializers.ReporteFallaDetailSerializer
 
 
@@ -59,3 +63,25 @@ class ReporteFallaCreateAPIView(generics.CreateAPIView):
         reporte = serializer.save()
         data = serializers.ReporteFallaDetailSerializer(reporte).data
         return Response(data, status=status.HTTP_201_CREATED)
+    
+class CatalogosReporteAPIView(APIView):
+    """Junta los 4 catalogos que usa el formulario de 'Reportar Falla' en
+    una sola respuesta, para que el client no tenga que hacer 4 llamadas
+    HTTP separadas y secuenciales cada vez que carga la pagina."""
+
+    def get(self, request):
+        data = {
+            "severidades": serializers.TipoSeveridadSerializer(
+                models.TipoSeveridad.objects.all(), many=True
+            ).data,
+            "tipos_falla": serializers.TipoFallaSerializer(
+                models.TipoFalla.objects.all(), many=True
+            ).data,
+            "maquinas": serializers.MaquinaSerializer(
+                models.Maquina.objects.all(), many=True
+            ).data,
+            "estados": serializers.EstadoReporteSerializer(
+                models.EstadoReporte.objects.all(), many=True
+            ).data,
+        }
+        return Response(data, status=status.HTTP_200_OK)

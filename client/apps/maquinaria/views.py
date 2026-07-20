@@ -1,9 +1,17 @@
 import requests
 from django.conf import settings
+from django.core.cache import cache
 from django.shortcuts import render
 from django.views import generic
 
 API_URL = f"{settings.API_BASE_URL}/maquinaria"
+
+# Sesion HTTP a nivel de modulo: reusa la conexion TCP con el api/.
+SESSION = requests.Session()
+
+# El ping es solo un status, no data real: cache de 30 seg para no
+# pegarle al api/ en cada click al modulo.
+PING_TTL = 30
 
 
 class Index(generic.View):
@@ -12,10 +20,13 @@ class Index(generic.View):
     template_name = "maquinaria/index.html"
 
     def get(self, request):
-        try:
-            response = requests.get(f"{API_URL}/ping/", timeout=5).json()
-        except requests.exceptions.RequestException:
-            response = {"status": "sin conexion con el api"}
+        response = cache.get("maquinaria_ping")
+        if response is None:
+            try:
+                response = SESSION.get(f"{API_URL}/ping/", timeout=5).json()
+            except requests.exceptions.RequestException:
+                response = {"status": "sin conexion con el api"}
+            cache.set("maquinaria_ping", response, PING_TTL)
         return render(request, self.template_name, {"modulo": "Maquinaria", "api_status": response})
 
 

@@ -14,6 +14,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media'
 
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-api")
+GROQ_API_KEY = config("GROQ_API_KEY", default="")
 DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 
@@ -38,6 +39,7 @@ LOCAL_APPS = [
     "apps.fallas",
     "apps.inventario",
     "apps.indicadores",
+    "apps.elipse",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

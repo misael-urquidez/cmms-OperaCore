@@ -1,37 +1,53 @@
-{% extends "base.html" %}
+{% extends "base_admin.html" %}
 {% block title %}Reportes de Falla · OperaCore{% endblock %}
-{% block content %}
-  <h1>Reportes de Falla</h1>
-  <p><a href="{% url 'fallas:reporte' %}">+ Nuevo reporte</a></p>
+{% block breadcrumb %}Fallas{% endblock %}
+{% block page_title %}Reportes de falla{% endblock %}
 
-  {% if reportes %}
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Asunto</th>
-          <th>Fecha</th>
-          <th>Severidad</th>
-          <th>Tipo</th>
-          <th>Maquina</th>
-          <th>Trabajador</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in reportes %}
-          <tr>
-            <td>{{ r.numeroRegistro }}</td>
-            <td>{{ r.asunto }}</td>
-            <td>{{ r.fechaCreacion }}</td>
-            <td>{{ r.tipo_severidad_nombre|default:"-" }}</td>
-            <td>{{ r.tipo_falla_nombre|default:"-" }}</td>
-            <td>{{ r.maquina_nombre|default:"-" }}</td>
-            <td>{{ r.trabajador_nombre|default:"-" }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No hay reportes de falla registrados.</p>
-  {% endif %}
+{% block content %}
+
+  <section class="panel">
+    <div class="panel__head">
+      <h2 class="panel__title">Reportes registrados</h2>
+      <div class="panel__actions">
+        <a class="btn-primary-sm" href="{% url 'fallas:reporte' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Nuevo reporte
+        </a>
+      </div>
+    </div>
+
+    {% if reportes %}
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Asunto</th>
+              <th>Fecha</th>
+              <th>Severidad</th>
+              <th>Tipo</th>
+              <th>Máquina</th>
+              <th>Trabajador</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in reportes %}
+              <tr>
+                <td>{{ r.numeroRegistro }}</td>
+                <td>{{ r.asunto }}</td>
+                <td>{{ r.fechaCreacion }}</td>
+                <td><span class="badge">{{ r.tipo_severidad_nombre|default:"-" }}</span></td>
+                <td>{{ r.tipo_falla_nombre|default:"-" }}</td>
+                <td>{{ r.maquina_nombre|default:"-" }}</td>
+                <td>{{ r.trabajador_nombre|default:"-" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="panel__empty">No hay reportes de falla registrados todavía.</p>
+    {% endif %}
+  </section>
+
 {% endblock %}

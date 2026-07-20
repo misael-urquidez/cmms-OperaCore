@@ -19,6 +19,7 @@ urlpatterns = [
     path("fallas/", include("apps.fallas.urls")),
     path("inventario/", include("apps.inventario.urls")),
     path("indicadores/", include("apps.indicadores.urls")),
+    path("elipse/", include("apps.elipse.urls")),
 ]
 
 if settings.DEBUG:

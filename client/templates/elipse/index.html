@@ -1,0 +1,79 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% block title %}Elipse · OperaCore{% endblock %}
+{% block breadcrumb %}Asistente{% endblock %}
+{% block page_title %}Elipse{% endblock %}
+
+{% block content %}
+<div class="elipse-chat" id="elipseChat">
+    <div class="elipse-chat__messages" id="elipseMessages">
+        <div class="elipse-welcome" id="elipseWelcome">
+            <div class="elipse-welcome__orb">⚡</div>
+            <h2>Hola, soy <em>Elipse</em></h2>
+            <p>Tu asistente de IA para OperaCore. Pregúntame sobre trabajadores por ahora;
+               pronto sabré de máquinas, mantenimientos, fallas e inventario.</p>
+        </div>
+    </div>
+
+    <form class="elipse-chat__form" id="elipseForm">
+        <textarea id="elipseInput" placeholder="Escribe tu pregunta…" rows="1"
+                  onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();elipseEnviar();}"></textarea>
+        <button type="button" id="elipseSend" onclick="elipseEnviar()">Enviar</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_ELIPSE = "{{ csrf_token }}";
+let elipseBusy = false;
+let elipseHistorial = [];
+
+function elipseEsc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function elipseAddMsg(rol, html) {
+    const w = document.getElementById('elipseWelcome');
+    if (w) w.remove();
+    const box = document.getElementById('elipseMessages');
+    const d = document.createElement('div');
+    d.className = 'elipse-msg elipse-msg--' + rol;
+    const nombre = rol === 'user' ? '{{ usuario.nombre|default:"Tú" }}' : 'Elipse';
+    d.innerHTML = `<div class="elipse-msg__name">${nombre}</div><div class="elipse-msg__bubble">${html}</div>`;
+    box.appendChild(d);
+    box.scrollTop = box.scrollHeight;
+}
+
+async function elipseEnviar() {
+    if (elipseBusy) return;
+    const input = document.getElementById('elipseInput');
+    const txt = input.value.trim();
+    if (!txt) return;
+    input.value = '';
+    elipseAddMsg('user', elipseEsc(txt));
+    elipseBusy = true;
+    document.getElementById('elipseSend').disabled = true;
+
+    try {
+        const res = await fetch("{% url 'elipse:chat' %}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_ELIPSE },
+            body: JSON.stringify({ pregunta: txt, historial: elipseHistorial.slice(-6) })
+        });
+        const data = await res.json();
+        if (data.error) {
+            elipseAddMsg('ai', '<span class="elipse-error">⚠ ' + elipseEsc(data.error) + '</span>');
+        } else {
+            elipseAddMsg('ai', data.html);
+            elipseHistorial.push({ role: 'user', content: txt });
+            elipseHistorial.push({ role: 'assistant', content: data.html.replace(/<[^>]+>/g, ' ').slice(0, 800) });
+        }
+    } catch (e) {
+        elipseAddMsg('ai', '<span class="elipse-error">⚠ Error de conexión.</span>');
+    } finally {
+        elipseBusy = false;
+        document.getElementById('elipseSend').disabled = false;
+        input.focus();
+    }
+}
+</script>
+{% endblock %}
