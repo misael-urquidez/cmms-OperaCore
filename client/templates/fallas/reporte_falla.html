@@ -5,7 +5,7 @@
 {% block page_title %}Nuevo reporte de falla{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">{% endblock %}
 {% block content %}
-  <h1>Reporte de Falla</h1>
+  <h1>Reporte de Falla</h1> 
 
   <div class="guias">
     <details open>
@@ -40,6 +40,9 @@
         <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas)</label>
         <input type="number" name="tiempoParo" id="tiempoParo" min="0" />
 
+        <label for="fechaSolucion">Fecha de solucion</label>
+        <input type="date" name="fechaSolucion" id="fechaSolucion" />
+
         <label for="maquina">Maquina</label>
         <select name="maquina" id="maquina" required>
           <option value="">Seleccione...</option>
@@ -56,13 +59,21 @@
           {% endfor %}
         </select>
 
-        <label for="tipo_falla">Tipo de falla</label>
+        <label for="tipo_falla">Selecione una o mas fallas encontradas</label>
         <select name="tipo_falla" id="tipo_falla" required>
           <option value="">Seleccione...</option>
           {% for tf in tipos_falla %}
             <option value="{{ tf.numeroRegistro }}">{{ tf.nombre }}</option>
           {% endfor %}
         </select>
+        <div class="contenedor-tipo-fallas" id="nuevas-fallas">
+
+        </div>
+        <div class="botones">
+            <button onclick="quitarSelect('tipo-falla')">- Quitar</button>
+            <button onclick="anadirFalla()">+ Añadir</button>
+        </div>
+
 
         <label for="estado_reporte">Estado del reporte</label>
         <select name="estado_reporte" id="estado_reporte" required>
@@ -71,6 +82,17 @@
             <option value="{{ e.codigo }}">{{ e.nombre }}</option>
           {% endfor %}
         </select>
+
+        <label for="trabajador">Selecciona el trabajador</label>
+        <select name="trabajador" id="trabajador" required>
+          <option value="">Seleccione...</option>
+          {% for t in trabajadores %}
+            <option value="{{ t.numeroNomina }}">{{ t.nombre }} {{ t.apellidoPat }}</option>
+          {% endfor %}
+        </select>
+
+
+
       </div>
 
       <div class="right-side">
@@ -98,5 +120,11 @@
       </div>
     </div>
   </form>
+
+
+
+
+
+  
 {% endblock %}
-{% block extra_js %}<script src="{% static 'fallas/js/preview-imagenes.js' %}"></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'fallas/js/preview-imagenes.js' %}"></script><script src="{% static 'fallas/js/añadir-elementos.js' %}"></script>{% endblock %}

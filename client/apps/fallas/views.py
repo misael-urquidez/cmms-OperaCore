@@ -24,34 +24,38 @@ REPORTES_TTL = 15
 
 
 def _cargar_catalogos():
-    """Devuelve (severidades, tipos_falla, maquinas, estados, ok). Los toma
-    del cache si estan todos; si falta alguno, pide los 4 juntos en UNA
-    sola llamada al endpoint agregador del api/ y los vuelve a cachear
+    """Devuelve (severidades, tipos_falla, maquinas, estados, trabajadores, ok).
+    Los toma del cache si estan todos; si falta alguno, pide todos juntos en
+    UNA sola llamada al endpoint agregador del api/ y los vuelve a cachear
     cada uno con su propio TTL."""
     severidades = cache.get("fallas_severidades")
     tipos_falla = cache.get("fallas_tipos_falla")
     maquinas = cache.get("fallas_maquinas")
     estados = cache.get("fallas_estados")
+    trabajadores = cache.get("fallas_trabajadores")
 
-    if None not in (severidades, tipos_falla, maquinas, estados):
-        return severidades, tipos_falla, maquinas, estados, True
+    if None not in (severidades, tipos_falla, maquinas, estados, trabajadores):
+        return severidades, tipos_falla, maquinas, estados, trabajadores, True
 
     try:
         data = SESSION.get(f"{API_URL}/v1/catalogos-reporte/", timeout=5).json()
     except requests.exceptions.RequestException:
-        return [], [], [], [], False
+        return [], [], [], [], [], False
 
     severidades = data["severidades"]
     tipos_falla = data["tipos_falla"]
     maquinas = data["maquinas"]
     estados = data["estados"]
+    trabajadores = data.get("trabajadores", [])
 
     cache.set("fallas_severidades", severidades, CATALOGOS_TTL)
     cache.set("fallas_tipos_falla", tipos_falla, CATALOGOS_TTL)
     cache.set("fallas_maquinas", maquinas, MAQUINAS_TTL)
     cache.set("fallas_estados", estados, CATALOGOS_TTL)
+    cache.set("fallas_trabajadores", trabajadores, CATALOGOS_TTL)
 
-    return severidades, tipos_falla, maquinas, estados, True
+    return severidades, tipos_falla, maquinas, estados, trabajadores, True
+
 
 class ReporteFalla(generic.View):
     template_name = "fallas/reporte_falla.html"
@@ -61,7 +65,7 @@ class ReporteFalla(generic.View):
     payload = {}
 
     def get(self, request):
-        severidades, tipos_falla, maquinas, estados, ok = _cargar_catalogos()
+        severidades, tipos_falla, maquinas, estados, trabajadores, ok = _cargar_catalogos()
         if not ok:
             messages.warning(request, "No se pudo conectar con la API para cargar los catálogos.")
         self.context = {
@@ -69,6 +73,7 @@ class ReporteFalla(generic.View):
             "tipos_falla": tipos_falla,
             "maquinas": maquinas,
             "estados": estados,
+            "trabajadores": trabajadores,
             "seccion": "fallas",
             "subseccion": "reporte",
         }
@@ -80,11 +85,28 @@ class ReporteFalla(generic.View):
             "descripcion": request.POST.get("descripcion"),
             "causaRaiz": request.POST.get("causaRaiz"),
             "tiempoParo": request.POST.get("tiempoParo"),
+            "fechaResolucion": request.POST.get("fechaSolucion") or None,
             "maquina": request.POST.get("maquina"),
-            "tipo_falla": request.POST.get("tipo_falla"),
+            "trabajador": request.POST.get("trabajador"),
             "tipo_severidad": request.POST.get("tipo_severidad"),
             "estado_reporte": request.POST.get("estado_reporte"),
         }
+
+        tipo_falla_ids = []
+        valor_base = request.POST.get("tipo_falla")
+        if valor_base:
+            tipo_falla_ids.append(int(valor_base))
+
+        idx = 1
+        while True:
+            val = request.POST.get(f"tipo_falla_{idx}")
+            if val is None:
+                break
+            if val:
+                tipo_falla_ids.append(int(val))
+            idx += 1
+
+        self.payload["tipo_falla_ids"] = tipo_falla_ids
 
         archivo = request.FILES.get("imagen")
         files = {"imagen": archivo} if archivo else None
@@ -127,3 +149,27 @@ class ListaReportes(generic.View):
             "subseccion": "lista",
         }
         return render(request, self.template_name, self.context)
+    
+
+class DetailReporte(generic.View):
+    template_name = "fallas/fallas-modal/ver-detalle.html"
+    context = {}
+
+    def get(self, request, pk):
+        cache_key = f"fallas_reporte_{pk}"
+        reporte = cache.get(cache_key)
+
+        if reporte is None:
+            try:
+                reporte = SESSION.get(
+                    f"{API_URL}/v1/reportes/{pk}/", timeout=5
+                ).json()
+                cache.set(cache_key, reporte, 30)
+            except (requests.exceptions.RequestException, ValueError):
+                return render(request, self.template_name, {"reporte": None})
+
+        self.context = {"reporte": reporte}
+        return render(request, self.template_name, self.context)
+    
+
+    

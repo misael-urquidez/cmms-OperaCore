@@ -4,6 +4,7 @@ import os
 from django.conf import settings
 from rest_framework import serializers
 
+from apps.usuarios.models import Trabajador
 from . import models
 
 
@@ -29,6 +30,14 @@ class EstadoReporteSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EstadoReporte
         fields = ["codigo", "nombre"]
+
+
+class TrabajadorLightSerializer(serializers.ModelSerializer):
+    """Serializer ligero para el select de trabajadores en el reporte de falla."""
+
+    class Meta:
+        model = Trabajador
+        fields = ["numeroNomina", "nombre", "apellidoPat"]
 
 
 class ReporteFallaListSerializer(serializers.ModelSerializer):
@@ -84,25 +93,40 @@ class ReporteFallaDetailSerializer(serializers.ModelSerializer):
 
 class ReporteFallaCreateSerializer(serializers.ModelSerializer):
     imagen = serializers.FileField(required=False, allow_null=True)
+    tipo_falla_ids = serializers.ListField(
+        child=serializers.IntegerField(), required=False, write_only=True
+    )
 
     class Meta:
         model = models.ReporteFalla
         fields = [
-            "asunto", "descripcion", "causaRaiz", "tiempoParo",
-            "maquina", "tipo_falla", "tipo_severidad", "imagen", "estado_reporte",
+            "asunto", "descripcion", "causaRaiz", "tiempoParo", "fechaResolucion",
+            "maquina", "trabajador", "tipo_severidad", "imagen",
+            "estado_reporte", "tipo_falla_ids",
         ]
 
     def create(self, validated_data):
         imagen_file = validated_data.pop("imagen", None)
+        tipo_falla_ids = validated_data.pop("tipo_falla_ids", [])
 
         validated_data["fechaCreacion"] = date.today()
         validated_data["horaCreacion"] = datetime.now().time()
-        validated_data["fechaResolucion"] = date.today()
-        trabajador = self.context["request"].session.get("usuario")
-        if trabajador:
-            validated_data["trabajador"] = trabajador["numeroNomina"]
+
+        if not validated_data.get("fechaResolucion"):
+            validated_data["fechaResolucion"] = date.today()
+
+        if not validated_data.get("trabajador"):
+            trabajador = self.context["request"].session.get("usuario")
+            if trabajador:
+                validated_data["trabajador"] = trabajador["numeroNomina"]
 
         reporte = super().create(validated_data)
+
+        for tf_id in tipo_falla_ids:
+            models.TipoReporte.objects.create(
+                tipo_falla_id=tf_id,
+                reporte_falla=reporte,
+            )
 
         if imagen_file:
             carpeta = os.path.join(settings.MEDIA_ROOT, "fallas")

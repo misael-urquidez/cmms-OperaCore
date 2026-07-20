@@ -2,6 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.usuarios.models import Trabajador
 from . import models, serializers
 
 
@@ -64,9 +65,17 @@ class ReporteFallaCreateAPIView(generics.CreateAPIView):
         data = serializers.ReporteFallaDetailSerializer(reporte).data
         return Response(data, status=status.HTTP_201_CREATED)
     
+class TrabajadorListAPIView(generics.ListAPIView):
+    """Listado ligero de trabajadores (solo nomina + nombre) para el
+    select del formulario de reporte de falla."""
+
+    queryset = Trabajador.objects.filter(actividad=True).order_by("nombre")
+    serializer_class = serializers.TrabajadorLightSerializer
+
+
 class CatalogosReporteAPIView(APIView):
-    """Junta los 4 catalogos que usa el formulario de 'Reportar Falla' en
-    una sola respuesta, para que el client no tenga que hacer 4 llamadas
+    """Junta los catalogos que usa el formulario de 'Reportar Falla' en
+    una sola respuesta, para que el client no tenga que hacer N llamadas
     HTTP separadas y secuenciales cada vez que carga la pagina."""
 
     def get(self, request):
@@ -83,5 +92,9 @@ class CatalogosReporteAPIView(APIView):
             "estados": serializers.EstadoReporteSerializer(
                 models.EstadoReporte.objects.all(), many=True
             ).data,
+            "trabajadores": serializers.TrabajadorLightSerializer(
+                Trabajador.objects.filter(actividad=True).order_by("nombre"),
+                many=True,
+            ).data,
         }
-        return Response(data, status=status.HTTP_200_OK)
+        return Response(data, status=status.HTTP_200_OK) 

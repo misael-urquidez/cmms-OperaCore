@@ -1,0 +1,87 @@
+<div class="fallas-modal__dialog" role="document">
+  <div class="fallas-modal__content">
+    <div class="fallas-modal__header">
+      <h2 class="fallas-modal__title">Reporte de falla #{{ reporte.numeroRegistro }}</h2>
+      <button class="fallas-modal__close" type="button" data-dismiss="modal" aria-label="Cerrar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="fallas-modal__body">
+      <div class="fallas-modal__grid">
+
+        <div class="fallas-modal__field">
+          <span class="fallas-modal__label">Asunto</span>
+          <span class="fallas-modal__value">{{ reporte.asunto }}</span>
+        </div>
+
+        <div class="fallas-modal__field">
+          <span class="fallas-modal__label">Máquina</span>
+          <span class="fallas-modal__value">{{ reporte.maquina_nombre|default:"-" }}</span>
+        </div>
+
+        <div class="fallas-modal__field">
+          <span class="fallas-modal__label">Trabajador</span>
+          <span class="fallas-modal__value">{{ reporte.trabajador_nombre|default:"-" }}</span>
+        </div>
+
+        <div class="fallas-modal__field">
+          <span class="fallas-modal__label">Severidad</span>
+          <span class="fallas-modal__value"><span class="badge">{{ reporte.tipo_severidad_nombre|default:"-" }}</span></span>
+        </div>
+
+        <div class="fallas-modal__field">
+          <span class="fallas-modal__label">Tipo de falla</span>
+          <span class="fallas-modal__value">{{ reporte.tipo_falla_nombre|default:"-" }}</span>
+        </div>
+
+        <div class="fallas-modal__field">
+          <span class="fallas-modal__label">Estado</span>
+          <span class="fallas-modal__value">{{ reporte.estado_reporte|default:"-" }}</span>
+        </div>
+
+        <div class="fallas-modal__field">
+          <span class="fallas-modal__label">Fecha de creación</span>
+          <span class="fallas-modal__value">{{ reporte.fechaCreacion }}</span>
+        </div>
+
+        <div class="fallas-modal__field">
+          <span class="fallas-modal__label">Hora de creación</span>
+          <span class="fallas-modal__value">{{ reporte.horaCreacion }}</span>
+        </div>
+
+        <div class="fallas-modal__field">
+          <span class="fallas-modal__label">Fecha de solución</span>
+          <span class="fallas-modal__value">{{ reporte.fechaResolucion|default:"-" }}</span>
+        </div>
+
+        <div class="fallas-modal__field">
+          <span class="fallas-modal__label">Tiempo de paro</span>
+          <span class="fallas-modal__value">{{ reporte.tiempoParo|default:"0" }} hrs</span>
+        </div>
+
+      </div>
+
+      <div class="fallas-modal__section">
+        <span class="fallas-modal__label">Descripción</span>
+        <p class="fallas-modal__text">{{ reporte.descripcion|default:"Sin descripción" }}</p>
+      </div>
+
+      <div class="fallas-modal__section">
+        <span class="fallas-modal__label">Causa raíz</span>
+        <p class="fallas-modal__text">{{ reporte.causaRaiz }}</p>
+      </div>
+
+      {% if reporte.imagen %}
+      <div class="fallas-modal__section">
+        <span class="fallas-modal__label">Evidencia</span>
+        <img class="fallas-modal__img" src="{{ reporte.imagen }}" alt="Evidencia del reporte">
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="fallas-modal__footer">
+      <button type="button" class="fallas-modal__btn fallas-modal__btn--close" data-dismiss="modal">Cerrar</button>
+    </div>
+  </div>
+</div>
