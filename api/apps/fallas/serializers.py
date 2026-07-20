@@ -1,5 +1,7 @@
 from datetime import date, datetime
+import os
 
+from django.conf import settings
 from rest_framework import serializers
 
 from . import models
@@ -81,19 +83,35 @@ class ReporteFallaDetailSerializer(serializers.ModelSerializer):
 
 
 class ReporteFallaCreateSerializer(serializers.ModelSerializer):
+    imagen = serializers.FileField(required=False, allow_null=True)
 
     class Meta:
         model = models.ReporteFalla
         fields = [
             "asunto", "descripcion", "causaRaiz", "tiempoParo",
-            "maquina", "tipo_falla", "tipo_severidad",
+            "maquina", "tipo_falla", "tipo_severidad", "imagen", "estado_reporte",
         ]
 
     def create(self, validated_data):
+        imagen_file = validated_data.pop("imagen", None)
+
         validated_data["fechaCreacion"] = date.today()
         validated_data["horaCreacion"] = datetime.now().time()
         validated_data["fechaResolucion"] = date.today()
         trabajador = self.context["request"].session.get("usuario")
         if trabajador:
             validated_data["trabajador"] = trabajador["numeroNomina"]
-        return super().create(validated_data)
+
+        reporte = super().create(validated_data)
+
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "fallas")
+            os.makedirs(carpeta, exist_ok=True)
+            ruta = os.path.join(carpeta, imagen_file.name)
+            with open(ruta, "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            reporte.imagen = f"fallas/{imagen_file.name}"
+            reporte.save(update_fields=["imagen"])
+
+        return reporte

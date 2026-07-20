@@ -77,7 +77,7 @@ class ReporteFalla(models.Model):
     tiempoParo = models.IntegerField(null=True, blank=True)
     causaRaiz = models.CharField(max_length=500)
     descripcion = models.CharField(max_length=500, null=True, blank=True)
-    imagen = models.CharField(max_length=255, null=True, blank=True)
+    imagen = models.ImageField(upload_to='fallas_images/')
     maquina = models.ForeignKey(
         Maquina, on_delete=models.DO_NOTHING, db_column="maquina", null=True, blank=True
     )
@@ -95,6 +95,13 @@ class ReporteFalla(models.Model):
         TipoSeveridad,
         on_delete=models.DO_NOTHING,
         db_column="tipo_severidad",
+        null=True,
+        blank=True,
+    )
+    estado_reporte = models.ForeignKey(
+        EstadoReporte,
+        on_delete=models.DO_NOTHING,
+        db_column="estado_reporte",
         null=True,
         blank=True,
     )
