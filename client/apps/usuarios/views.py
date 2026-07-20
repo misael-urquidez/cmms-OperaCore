@@ -41,7 +41,11 @@ class AuthView(generic.View):
     template_name = "usuarios/index.html"
 
     def get(self, request):
-        if request.session.get("usuario"):
+        usuario = request.session.get("usuario")
+        if usuario:
+            # Ya hay sesion: mandarlo a su pantalla segun rol.
+            if usuario.get("rol") == "ADMIN":
+                return redirect("usuarios:admin_dashboard")
             return redirect("home")
 
         tab = request.GET.get("tab", "login")
@@ -89,6 +93,11 @@ class LoginView(generic.View):
         trabajador = response.json()
         request.session["usuario"] = trabajador
         messages.success(request, f"Bienvenido, {trabajador.get('nombre') or trabajador.get('usuario')}.")
+
+        # Redirigir segun el rol: ADMIN va a su panel; los demas (TECNI,
+        # ENCLN o sin rol) al home normal mientras desarrollamos sus menus.
+        if trabajador.get("rol") == "ADMIN":
+            return redirect("usuarios:admin_dashboard")
         return redirect("home")
 
 
@@ -135,4 +144,25 @@ class LogoutView(generic.View):
     def get(self, request):
         request.session.flush()
         messages.success(request, "Sesión cerrada.")
-        return redirect("home")
+        return redirect("usuarios:index")
+
+
+class AdminDashboardView(generic.View):
+    """Panel principal del ADMINISTRADOR. Solo entra quien tiene sesion
+    iniciada Y rol ADMIN; cualquier otro caso se regresa con aviso."""
+
+    template_name = "usuarios/admin_dashboard.html"
+
+    def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
+        if usuario.get("rol") != "ADMIN":
+            messages.error(request, "No tienes permisos para entrar al panel de administración.")
+            return redirect("home")
+
+        # stats: por ahora vacio; aqui despues pegamos al api/ para llenar
+        # las tarjetas del dashboard (maquinas, fallas abiertas, etc.).
+        return render(request, self.template_name, {"seccion": "dashboard", "stats": {}})
