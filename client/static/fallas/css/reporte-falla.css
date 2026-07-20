@@ -1,0 +1,264 @@
+.contenedor {
+    display: flex;
+    gap: 1.5rem;
+    background: var(--color-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+}
+
+.left-side {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.right-side {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.contenedor label {
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    margin-top: 0.5rem;
+}
+
+.contenedor input[type="text"],
+.contenedor input[type="number"],
+.contenedor textarea,
+.contenedor select {
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--line);
+    border-radius: 0.375rem;
+    font-size: 0.9rem;
+}
+
+.contenedor input:focus,
+.contenedor textarea:focus,
+.contenedor select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.contenedor textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.contenedor button {
+    padding: 0.6rem 1.5rem;
+    background: var(--color-primary);
+    color: var(--color-bg);
+    border: none;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.contenedor button:hover {
+    opacity: 0.85;
+}
+
+.contenedor .btn-cancel {
+    background: transparent;
+    color: var(--color-muted);
+    border: 1px solid rgba(255,255,255,0.12);
+    text-decoration: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.9rem;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.contenedor .btn-cancel:hover {
+    color: var(--color-text);
+    border-color: var(--color-primary);
+}
+
+.contenedor-botones{
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+}
+
+.drag-drop{
+    width: 100%;
+}
+
+    .drag-drop .drop-zone {
+     width: 100%;
+      border: 2px dashed #0d5ecf;
+      background: #f8fafc;
+      border-radius: 20px;
+      padding: 2rem 1rem;
+      text-align: center;
+      transition: background 0.2s, border-color 0.2s;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .drag-drop .drop-zone:hover {
+      background: #f1f5f9;
+      border-color: #64748b;
+    }
+
+    .drag-drop .drop-zone .icon {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .drag-drop .drop-zone p {
+      font-size: 0.95rem;
+      color: #1e293b;
+      font-weight: 450;
+    }
+
+    .drag-drop .drop-zone span {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+
+    .drag-drop input[type="file"] {
+      position: absolute;
+      width: 0;
+      height: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* 4. CON ÍCONO Y TEXTO (botón híbrido) */
+    .icon-btn .file-label-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      background: #eef2ff;
+      color: #4338ca;
+      padding: 0.65rem 1.8rem 0.65rem 1.4rem;
+      border-radius: 40px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      border: 1px solid #c7d2fe;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      width: fit-content;
+    }
+
+    .icon-btn .file-label-icon:hover {
+      background: #e0e7ff;
+      border-color: #818cf8;
+    }
+
+    .icon-btn input[type="file"] {
+      position: absolute;
+      width: 0;
+      height: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .icon-btn .file-status {
+      font-size: 0.85rem;
+      color: #334155;
+      background: #f1f5f9;
+      padding: 0.2rem 0.9rem;
+      border-radius: 40px;
+      display: inline-block;
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .preview-box {
+      margin-top: 0.5rem;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .preview-box img {
+      max-width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .preview-box .placeholder {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      padding: 1rem;
+      text-align: center;
+    }
+
+.guias {
+    background: rgba(56, 189, 248, 0.06);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.guias summary {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-primary);
+    cursor: pointer;
+    list-style: none;
+}
+
+.guias summary::-webkit-details-marker { display: none; }
+
+.guias summary::before {
+    content: "▸ ";
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+.guias[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.guias__intro {
+    font-size: 0.82rem;
+    color: var(--color-muted);
+    margin: 0.75rem 0 0.5rem;
+    line-height: 1.5;
+}
+
+.guias__lista {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: 0.82rem;
+    color: var(--color-text);
+    line-height: 1.6;
+}
+
+.guias__lista li {
+    margin-bottom: 0.4rem;
+}
+
+.guias__lista li strong {
+    color: var(--color-primary);
+}

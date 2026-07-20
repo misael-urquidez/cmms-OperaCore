@@ -9,6 +9,10 @@ from django.views import generic
 
 API_URL = f"{settings.API_BASE_URL}/elipse"
 
+# Sesion HTTP a nivel de modulo: reusa la conexion TCP con el api/.
+# Aqui no se cachea nada: es un chat, cada pregunta es distinta.
+SESSION = requests.Session()
+
 
 class Index(generic.View):
     """Pantalla de chat de Elipse. Solo para sesion iniciada (mismo
@@ -39,7 +43,7 @@ class Chat(generic.View):
             return JsonResponse({"error": "Petición inválida."}, status=400)
 
         try:
-            resp = requests.post(f"{API_URL}/chat/", json=body, timeout=25)
+            resp = SESSION.post(f"{API_URL}/chat/", json=body, timeout=25)
             return JsonResponse(resp.json(), status=resp.status_code)
         except requests.exceptions.RequestException:
             return JsonResponse({"error": "No se pudo conectar con el servidor de Elipse."}, status=502)
