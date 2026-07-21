@@ -56,11 +56,31 @@ class OrdenMantenimiento(models.Model):
     horasintervenidas = models.FloatField(db_column='horasIntervenidas', blank=True, null=True)  # Field name made lowercase.
     porcentaje = models.FloatField(blank=True, null=True)
     imagen = models.CharField(max_length=255, blank=True, null=True)
-    maquina = models.ForeignKey(Maquina, models.DO_NOTHING, db_column='maquina', blank=True, null=True)
-    trabajador = models.ForeignKey(Trabajador, models.DO_NOTHING, db_column='trabajador', blank=True, null=True)
-    reporte_falla = models.ForeignKey(ReporteFalla, models.DO_NOTHING, db_column='reporte_falla', blank=True, null=True)
-    tipo_mantenimiento = models.ForeignKey(TipoMantenimiento, models.DO_NOTHING, db_column='tipo_mantenimiento', blank=True, null=True)
-    estado_orden = models.ForeignKey(EstadoOrden, models.DO_NOTHING, db_column='estado_orden', blank=True, null=True)
+    maquina = models.ForeignKey(
+        Maquina, models.DO_NOTHING, db_column='maquina', blank=True, null=True
+    )
+    trabajador = models.ForeignKey(
+        Trabajador, 
+        models.DO_NOTHING, 
+        db_column='trabajador', 
+        blank=True, 
+        null=True,
+        related_name='mantenimiento_ordenes'  # <-- AGREGAR ESTO
+    )
+    reporte_falla = models.ForeignKey(
+        ReporteFalla, 
+        models.DO_NOTHING, 
+        db_column='reporte_falla', 
+        blank=True, 
+        null=True,
+        related_name='mantenimiento_ordenes'  # <-- AGREGAR ESTO
+    )
+    tipo_mantenimiento = models.ForeignKey(
+        TipoMantenimiento, models.DO_NOTHING, db_column='tipo_mantenimiento', blank=True, null=True
+    )
+    estado_orden = models.ForeignKey(
+        EstadoOrden, models.DO_NOTHING, db_column='estado_orden', blank=True, null=True
+    )
 
     class Meta:
         managed = False
