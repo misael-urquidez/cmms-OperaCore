@@ -392,13 +392,12 @@ CREATE TABLE REPORTE_FALLA (
     trabajador      VARCHAR(15) NOT NULL,
     tipo_falla      INT  NOT NULL,
     tipo_severidad  VARCHAR(5)  NOT NULL,
-    estado_reporte VARCHAR(5)  NOT NULL,
+    estado_reporte  VARCHAR(5)  NOT NULL,
     CONSTRAINT fk_repfalla_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo),
     CONSTRAINT fk_repfalla_trabajador FOREIGN KEY (trabajador) REFERENCES TRABAJADOR(numeroNomina),
     CONSTRAINT fk_repfalla_tipofalla FOREIGN KEY (tipo_falla) REFERENCES TIPO_FALLA(numeroRegistro),
-    CONSTRAINT fk_repfalla_severidad FOREIGN KEY (tipo_severidad) REFERENCES TIPO_SEVERIDAD(codigo)
-    CONSTRAINT fk_estado_reporte  FOREIGN KEY (estado_reporte) REFERENCES EDO_REPORTE(codigo); */
-
+    CONSTRAINT fk_repfalla_severidad FOREIGN KEY (tipo_severidad) REFERENCES TIPO_SEVERIDAD(codigo),
+    CONSTRAINT fk_estado_reporte FOREIGN KEY (estado_reporte) REFERENCES EDO_REPORTE(codigo)
 ) ENGINE=InnoDB;
 
 /* ALTER TABLE REPORTE_FALLA ADD COLUMN estado_reporte VARCHAR(5) NULL;

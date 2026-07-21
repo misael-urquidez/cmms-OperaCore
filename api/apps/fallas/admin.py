@@ -8,6 +8,7 @@ class ReporteFallaAdmin(admin.ModelAdmin):
     list_display = (
         "numeroRegistro", "asunto", "fechaCreacion", "horaCreacion",
         "maquina", "trabajador", "tipo_falla", "tipo_severidad",
+        "estado_reporte",
     )
     list_filter = ("tipo_severidad", "tipo_falla", "fechaCreacion")
     search_fields = ("asunto", "causaRaiz", "descripcion")
@@ -29,4 +30,3 @@ class EstadoReporteAdmin(admin.ModelAdmin):
 
 
 admin.site.register(models.Maquina)
-admin.site.register(models.TipoReporte)

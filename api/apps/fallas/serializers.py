@@ -92,8 +92,8 @@ class ReporteFallaCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["fechaCreacion"] = date.today()
         validated_data["horaCreacion"] = datetime.now().time()
-        validated_data["fechaResolucion"] = date.today()
+        validated_data["estado_reporte"] = models.EstadoReporte.objects.get(codigo="ABIER")
         trabajador = self.context["request"].session.get("usuario")
         if trabajador:
-            validated_data["trabajador"] = trabajador["numeroNomina"]
+            validated_data["trabajador_id"] = trabajador["numeroNomina"]
         return super().create(validated_data)
