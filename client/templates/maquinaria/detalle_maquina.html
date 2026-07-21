@@ -3,297 +3,355 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>OPERACORE | Maquinaria</title>
+    <title>OPERACORE | Detalle de Máquina: {{ maquina.nombre|default:"Equipo" }}</title>
     <style>
-        /* ==========================================================================
-           VARIABLES GLOBALES Y CONFIGURACIÓN (Fácil mantenimiento)
-           ========================================================================== */
         :root {
-            /* Paleta de Colores Terciarios e Industriales */
-            --bg-main: #0f1115;          /* Fondo oscuro profundo */
-            --bg-card: #161920;          /* Fondo de tarjetas (Gris azulado industrial) */
-            --bg-info: #1f242e;          /* Fondo de contenedores de datos */
-            --border-color: #2a313e;     /* Bordes sutiles estándar */
-            
-            /* Colores de Acento (Estilo Tech/CMMS) */
-            --accent: #00adb5;           /* Cian/Aqua para elementos interactivos y títulos */
-            --accent-hover: #00f5ff;     /* Brillo de interacción */
-            --text-main: #e3e8f0;        /* Texto principal claro */
-            --text-muted: #94a3b8;       /* Texto secundario/etiquetas */
-            
-            /* Estados de Mantenimiento (Ejemplo dinámico o base) */
-            --status-bg: #1e293b;
-            --status-text: #38bdf8;
-            
-            /* Animaciones */
+            --bg-main: #0f1115;
+            --bg-card: #161920;
+            --bg-info: #1f242e;
+            --border-color: #2a313e;
+            --accent: #00adb5;
+            --text-main: #e3e8f0;
+            --text-muted: #94a3b8;
             --transition: all 0.25s ease-in-out;
         }
 
-        /* ==========================================================================
-           ESTILOS GENERALES
-           ========================================================================== */
         body {
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background-color: var(--bg-main);
             color: var(--text-main);
-            line-height: 1.5;
         }
 
-        /* ==========================================================================
-           HEADER (Panel de Control Superior)
-           ========================================================================== */
         header {
             background-color: var(--bg-card);
             padding: 24px 40px;
             border-bottom: 1px solid var(--border-color);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         header h1 {
             margin: 0;
             color: #ffffff;
-            font-size: 28px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
+            font-size: 24px;
+        }
+
+        .header-actions {
             display: flex;
-            align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
-        header p {
-            margin: 6px 0 0 0;
-            color: var(--text-muted);
-            font-size: 14px;
-        }
-
-        /* ==========================================================================
-           CONTENEDOR PRINCIPAL (Grid Responsivo)
-           ========================================================================== */
         .container {
             padding: 40px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 30px;
-            max-width: 1400px;
+            max-width: 1250px;
             margin: 0 auto;
         }
 
-        /* ==========================================================================
-           TARJETAS DE MAQUINARIA (Dashboard Style)
-           ========================================================================== */
-        .card {
+        /* Layout en 3 columnas: Imagen a la izquierda, Información en el medio, Visor 3D a la derecha */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 360px 1fr 360px;
+            gap: 25px;
+            align-items: start;
+        }
+
+        .detail-card {
             background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 24px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-            transition: var(--transition);
-            display: flex;
-            flex-direction: column;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
         }
 
-        .card:hover {
-            transform: translateY(-4px);
-            border-color: var(--accent);
-            box-shadow: 0 12px 20px -5px rgba(0, 173, 181, 0.15);
-        }
-
-        /* ==========================================================================
-           CONTENEDOR DE IMAGEN (Viewport del Componente)
-           ========================================================================== */
-        .machine-img {
-            height: 180px;
-            background-color: var(--bg-main);
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-            margin-bottom: 20px;
-            position: relative;
-        }
-
-        /* Icono fallback cuando no hay imagen */
-        .machine-img font-fallback {
-            font-size: 48px;
-            color: var(--text-muted);
-        }
-
-        .machine-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain; /* Mantiene la proporción del equipo SMT sin deformar */
-            padding: 10px;
-            transition: var(--transition);
-        }
-
-        .card:hover .machine-img img {
-            transform: scale(1.04);
-        }
-
-        /* ==========================================================================
-           DETALLES Y TEXTOS
-           ========================================================================== */
-        h2 {
+        .detail-card h2 {
             color: #ffffff;
-            margin: 0 0 16px 0;
-            font-size: 20px;
-            font-weight: 600;
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .info-group {
+            background-color: var(--bg-info);
+            padding: 12px 18px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: var(--text-muted);
+            border: 1px solid transparent;
+        }
+
+        .info-group b {
+            color: var(--text-main);
+        }
+
+        /* Estilos para las tarjetas de Imagen y Visor 3D */
+        .viewer-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            text-align: center;
+        }
+
+        .viewer-card h3 {
+            color: #ffffff;
+            font-size: 16px;
+            margin-top: 0;
+            margin-bottom: 15px;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 10px;
         }
 
-        /* Filas de Información Técnica */
-        .info {
-            background-color: var(--bg-info);
-            padding: 10px 14px;
-            margin-bottom: 8px;
-            border-radius: 6px;
-            color: var(--text-muted);
-            font-size: 13px;
+        #canvas-container {
+            width: 100%;
+            height: 320px;
+            background-color: #0b0d10;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Contenedor de la imagen estática */
+        .image-container {
+            width: 100%;
+            height: 320px;
+            background-color: #0b0d10;
+            border-radius: 8px;
+            overflow: hidden;
             display: flex;
-            justify-content: space-between; /* Alinea etiqueta a la izquierda y valor a la derecha */
             align-items: center;
-            border: 1px solid transparent;
-            transition: var(--transition);
+            justify-content: center;
         }
 
-        .info:hover {
-            border-color: var(--border-color);
-            background-color: rgba(31, 36, 46, 0.7);
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
-        .info b {
-            color: var(--text-main);
-            font-weight: 500;
-        }
-
-        /* Etiqueta de Estado de la Máquina */
-        .estado {
-            display: inline-flex;
-            align-self: flex-start; /* Evita que ocupe todo el ancho */
-            margin-top: 12px;
-            padding: 4px 12px;
-            border-radius: 4px;
-            background-color: var(--status-bg);
-            color: var(--status-text);
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border: 1px solid rgba(56, 189, 248, 0.2);
-        }
-
-        /* ==========================================================================
-           BOTÓN DE ACCIÓN (Mantenimiento / Detalles)
-           ========================================================================== */
-        .btn {
-            display: block;
-            margin-top: auto; /* Empuja el botón al fondo si las tarjetas tienen alturas distintas */
-            padding: 12px;
-            background-color: transparent;
-            color: var(--accent);
-            text-decoration: none;
-            text-align: center;
-            font-weight: 600;
-            font-size: 14px;
-            border-radius: 6px;
-            border: 1px solid var(--accent);
-            transition: var(--transition);
-            box-sizing: border-box;
-        }
-
-        .btn:hover {
+        .btn-action {
+            display: inline-block;
             background-color: var(--accent);
             color: var(--bg-main);
-            box-shadow: 0 4px 12px rgba(0, 173, 181, 0.2);
+            padding: 10px 18px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: var(--transition);
         }
-        
-        /* Mensaje de error / vacío */
-        .no-data {
-            grid-column: 1 / -1; 
-            text-align: center; 
-            color: var(--text-muted);
+
+        .btn-action:hover {
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            background-color: var(--bg-info);
+            opacity: 1;
+        }
+
+        .error-box {
+            text-align: center;
             padding: 60px 0;
-            font-weight: 400;
+            color: var(--text-muted);
+            grid-column: 1 / -1;
+        }
+
+        /* Responsividad para pantallas medianas/pequeñas */
+        @media (max-width: 1100px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
+
+    <!-- Importmap con la subcarpeta 'controls/' corregida para OrbitControls en jsDelivr -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 </head>
 <body>
 
-    <!-- Panel Superior -->
     <header>
-        <h1>⚙ OPERACORE CMMS</h1>
-        <p>Sistema inteligente de gestión de maquinaria industrial SMT</p>
+        <h1>⚙ OPERACORE | Panel de Detalle Técnico</h1>
+        <div class="header-actions">
+            <!-- Botón para volver directamente al Index general usando el namespace correcto -->
+            <a class="btn-action btn-secondary" href="{% url 'maquinaria:index' %}">&larr; Menú Principal</a>
+        </div>
     </header>
 
-    <!-- Grilla de Equipos -->
     <div class="container">
-        {% for maquina in maquinas %}
-        <div class="card">
-            
-            <!-- Imagen del Equipo -->
-            <div class="machine-img">
-                {% if maquina.imagen_url %}
-                    <img src="{% static maquina.imagen_url %}" alt="{{ maquina.nombre }}">
-                {% else %}
-                    <span class="font-fallback">⚙</span>
-                {% endif %}
+        {% if maquina %}
+        <div class="content-grid">
+            <!-- Columna 1 (Izquierda): Imagen del equipo -->
+            <div class="viewer-card">
+                <h3>Fotografía del Equipo</h3>
+                <div class="image-container">
+                    {% if maquina.modelo_3d and maquina.modelo_3d != "None" %}
+                        <!-- Esto toma 'images/YamahaYS12.glb', corta la extensión y le pone .png con la ruta estática correcta -->
+                        <img src="{% get_static_prefix %}maquinaria/{{ maquina.modelo_3d|slice:":-4" }}.png" alt="{{ maquina.nombre }}">
+                    {% else %}
+                        <div style="color: var(--text-muted); font-size: 13px; padding: 20px;">Sin imagen disponible</div>
+                    {% endif %}
+                </div>
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Vista previa del equipo físico</p>
             </div>
 
-            <!-- Título del Dispositivo -->
-            <h2>{{ maquina.nombre }}</h2>
-
-            <!-- Fichas Técnicas Informativas -->
-            <div class="info">
-                <span>Código:</span>
-                <b>{{ maquina.codigo }}</b>
+            <!-- Columna 2 (Medio): Información técnica -->
+            <div class="detail-card">
+                <h2>{{ maquina.nombre }}</h2>
+                
+                <div class="info-group">
+                    <span>Código del Equipo:</span>
+                    <b>{{ maquina.codigo }}</b>
+                </div>
+                <div class="info-group">
+                    <span>Línea SMT:</span>
+                    <b>{{ maquina.linea|default:"Sin línea asignada" }}</b>
+                </div>
+                <div class="info-group">
+                    <span>Marca:</span>
+                    <b>{{ maquina.marca|default:"N/D" }}</b>
+                </div>
+                <div class="info-group">
+                    <span>Modelo:</span>
+                    <b>{{ maquina.modelo|default:"N/D" }}</b>
+                </div>
+                <div class="info-group">
+                    <span>Tipo de Máquina:</span>
+                    <b>{{ maquina.tipo_maquina|default:"N/D" }}</b>
+                </div>
+                <div class="info-group">
+                    <span>Estado Operativo:</span>
+                    <b style="color: var(--accent);">{{ maquina.estado_maquina|default:"Sin estado" }}</b>
+                </div>
             </div>
 
-            <div class="info">
-                <span>Línea:</span>
-                <b>{% if maquina.linea %}{{ maquina.linea }}{% else %}Sin línea{% endif %}</b>
+            <!-- Columna 3 (Derecha): Cuadrito con el visor 3D -->
+            <div class="viewer-card">
+                <h3>Visualizador 3D</h3>
+                <div id="canvas-container"></div>
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Arrastra para rotar el modelo</p>
             </div>
-
-            <div class="info">
-                <span>Marca:</span>
-                <b>{% if maquina.marca %}{{ maquina.marca }}{% else %}Sin marca{% endif %}</b>
-            </div>
-
-            <div class="info">
-                <span>Modelo:</span>
-                <b>{% if maquina.modelo %}{{ maquina.modelo }}{% else %}Sin modelo{% endif %}</b>
-            </div>
-
-            <div class="info">
-                <span>Tipo de máquina:</span>
-                <b>{% if maquina.tipo_maquina %}{{ maquina.tipo_maquina }}{% else %}Sin tipo{% endif %}</b>
-            </div>
-
-            <!-- Estatus Operativo -->
-            <span class="estado">
-                {% if maquina.estado_maquina %}
-                    {{ maquina.estado_maquina }}
-                {% else %}
-                    Sin estado
-                {% endif %}
-            </span>
-
-            <!-- Enlace Técnico -->
-            <a class="btn" href="{% url 'maquinaria-detail' maquina.codigo %}">
-                ⚙ Ver detalle
-            </a>
         </div>
-        {% empty %}
-        <!-- Estado Vacío -->
-        <h3 class="no-data">
-            No existen máquinas registradas en el sistema.
-        </h3>
-        {% endfor %}
+        {% else %}
+        <div class="error-box">
+            <h3>No se pudo cargar la información de esta máquina o el equipo no existe.</h3>
+            <p>Verifica que el código sea correcto o que el servicio API esté activo.</p>
+        </div>
+        {% endif %}
     </div>
 
+    <!-- Script con iluminación dinámica equilibrada (sin quemar/blanquear la escena) -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const container = document.getElementById('canvas-container');
+        const modelPath = "{{ maquina.modelo_3d }}";
+
+        if (container && modelPath && modelPath !== "None" && modelPath.trim() !== "") {
+            // 1. Escena, Cámara y Renderizador
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0; // Exposición equilibrada para evitar el efecto "muy blanco"
+            container.appendChild(renderer.domElement);
+
+            // 2. Controles de órbita
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            // 3. Iluminación profesional y balanceada (con tonos cálidos y fríos para dar relieve sin blanquear)
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Luz ambiente moderada para conservar sombras suaves
+            scene.add(ambientLight);
+
+            const frontLight = new THREE.DirectionalLight(0xffffff, 1.2); // Luz principal frontal
+            frontLight.position.set(5, 8, 5);
+            scene.add(frontLight);
+
+            const fillLight = new THREE.DirectionalLight(0x90b0ff, 0.6); // Luz de relleno lateral azulada suave
+            fillLight.position.set(-6, 3, -4);
+            scene.add(fillLight);
+
+            const topLight = new THREE.DirectionalLight(0xffffff, 0.8); // Luz cenital superior para los detalles del panel
+            topLight.position.set(0, 10, 0);
+            scene.add(topLight);
+
+            // 4. Carga segura del archivo .glb apuntando a static/maquinaria/images/...
+            const loader = new GLTFLoader();
+            const staticUrl = "{% get_static_prefix %}";
+            const fullUrl = staticUrl + 'maquinaria/' + modelPath;
+
+            loader.load(fullUrl, function (gltf) {
+                const model = gltf.scene;
+                
+                // Ajuste sutil de materiales para mantener colores naturales y evitar brillos excesivos
+                model.traverse((node) => {
+                    if (node.isMesh && node.material) {
+                        node.material.roughness = Math.max(node.material.roughness || 0.4, 0.3);
+                        node.material.metalness = Math.min(node.material.metalness || 0.5, 0.4);
+                        node.material.needsUpdate = true;
+                    }
+                });
+
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 3.5 / maxDim;
+                model.scale.set(scale, scale, scale);
+
+                model.position.sub(center.multiplyScalar(scale));
+                scene.add(model);
+
+                camera.position.set(0, 2, 5);
+                controls.update();
+
+            }, undefined, function (error) {
+                console.error("Error al cargar el modelo 3D:", error);
+            });
+
+            // 5. Animación continua
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Responsividad
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+    </script>
 </body>
 </html>
