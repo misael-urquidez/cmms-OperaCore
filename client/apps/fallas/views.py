@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.http import JsonResponse
 from django.views import generic
 from django.contrib import messages
 import requests
@@ -170,6 +171,42 @@ class DetailReporte(generic.View):
 
         self.context = {"reporte": reporte}
         return render(request, self.template_name, self.context)
-    
+
+
+class ActualizarReporte(generic.View):
+    template_name = "fallas/fallas-modal/actualizar.html"
+
+    def get(self, request, pk):
+        cache_key = f"fallas_reporte_{pk}"
+        reporte = cache.get(cache_key)
+
+        if reporte is None:
+            try:
+                reporte = SESSION.get(
+                    f"{API_URL}/v1/reportes/{pk}/", timeout=5
+                ).json()
+                cache.set(cache_key, reporte, 30)
+            except (requests.exceptions.RequestException, ValueError):
+                return render(request, self.template_name, {"reporte": None})
+
+        severidades, tipos_falla, maquinas, estados, trabajadores, _ = _cargar_catalogos()
+
+        context = {
+            "reporte": reporte,
+            "severidades": severidades,
+            "tipos_falla": tipos_falla,
+            "maquinas": maquinas,
+            "estados": estados,
+            "trabajadores": trabajadores,
+            "api_base_url": settings.API_BASE_URL,
+        }
+        return render(request, self.template_name, context)
+
+
+class InvalidarCacheReportes(generic.View):
+
+    def post(self, request):
+        cache.delete("fallas_reportes_list")
+        return JsonResponse({"ok": True})
 
     

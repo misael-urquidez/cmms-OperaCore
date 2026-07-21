@@ -30,6 +30,7 @@
               <th>Máquina</th>
               <th>Trabajador</th>
               <th>Acciones</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -43,6 +44,7 @@
                 <td>{{ r.maquina_nombre|default:"-" }}</td>
                 <td>{{ r.trabajador_nombre|default:"-" }}</td>
                 <td><button type="button" onclick="abrir_modal_detalle({{ r.numeroRegistro }})">Ver detalles</button></td>
+                <td><button type="button" onclick="abrir_modal_actualizar({{ r.numeroRegistro }})">Actualizar</button></td>
               </tr>
             {% endfor %}
           </tbody>
@@ -56,8 +58,14 @@
   <div class="fallas-modal" id="detalle-falla" role="dialog">
   </div>
 
+    <div class="fallas-modal" id="actualizar-falla" role="dialog">
+  </div>
+
 {% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}">{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">
+<link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}">
+{% endblock %}
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="{% static 'fallas/js/modal.js' %}"></script>

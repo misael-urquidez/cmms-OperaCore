@@ -1,0 +1,175 @@
+<div class="fallas-modal__dialog" role="document">
+  <div class="fallas-modal__content">
+    <div class="fallas-modal__header">
+      <h2 class="fallas-modal__title">Actualizar reporte #{{ reporte.numeroRegistro }}</h2>
+      <button class="fallas-modal__close" type="button" data-dismiss="modal" aria-label="Cerrar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <form class="fallas-modal__body" id="form-actualizar-reporte" data-pk="{{ reporte.numeroRegistro }}" data-api="{{ api_base_url }}" enctype="multipart/form-data">
+      <div class="fallas-modal__grid">
+
+        <div class="fallas-modal__field">
+          <label class="fallas-modal__label" for="upd-asunto">Asunto</label>
+          <input type="text" id="upd-asunto" name="asunto" value="{{ reporte.asunto }}" maxlength="500" required>
+        </div>
+
+        <div class="fallas-modal__field">
+          <label class="fallas-modal__label" for="upd-maquina">Máquina</label>
+          <select id="upd-maquina" name="maquina" required>
+            {% for m in maquinas %}
+              <option value="{{ m.codigo }}" {% if reporte.maquina == m.codigo %}selected{% endif %}>{{ m.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="fallas-modal__field">
+          <label class="fallas-modal__label" for="upd-trabajador">Trabajador</label>
+          <select id="upd-trabajador" name="trabajador" required>
+            {% for t in trabajadores %}
+              <option value="{{ t.numeroNomina }}" {% if reporte.trabajador == t.numeroNomina %}selected{% endif %}>{{ t.nombre }} {{ t.apellidoPat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="fallas-modal__field">
+          <label class="fallas-modal__label" for="upd-severidad">Severidad</label>
+          <select id="upd-severidad" name="tipo_severidad" required>
+            {% for s in severidades %}
+              <option value="{{ s.codigo }}" {% if reporte.tipo_severidad == s.codigo %}selected{% endif %}>{{ s.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="fallas-modal__field">
+          <label class="fallas-modal__label" for="upd-tipo-falla">Tipo de falla</label>
+          <select id="upd-tipo-falla" name="tipo_falla" required>
+            {% for tf in tipos_falla %}
+              <option value="{{ tf.numeroRegistro }}" {% if reporte.tipo_falla == tf.numeroRegistro %}selected{% endif %}>{{ tf.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="fallas-modal__field">
+          <label class="fallas-modal__label" for="upd-estado">Estado</label>
+          <select id="upd-estado" name="estado_reporte" required>
+            {% for e in estados %}
+              <option value="{{ e.codigo }}" {% if reporte.estado_reporte == e.codigo %}selected{% endif %}>{{ e.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="fallas-modal__field">
+          <label class="fallas-modal__label" for="upd-fecha-resolucion">Fecha de solución</label>
+          <input type="date" id="upd-fecha-resolucion" name="fechaResolucion" value="{{ reporte.fechaResolucion|default:'' }}">
+        </div>
+
+        <div class="fallas-modal__field">
+          <label class="fallas-modal__label" for="upd-tiempo-paro">Tiempo de paro (hrs)</label>
+          <input type="number" id="upd-tiempo-paro" name="tiempoParo" min="0" value="{{ reporte.tiempoParo|default:'0' }}">
+        </div>
+
+      </div>
+
+      <div class="fallas-modal__section">
+        <label class="fallas-modal__label" for="upd-descripcion">Descripción</label>
+        <textarea id="upd-descripcion" name="descripcion" maxlength="500">{{ reporte.descripcion|default:"" }}</textarea>
+      </div>
+
+      <div class="fallas-modal__section">
+        <label class="fallas-modal__label" for="upd-causa-raiz">Causa raíz</label>
+        <input type="text" id="upd-causa-raiz" name="causaRaiz" value="{{ reporte.causaRaiz }}" maxlength="500" required>
+      </div>
+
+      <div class="fallas-modal__section fallas-modal__imagen-section">
+        <span class="fallas-modal__label">Evidencia</span>
+        <div class="card drag-drop">
+          <div class="file-wrapper">
+            <label for="upd-fileDrag" class="drop-zone" id="upd-dropZoneLabel">
+              {% if reporte.imagen %}
+                <img src="{{ reporte.imagen }}" alt="Evidencia actual" style="display:none;" id="upd-existing-img">
+              {% endif %}
+              <div class="icon">📤</div>
+              <p>{% if reporte.imagen %}Cambiar imagen{% else %}Suelta tu imagen aquí{% endif %}</p>
+              <span>{% if reporte.imagen %}o haz clic para reemplazar{% else %}o haz clic para explorar{% endif %}</span>
+            </label>
+            <input type="file" id="upd-fileDrag" name="imagen" accept="image/*">
+            <div class="preview-box" id="upd-previewDrag">
+              {% if reporte.imagen %}
+                <img src="{{ reporte.imagen }}" alt="Evidencia actual">
+              {% else %}
+                <span class="placeholder">Vista previa</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fallas-modal__footer">
+        <button type="button" class="fallas-modal__btn fallas-modal__btn--close" data-dismiss="modal">Cancelar</button>
+        <button type="submit" class="fallas-modal__btn fallas-modal__btn--primary">Guardar cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+    var input = document.getElementById('upd-fileDrag');
+    var preview = document.getElementById('upd-previewDrag');
+    var dropZone = document.getElementById('upd-dropZoneLabel');
+    if (!input || !preview || !dropZone) return;
+
+    dropZone.addEventListener('click', function (e) {
+        if (e.target === this || e.target.closest('.drop-zone')) input.click();
+    });
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function (name) {
+        dropZone.addEventListener(name, function (e) { e.preventDefault(); e.stopPropagation(); });
+    });
+
+    dropZone.addEventListener('dragover', function () {
+        dropZone.style.borderColor = '#2563eb';
+        dropZone.style.background = '#eef2ff';
+    });
+
+    dropZone.addEventListener('dragleave', function () {
+        dropZone.style.borderColor = '#94a3b8';
+        dropZone.style.background = '#fafcff';
+    });
+
+    dropZone.addEventListener('drop', function (e) {
+        var files = e.dataTransfer.files;
+        if (files.length > 0) {
+            input.files = files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        dropZone.style.borderColor = '#94a3b8';
+        dropZone.style.background = '#fafcff';
+    });
+
+    input.addEventListener('change', function () {
+        var file = this.files[0];
+        preview.innerHTML = '';
+        if (file && file.type.startsWith('image/')) {
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                var img = document.createElement('img');
+                img.src = ev.target.result;
+                preview.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+            var p = dropZone.querySelector('p');
+            var span = dropZone.querySelector('span');
+            if (p) p.textContent = file.name;
+            if (span) span.textContent = (file.size / 1024).toFixed(1) + ' KB';
+        } else {
+            var ph = document.createElement('span');
+            ph.className = 'placeholder';
+            ph.textContent = file ? 'Archivo no compatible' : 'Vista previa';
+            preview.appendChild(ph);
+        }
+    });
+})();
+</script>

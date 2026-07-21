@@ -1,3 +1,6 @@
+import os
+
+from django.conf import settings
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -64,6 +67,40 @@ class ReporteFallaCreateAPIView(generics.CreateAPIView):
         reporte = serializer.save()
         data = serializers.ReporteFallaDetailSerializer(reporte).data
         return Response(data, status=status.HTTP_201_CREATED)
+
+
+class ReporteFallaUpdateAPIView(generics.UpdateAPIView):
+
+    queryset = models.ReporteFalla.objects.all()
+    serializer_class = serializers.ReporteFallaUpdateSerializer
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        reporte = models.ReporteFalla.objects.get(pk=kwargs["pk"])
+
+        tipo_falla_ids = request.data.getlist("tipo_falla_ids")
+        if tipo_falla_ids:
+            models.TipoReporte.objects.filter(reporte_falla=reporte).delete()
+            for tf_id in tipo_falla_ids:
+                models.TipoReporte.objects.create(
+                    tipo_falla_id=int(tf_id),
+                    reporte_falla=reporte,
+                )
+
+        imagen_file = request.FILES.get("imagen")
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "fallas")
+            os.makedirs(carpeta, exist_ok=True)
+            with open(os.path.join(carpeta, imagen_file.name), "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            reporte.imagen = f"fallas/{imagen_file.name}"
+            reporte.save(update_fields=["imagen"])
+
+        return Response(
+            serializers.ReporteFallaDetailSerializer(reporte).data,
+            status=status.HTTP_200_OK,
+        )
     
 class TrabajadorListAPIView(generics.ListAPIView):
     """Listado ligero de trabajadores (solo nomina + nombre) para el

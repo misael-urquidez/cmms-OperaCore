@@ -139,3 +139,14 @@ class ReporteFallaCreateSerializer(serializers.ModelSerializer):
             reporte.save(update_fields=["imagen"])
 
         return reporte
+
+
+class ReporteFallaUpdateSerializer(serializers.ModelSerializer):
+    imagen = serializers.FileField(required=False, allow_null=True)
+
+    class Meta:
+        model = models.ReporteFalla
+        fields = [
+            "asunto", "descripcion", "causaRaiz", "tiempoParo", "fechaResolucion",
+            "maquina", "trabajador", "tipo_severidad", "imagen", "estado_reporte",
+        ]

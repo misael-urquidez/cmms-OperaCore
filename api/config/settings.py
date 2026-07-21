@@ -30,6 +30,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework.authtoken",  # para login por token, como obtain_auth_token
+    "corsheaders",
 ]
 
 LOCAL_APPS = [
@@ -46,6 +47,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -125,5 +127,5 @@ REST_FRAMEWORK = {
     ],
 }
 
-# CORS simple si el client corre en otro puerto/dominio (opcional, actívalo si
-# lo necesitas instalando django-cors-headers y agregándolo a INSTALLED_APPS).
+# CORS: el client (puerto 8001) consume el api (puerto 8000).
+CORS_ALLOW_ALL_ORIGINS = True
