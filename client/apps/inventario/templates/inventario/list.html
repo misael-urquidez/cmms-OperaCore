@@ -1,0 +1,100 @@
+{% extends "base_admin.html" %}
+{% block title %}Inventario · OperaCore{% endblock %}
+{% block breadcrumb %}Inventario{% endblock %}
+{% block page_title %}Inventario{% endblock %}
+
+{% block extra_css %}
+<style>
+    .badge--alerta { background: #d9534f22; color: #d9534f; }
+    .badge--ok { background: #5cb85c22; color: #5cb85c; }
+    .data-table tbody tr.is-alerta { background: color-mix(in srgb, #d9534f 8%, transparent); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+  <section class="panel">
+    <div class="panel__head">
+      <h2 class="panel__title">Refacciones</h2>
+      <div class="panel__actions">
+        <a class="btn-primary-sm" href="{% url 'inventario:movimiento_nuevo' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Registrar entrada / salida
+        </a>
+      </div>
+    </div>
+
+    {% if refacciones %}
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>SKU</th>
+              <th>Proveedor</th>
+              <th>Costo</th>
+              <th>Stock</th>
+              <th>Stock mínimo</th>
+              <th>Punto de reorden</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in refacciones %}
+              <tr class="{% if r.stock_bajo %}is-alerta{% endif %}">
+                <td>{{ r.nombre }}</td>
+                <td>{{ r.codigo_sku }}</td>
+                <td>{{ r.proveedor_nombre|default:"—" }}</td>
+                <td>${{ r.costo }}</td>
+                <td>{{ r.stock }}</td>
+                <td>{{ r.stock_minimo }}</td>
+                <td>{{ r.punto_reorden|default:"—" }}</td>
+                <td>
+                  {% if r.stock_bajo %}
+                    <span class="badge badge--alerta">Stock bajo</span>
+                  {% else %}
+                    <span class="badge badge--ok">OK</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="panel__empty">No hay refacciones registradas todavía.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel" style="margin-top: 1rem;">
+    <div class="panel__head">
+      <h2 class="panel__title">Herramientas</h2>
+    </div>
+
+    {% if herramientas %}
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Descripción</th>
+              <th>Tipo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in herramientas %}
+              <tr>
+                <td>{{ h.nombre }}</td>
+                <td>{{ h.descripcion|default:"—" }}</td>
+                <td>{{ h.tipo_nombre|default:"—" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="panel__empty">No hay herramientas registradas todavía.</p>
+    {% endif %}
+  </section>
+
+{% endblock %}

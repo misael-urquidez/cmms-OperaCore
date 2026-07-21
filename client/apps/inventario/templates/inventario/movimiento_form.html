@@ -1,0 +1,56 @@
+{% extends "base_admin.html" %}
+{% block title %}Registrar movimiento · OperaCore{% endblock %}
+{% block breadcrumb %}Inventario{% endblock %}
+{% block page_title %}Registrar entrada / salida{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-panel { max-width: 480px; }
+    .form-panel label { display: block; margin-top: 1rem; margin-bottom: 0.3rem; font-weight: 600; font-size: 0.82rem; color: var(--color-muted); }
+    .form-panel select, .form-panel input, .form-panel textarea {
+        width: 100%; padding: 0.55rem 0.7rem; border: 1px solid var(--admin-border); border-radius: 0.5rem;
+        font-size: 0.85rem; box-sizing: border-box; background: var(--color-surface); color: var(--color-text);
+    }
+    .form-panel__actions { display: flex; gap: 0.6rem; margin-top: 1.5rem; align-items: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+  <section class="panel form-panel">
+    <div class="panel__head">
+      <div class="panel__actions">
+        <a class="panel__link" href="{% url 'inventario:listado' %}">&larr; Volver al inventario</a>
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+
+      <label for="refaccion">Refacción</label>
+      <select name="refaccion" id="refaccion" required>
+        <option value="" disabled selected>Selecciona una refacción</option>
+        {% for r in refacciones %}
+          <option value="{{ r.numero_registro }}">{{ r.nombre }} (stock actual: {{ r.stock }})</option>
+        {% endfor %}
+      </select>
+
+      <label for="tipo_movimiento">Tipo de movimiento</label>
+      <select name="tipo_movimiento" id="tipo_movimiento" required>
+        <option value="ENTRADA">Entrada</option>
+        <option value="SALIDA">Salida</option>
+      </select>
+
+      <label for="cantidad">Cantidad</label>
+      <input type="number" name="cantidad" id="cantidad" min="1" required>
+
+      <label for="descripcion">Descripción (opcional)</label>
+      <textarea name="descripcion" id="descripcion" rows="3" placeholder="Ej. Reemplazo por falla en línea 2"></textarea>
+
+      <div class="form-panel__actions">
+        <button type="submit" class="btn-primary-sm">Registrar movimiento</button>
+      </div>
+    </form>
+  </section>
+
+{% endblock %}

@@ -4,5 +4,6 @@ from . import views
 app_name = "inventario"
 
 urlpatterns = [
-    path("", views.Index.as_view(), name="index"),
+    path("", views.ListadoInventario.as_view(), name="listado"),
+    path("movimiento/nuevo/", views.RegistrarMovimiento.as_view(), name="movimiento_nuevo"),
 ]

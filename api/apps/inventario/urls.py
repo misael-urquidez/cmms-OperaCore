@@ -1,14 +1,11 @@
 from django.urls import path
+
 from . import views
 
-app_name = "inventario"
-
 urlpatterns = [
-    path("ping/", views.PingAPIView.as_view(), name="ping"),
-
-    # v1 / v2 como en las clases de tu maestro, agrega aqui conforme crees
-    # tus vistas de list/detail/create/update/delete:
-    # path("v1/list/", views.ListInventarioAPIView.as_view(), name="list"),
-    # path("v1/<int:pk>/", views.DetailInventarioAPIView.as_view(), name="detail"),
-    # path("v2/create/", views.CreateInventarioAPIView.as_view(), name="create"),
+    path('v1/refacciones/list/', views.ListRefaccionAPIView.as_view(), name='refaccion-list'),
+    path('v1/refacciones/<int:pk>/', views.DetailRefaccionAPIView.as_view(), name='refaccion-detail'),
+    path('v1/herramientas/list/', views.ListHerramientaAPIView.as_view(), name='herramienta-list'),
+    path('v1/herramientas/<int:pk>/', views.DetailHerramientaAPIView.as_view(), name='herramienta-detail'),
+    path('v2/movimientos/create/', views.CreateMovimientoAPIView.as_view(), name='movimiento-create'),
 ]

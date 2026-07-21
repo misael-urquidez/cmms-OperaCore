@@ -52,6 +52,17 @@
         <a href="{% url 'fallas:lista' %}" class="{% if seccion == 'fallas' and subseccion == 'lista' %}is-active{% endif %}">Ver reportes</a>
     </div>
 </div>
+            <div class="sidebar__group {% if seccion == 'inventario' %}is-open{% endif %}">
+    <button type="button" class="sidebar__link sidebar__group-toggle" aria-expanded="{% if seccion == 'inventario' %}true{% else %}false{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+        <span>Inventario</span>
+        <svg class="sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="sidebar__submenu">
+        <a href="{% url 'inventario:listado' %}" class="{% if seccion == 'inventario' and subseccion == 'listado' %}is-active{% endif %}">Ver inventario</a>
+        <a href="{% url 'inventario:movimiento_nuevo' %}" class="{% if seccion == 'inventario' and subseccion == 'movimiento' %}is-active{% endif %}">Registrar movimiento</a>
+    </div>
+</div>
             {# Aqui iremos agregando las demas secciones conforme esten desarrolladas #}
         </nav>
 
