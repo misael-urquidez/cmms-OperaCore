@@ -48,6 +48,7 @@ class ReporteFallaListAPIView(generics.ListAPIView):
     )
     serializer_class = serializers.ReporteFallaListSerializer
 
+#cambio
 
 class ReporteFallaDetailAPIView(generics.RetrieveAPIView):
 
