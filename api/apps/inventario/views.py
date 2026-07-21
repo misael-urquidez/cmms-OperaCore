@@ -5,275 +5,309 @@ from . import models
 from . import serializers
 
 
+# ------------ PING & CATÁLOGOS AGREGADOS ----------------------------------
 class PingAPIView(APIView):
-    """Endpoint de prueba: confirma que el modulo Inventario responde."""
-
+    """Endpoint de prueba: confirma que el módulo Inventario responde."""
     def get(self, request):
         return Response({"modulo": "inventario", "status": "ok"}, status=status.HTTP_200_OK)
 
-# ------------ CLASIFICACION ----------------------------------------------------
-class ListarClasificacionAPIView(generics.ListAPIView):
-    queryset = models.Clasificacion.objects.all()
+
+class CatalogosInventarioAPIView(APIView):
+    """Junta los catálogos principales para los formularios de registro."""
+    def get(self, request):
+        data = {
+            "clasificaciones": serializers.ListClasificacionSerializer(
+                models.Clasificacion.objects.all(), many=True
+            ).data,
+            "estados_herramienta": serializers.ListEdoHerramientaSerializer(
+                models.EdoHerramienta.objects.all(), many=True
+            ).data,
+            "estados_pieza": serializers.ListEdoPiezaSerializer(
+                models.EdoPieza.objects.all(), many=True
+            ).data,
+            "estados_refaccion": serializers.ListEdoRefaccionSerializer(
+                models.EdoRefaccion.objects.all(), many=True
+            ).data,
+            "tipos_herramienta": serializers.ListTipoHerramientaSerializer(
+                models.TipoHerramienta.objects.all(), many=True
+            ).data,
+            "tipos_pieza": serializers.ListTipoPiezaSerializer(
+                models.TipoPieza.objects.all(), many=True
+            ).data,
+            "tipos_refaccion": serializers.ListTipoRefaccionSerializer(
+                models.TipoRefaccion.objects.all(), many=True
+            ).data,
+            "proveedores": serializers.ListProveedorSerializer(
+                models.Proveedor.objects.all(), many=True
+            ).data,
+        }
+        return Response(data, status=status.HTTP_200_OK)
+
+
+# ------------ CLASIFICACIÓN ------------------------------------------------
+class ClasificacionListAPIView(generics.ListAPIView):
+    queryset = models.Clasificacion.objects.all().order_by("nombre")
     serializer_class = serializers.ListClasificacionSerializer
 
-class DetailClasificacionAPIView(generics.RetrieveAPIView):
+
+class ClasificacionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Clasificacion.objects.all()
     serializer_class = serializers.DetailClasificacionSerializer
-    lookup_field = 'codigo'
 
-class CrearClasificacionAPIView(generics.CreateAPIView):
-    queryset = models.Clasificacion.objects.all()
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateClasificacionSerializer
+        return serializers.DetailClasificacionSerializer
+
+
+class ClasificacionCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateClasificacionSerializer
 
-class UpdateClasificacionAPIView(generics.UpdateAPIView):
-    queryset = models.Clasificacion.objects.all()
-    serializer_class = serializers.UpdateClasificacionSerializer
-    lookup_field = 'codigo'
 
-
-# ------------ EDO HERRAMIENTA --------------------------------------------------
-class ListarEdoHerramientaAPIView(generics.ListAPIView):
-    queryset = models.EdoHerramienta.objects.all()
+# ------------ EDO HERRAMIENTA ----------------------------------------------
+class EdoHerramientaListAPIView(generics.ListAPIView):
+    queryset = models.EdoHerramienta.objects.all().order_by("nombre")
     serializer_class = serializers.ListEdoHerramientaSerializer
 
-class DetailEdoHerramientaAPIView(generics.RetrieveAPIView):
+
+class EdoHerramientaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.EdoHerramienta.objects.all()
     serializer_class = serializers.DetailEdoHerramientaSerializer
-    lookup_field = 'codigo'
 
-class CrearEdoHerramientaAPIView(generics.CreateAPIView):
-    queryset = models.EdoHerramienta.objects.all()
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateEdoHerramientaSerializer
+        return serializers.DetailEdoHerramientaSerializer
+
+
+class EdoHerramientaCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateEdoHerramientaSerializer
 
-class UpdateEdoHerramientaAPIView(generics.UpdateAPIView):
-    queryset = models.EdoHerramienta.objects.all()
-    serializer_class = serializers.UpdateEdoHerramientaSerializer
-    lookup_field = 'codigo'
 
-
-# ------------ EDO PIEZA --------------------------------------------------------
-class ListarEdoPiezaAPIView(generics.ListAPIView):
-    queryset = models.EdoPieza.objects.all()
+# ------------ EDO PIEZA ----------------------------------------------------
+class EdoPiezaListAPIView(generics.ListAPIView):
+    queryset = models.EdoPieza.objects.all().order_by("nombre")
     serializer_class = serializers.ListEdoPiezaSerializer
 
-class DetailEdoPiezaAPIView(generics.RetrieveAPIView):
+
+class EdoPiezaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.EdoPieza.objects.all()
     serializer_class = serializers.DetailEdoPiezaSerializer
-    lookup_field = 'codigo'
 
-class CrearEdoPiezaAPIView(generics.CreateAPIView):
-    queryset = models.EdoPieza.objects.all()
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateEdoPiezaSerializer
+        return serializers.DetailEdoPiezaSerializer
+
+
+class EdoPiezaCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateEdoPiezaSerializer
 
-class UpdateEdoPiezaAPIView(generics.UpdateAPIView):
-    queryset = models.EdoPieza.objects.all()
-    serializer_class = serializers.UpdateEdoPiezaSerializer
-    lookup_field = 'codigo'
 
-
-# ------------ EDO REFACCION ----------------------------------------------------
-class ListarEdoRefaccionAPIView(generics.ListAPIView):
-    queryset = models.EdoRefaccion.objects.all()
+# ------------ EDO REFACCION ------------------------------------------------
+class EdoRefaccionListAPIView(generics.ListAPIView):
+    queryset = models.EdoRefaccion.objects.all().order_by("nombre")
     serializer_class = serializers.ListEdoRefaccionSerializer
 
-class DetailEdoRefaccionAPIView(generics.RetrieveAPIView):
+
+class EdoRefaccionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.EdoRefaccion.objects.all()
     serializer_class = serializers.DetailEdoRefaccionSerializer
-    lookup_field = 'codigo'
 
-class CrearEdoRefaccionAPIView(generics.CreateAPIView):
-    queryset = models.EdoRefaccion.objects.all()
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateEdoRefaccionSerializer
+        return serializers.DetailEdoRefaccionSerializer
+
+
+class EdoRefaccionCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateEdoRefaccionSerializer
 
-class UpdateEdoRefaccionAPIView(generics.UpdateAPIView):
-    queryset = models.EdoRefaccion.objects.all()
-    serializer_class = serializers.UpdateEdoRefaccionSerializer
-    lookup_field = 'codigo'
 
-
-# ------------ TIPO HERRAMIENTA --------------------------------------------------
-class ListarTipoHerramientaAPIView(generics.ListAPIView):
-    queryset = models.TipoHerramienta.objects.all()
+# ------------ TIPO HERRAMIENTA ---------------------------------------------
+class TipoHerramientaListAPIView(generics.ListAPIView):
+    queryset = models.TipoHerramienta.objects.all().order_by("nombre")
     serializer_class = serializers.ListTipoHerramientaSerializer
 
-class DetailTipoHerramientaAPIView(generics.RetrieveAPIView):
+
+class TipoHerramientaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.TipoHerramienta.objects.all()
     serializer_class = serializers.DetailTipoHerramientaSerializer
 
-class CrearTipoHerramientaAPIView(generics.CreateAPIView):
-    queryset = models.TipoHerramienta.objects.all()
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateTipoHerramientaSerializer
+        return serializers.DetailTipoHerramientaSerializer
+
+
+class TipoHerramientaCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateTipoHerramientaSerializer
 
-class UpdateTipoHerramientaAPIView(generics.UpdateAPIView):
-    queryset = models.TipoHerramienta.objects.all()
-    serializer_class = serializers.UpdateTipoHerramientaSerializer
 
-
-# ------------ TIPO PIEZA --------------------------------------------------------
-class ListarTipoPiezaAPIView(generics.ListAPIView):
-    queryset = models.TipoPieza.objects.all()
+# ------------ TIPO PIEZA ---------------------------------------------------
+class TipoPiezaListAPIView(generics.ListAPIView):
+    queryset = models.TipoPieza.objects.all().order_by("nombre")
     serializer_class = serializers.ListTipoPiezaSerializer
 
-class DetailTipoPiezaAPIView(generics.RetrieveAPIView):
+
+class TipoPiezaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.TipoPieza.objects.all()
     serializer_class = serializers.DetailTipoPiezaSerializer
 
-class CrearTipoPiezaAPIView(generics.CreateAPIView):
-    queryset = models.TipoPieza.objects.all()
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateTipoPiezaSerializer
+        return serializers.DetailTipoPiezaSerializer
+
+
+class TipoPiezaCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateTipoPiezaSerializer
 
-class UpdateTipoPiezaAPIView(generics.UpdateAPIView):
-    queryset = models.TipoPieza.objects.all()
-    serializer_class = serializers.UpdateTipoPiezaSerializer
 
-
-# ------------ TIPO REFACCION ----------------------------------------------------
-class ListarTipoRefaccionAPIView(generics.ListAPIView):
-    queryset = models.TipoRefaccion.objects.all()
+# ------------ TIPO REFACCION -----------------------------------------------
+class TipoRefaccionListAPIView(generics.ListAPIView):
+    queryset = models.TipoRefaccion.objects.all().order_by("nombre")
     serializer_class = serializers.ListTipoRefaccionSerializer
 
-class DetailTipoRefaccionAPIView(generics.RetrieveAPIView):
+
+class TipoRefaccionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.TipoRefaccion.objects.all()
     serializer_class = serializers.DetailTipoRefaccionSerializer
 
-class CrearTipoRefaccionAPIView(generics.CreateAPIView):
-    queryset = models.TipoRefaccion.objects.all()
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateTipoRefaccionSerializer
+        return serializers.DetailTipoRefaccionSerializer
+
+
+class TipoRefaccionCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateTipoRefaccionSerializer
 
-class UpdateTipoRefaccionAPIView(generics.UpdateAPIView):
-    queryset = models.TipoRefaccion.objects.all()
-    serializer_class = serializers.UpdateTipoRefaccionSerializer
 
-
-# ------------ PROVEEDOR --------------------------------------------------------
-class ListarProveedorAPIView(generics.ListAPIView):
-    queryset = models.Proveedor.objects.all()
+# ------------ PROVEEDORES --------------------------------------------------
+class ProveedorListAPIView(generics.ListAPIView):
+    queryset = models.Proveedor.objects.all().order_by("razonsocial")
     serializer_class = serializers.ListProveedorSerializer
 
-class DetailProveedorAPIView(generics.RetrieveAPIView):
+
+class ProveedorDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Proveedor.objects.all()
     serializer_class = serializers.DetailProveedorSerializer
-    lookup_field = 'codigo'
 
-class CrearProveedorAPIView(generics.CreateAPIView):
-    queryset = models.Proveedor.objects.all()
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateProveedorSerializer
+        return serializers.DetailProveedorSerializer
+
+
+class ProveedorCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateProveedorSerializer
 
-class UpdateProveedorAPIView(generics.UpdateAPIView):
-    queryset = models.Proveedor.objects.all()
-    serializer_class = serializers.UpdateProveedorSerializer
-    lookup_field = 'codigo'
 
-
-# ------------ HERRAMIENTA -------------------------------------------------------
-class ListarHerramientaAPIView(generics.ListAPIView):
-    queryset = models.Herramienta.objects.all()
+# ------------ HERRAMIENTAS -------------------------------------------------
+class HerramientaListAPIView(generics.ListAPIView):
+    queryset = models.Herramienta.objects.select_related("tipo_herramienta").order_by("nombre")
     serializer_class = serializers.ListHerramientaSerializer
 
-class DetailHerramientaAPIView(generics.RetrieveAPIView):
-    queryset = models.Herramienta.objects.all()
+
+class HerramientaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.Herramienta.objects.select_related("tipo_herramienta")
     serializer_class = serializers.DetailHerramientaSerializer
 
-class CrearHerramientaAPIView(generics.CreateAPIView):
-    queryset = models.Herramienta.objects.all()
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateHerramientaSerializer
+        return serializers.DetailHerramientaSerializer
+
+
+class HerramientaCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateHerramientaSerializer
 
-class UpdateHerramientaAPIView(generics.UpdateAPIView):
-    queryset = models.Herramienta.objects.all()
-    serializer_class = serializers.UpdateHerramientaSerializer
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        herramienta = serializer.save()
+        data = serializers.DetailHerramientaSerializer(herramienta).data
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
-# ------------ PIEZA ------------------------------------------------------------
-class ListarPiezaAPIView(generics.ListAPIView):
-    queryset = models.Pieza.objects.all()
+# ------------ PIEZAS -------------------------------------------------------
+class PiezaListAPIView(generics.ListAPIView):
+    queryset = models.Pieza.objects.select_related("maquina", "edo_pieza", "tipo_pieza").order_by("nombre")
     serializer_class = serializers.ListPiezaSerializer
 
-class DetailPiezaAPIView(generics.RetrieveAPIView):
-    queryset = models.Pieza.objects.all()
-    serializer_class = serializers.DetailPiezaSerializer
-    lookup_field = 'numeroserie'  # <-- Tu PK de texto en Pieza
 
-class CrearPiezaAPIView(generics.CreateAPIView):
-    queryset = models.Pieza.objects.all()
+class PiezaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.Pieza.objects.select_related("maquina", "edo_pieza", "tipo_pieza")
+    serializer_class = serializers.DetailPiezaSerializer
+
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdatePiezaSerializer
+        return serializers.DetailPiezaSerializer
+
+
+class PiezaCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreatePiezaSerializer
 
-class UpdatePiezaAPIView(generics.UpdateAPIView):
-    queryset = models.Pieza.objects.all()
-    serializer_class = serializers.UpdatePiezaSerializer
-    lookup_field = 'numeroserie'
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        pieza = serializer.save()
+        data = serializers.DetailPiezaSerializer(pieza).data
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
-# ------------ REFACCION --------------------------------------------------------
-class ListarRefaccionAPIView(generics.ListAPIView):
-    queryset = models.Refaccion.objects.all()
+# ------------ REFACCIONES --------------------------------------------------
+class RefaccionListAPIView(generics.ListAPIView):
+    queryset = models.Refaccion.objects.select_related("proveedor", "tipo_refaccion", "clasificacion").order_by("nombre")
     serializer_class = serializers.ListRefaccionSerializer
 
-class DetailRefaccionAPIView(generics.RetrieveAPIView):
-    queryset = models.Refaccion.objects.all()
+
+class RefaccionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.Refaccion.objects.select_related("proveedor", "tipo_refaccion", "clasificacion")
     serializer_class = serializers.DetailRefaccionSerializer
 
-class CrearRefaccionAPIView(generics.CreateAPIView):
-    queryset = models.Refaccion.objects.all()
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateRefaccionSerializer
+        return serializers.DetailRefaccionSerializer
+
+
+class RefaccionCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateRefaccionSerializer
 
-class UpdateRefaccionAPIView(generics.UpdateAPIView):
-    queryset = models.Refaccion.objects.all()
-    serializer_class = serializers.UpdateRefaccionSerializer
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        refaccion = serializer.save()
+        data = serializers.DetailRefaccionSerializer(refaccion).data
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
-# ------------ TABLAS DE RELACION / INTERMEDIAS ---------------------------------
-class ListarRefaccMaquiAPIView(generics.ListAPIView):
+# ------------ TABLAS DE RELACION / INTERMEDIAS ----------------------------
+class RefaccMaquiListAPIView(generics.ListCreateAPIView):
     queryset = models.RefaccMaqui.objects.all()
-    serializer_class = serializers.ListRefaccMaquiSerializer
-
-class DetailRefaccMaquiAPIView(generics.RetrieveAPIView):
-    queryset = models.RefaccMaqui.objects.all()
-    serializer_class = serializers.DetailRefaccMaquiSerializer
-    lookup_field = 'maquina'
-
-class CrearRefaccMaquiAPIView(generics.CreateAPIView):
-    queryset = models.RefaccMaqui.objects.all()
-    serializer_class = serializers.CreateRefaccMaquiSerializer
-
-class UpdateRefaccMaquiAPIView(generics.UpdateAPIView):
-    queryset = models.RefaccMaqui.objects.all()
-    serializer_class = serializers.UpdateRefaccMaquiSerializer
-    lookup_field = 'maquina'
+    
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return serializers.CreateRefaccMaquiSerializer
+        return serializers.ListRefaccMaquiSerializer
 
 
-class ListarEstadoHerramientaAPIView(generics.ListAPIView):
+class EstadoHerramientaListAPIView(generics.ListCreateAPIView):
     queryset = models.EstadoHerramienta.objects.all()
-    serializer_class = serializers.ListEstadoHerramientaSerializer
 
-class DetailEstadoHerramientaAPIView(generics.RetrieveAPIView):
-    queryset = models.EstadoHerramienta.objects.all()
-    serializer_class = serializers.DetailEstadoHerramientaSerializer
-    lookup_field = 'herramienta'
-
-class CrearEstadoHerramientaAPIView(generics.CreateAPIView):
-    queryset = models.EstadoHerramienta.objects.all()
-    serializer_class = serializers.CreateEstadoHerramientaSerializer
-
-class UpdateEstadoHerramientaAPIView(generics.UpdateAPIView):
-    queryset = models.EstadoHerramienta.objects.all()
-    serializer_class = serializers.UpdateEstadoHerramientaSerializer
-    lookup_field = 'herramienta'
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return serializers.CreateEstadoHerramientaSerializer
+        return serializers.ListEstadoHerramientaSerializer
 
 
-class ListarEstadoRefaccionAPIView(generics.ListAPIView):
+class EstadoRefaccionListAPIView(generics.ListCreateAPIView):
     queryset = models.EstadoRefaccion.objects.all()
-    serializer_class = serializers.ListEstadoRefaccionSerializer
 
-class DetailEstadoRefaccionAPIView(generics.RetrieveAPIView):
-    queryset = models.EstadoRefaccion.objects.all()
-    serializer_class = serializers.DetailEstadoRefaccionSerializer
-    lookup_field = 'estado_refaccion'
-
-class CrearEstadoRefaccionAPIView(generics.CreateAPIView):
-    queryset = models.EstadoRefaccion.objects.all()
-    serializer_class = serializers.CreateEstadoRefaccionSerializer
-
-class UpdateEstadoRefaccionAPIView(generics.UpdateAPIView):
-    queryset = models.EstadoRefaccion.objects.all()
-    serializer_class = serializers.UpdateEstadoRefaccionSerializer
-    lookup_field = 'estado_refaccion'
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return serializers.CreateEstadoRefaccionSerializer
+        return serializers.ListEstadoRefaccionSerializer
