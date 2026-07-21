@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "apps.inventario",
     "apps.indicadores",
     "apps.elipse",
+    "apps.monitoreo",
 ]
 
 MIDDLEWARE = [

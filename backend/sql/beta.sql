@@ -391,7 +391,7 @@ CREATE TABLE REPORTE_FALLA (
     maquina         VARCHAR(10) NOT NULL,
     trabajador      VARCHAR(15) NOT NULL,
     tipo_severidad  VARCHAR(5)  NOT NULL,
-    estado_reporte VARCHAR(5)  NOT NULL,
+    estado_reporte  VARCHAR(5)  NOT NULL,
     CONSTRAINT fk_repfalla_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo),
     CONSTRAINT fk_repfalla_trabajador FOREIGN KEY (trabajador) REFERENCES TRABAJADOR(numeroNomina),
     CONSTRAINT fk_repfalla_severidad FOREIGN KEY (tipo_severidad) REFERENCES TIPO_SEVERIDAD(codigo),
