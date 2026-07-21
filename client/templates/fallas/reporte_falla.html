@@ -28,7 +28,7 @@
     {% csrf_token %}
     <div class="contenedor">
       <div class="left-side">
-        <label for="asunto">Asunto</label>
+        <label for="asunto">Asunto  <span id="asunto-error"></span></label>
         <input type="text" name="asunto" id="asunto" required maxlength="500" />
 
         <label for="descripcion">Descripcion</label>
@@ -37,7 +37,7 @@
         <label for="causaRaiz">Causa raiz</label>
         <input type="text" name="causaRaiz" id="causaRaiz" required maxlength="500" />
 
-        <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas)</label>
+        <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas) <span id="horas-error"></span></label>
         <input type="number" name="tiempoParo" id="tiempoParo" min="0" />
 
         <label for="fechaSolucion">Fecha de solucion</label>
@@ -91,6 +91,9 @@
           {% endfor %}
         </select>
 
+            <h3>📊 Estado de validaciones:</h3>
+    <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
+
 
 
       </div>
@@ -127,4 +130,8 @@
 
   
 {% endblock %}
-{% block extra_js %}<script src="{% static 'fallas/js/preview-imagenes.js' %}"></script><script src="{% static 'fallas/js/añadir-elementos.js' %}"></script>{% endblock %}
+{% block extra_js %}
+<script src="{% static 'fallas/js/preview-imagenes.js' %}"></script>
+<script src="{% static 'fallas/js/añadir-elementos.js' %}"></script>
+<script src="{% static 'js/validaciones-inputs.js' %}"></script>
+{% endblock %}
