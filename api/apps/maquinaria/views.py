@@ -168,3 +168,20 @@ class UpdateMaquinaAPIView(generics.UpdateAPIView):
     queryset = models.Maquina.objects.all()
     serializer_class = serializers.UpdateMaquinaSerializer
     lookup_field = 'codigo'
+
+# ------------ REGISTRO DE OPERACION -------------------------------------
+class ListarRegistroOpsAPIView(generics.ListAPIView):
+    queryset = models.RegistroOps.objects.all()
+    serializer_class = serializers.ListRegistroOpsSerarializar
+
+class DetailRegistroOpsAPIView(generics.RetrieveAPIView):
+    queryset = models.RegistroOps.objects.all()
+    serializer_class = serializers.DetailRegistroOpsSerarializar
+
+class CrearRegistroOpsAPIView(generics.CreateAPIView):
+    queryset = models.RegistroOps.objects.all()
+    serializer_class = serializers.CreateRegistroOpsSerarializar
+
+class UpdateRegistroOpsAPIView(generics.UpdateAPIView):
+    queryset = models.RegistroOps.objects.all()
+    serializer_class = serializers.UpdateRegistroOpsSerarializar

@@ -293,3 +293,42 @@ class UpdateMaquinaSerializer(serializers.ModelSerializer):
             "estado_maquina",
             "tipo_maquina"
         ]
+
+# ------------ REGISTRO DE OPERACION -------------------------------------
+class ListRegistroOpsSerarializar(serializers.ModelSerializer):
+    class Meta:
+        model = models.RegistroOps
+        fields = [
+            "horasoperacion",
+            "maquina"
+        ]
+
+class DetailRegistroOpsSerarializar(serializers.ModelSerializer):
+    class Meta:
+        model = models.RegistroOps
+        fields = [
+            "fechainicio",
+            "fechafin",
+            "horasoperacion",
+            "maquina"
+        ]
+
+class CreateRegistroOpsSerarializar(serializers.ModelSerializer):
+    class Meta:
+        model = models.RegistroOps
+        fields = [
+            "fechainicio",
+            "fechafin",
+            "horasoperacion",
+            "maquina"
+        ]
+
+class UpdateRegistroOpsSerarializar(serializers.ModelSerializer):
+    class Meta:
+        model = models.RegistroOps
+        fields = [
+            "fechainicio",
+            "fechafin",
+            "horasoperacion",
+            "maquina"
+        ]

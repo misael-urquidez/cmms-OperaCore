@@ -5,6 +5,7 @@ python -m venv venv
 python3 -m venv venv
 
 comando para prender entorno virtual en windows:
+venv\Scripts\activate
 
 
 comando para descargar los requeriments:

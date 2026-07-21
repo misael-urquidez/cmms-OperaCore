@@ -35,6 +35,7 @@ LOCAL_APPS = [
     "apps.inventario",
     "apps.indicadores",
     "apps.elipse",
+    "apps.monitoreo",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

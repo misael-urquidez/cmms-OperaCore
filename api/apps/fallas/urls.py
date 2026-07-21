@@ -1,10 +1,12 @@
 from django.urls import path
+
 from . import views
 
 app_name = "fallas"
 
 urlpatterns = [
     path("ping/", views.PingAPIView.as_view(), name="ping"),
+<<<<<<< HEAD
     #------------TIPO FALLA ----------------------------------------------------------------------------------------
     path("v1/tipo_falla/list/", views.ListarTipoFallaAPIView.as_view(), name="list_tipos_falla"),
     path("v1/tipo_falla/create/", views.CrearTipoFallaAPIView.as_view(), name="create_tipo_falla"),
@@ -30,4 +32,16 @@ urlpatterns = [
     path("v1/reportes/create/", views.CrearReporteFallaAPIView.as_view(), name="create_reporte"),
     path("v1/reportes/<int:pk>/", views.DetailReporteFallaAPIView.as_view(), name="detail_reporte"),
     path("v1/reportes/update/<int:pk>/", views.UpdateReporteFallaAPIView.as_view(), name="update_reporte"),
+=======
+    # v1 - lectura (catalogos + reportes)
+    path("v1/tipos-severidad/", views.TipoSeveridadListAPIView.as_view(), name="tipos-severidad"),
+    path("v1/tipos-falla/", views.TipoFallaListAPIView.as_view(), name="tipos-falla"),
+    path("v1/maquinas/", views.MaquinaListAPIView.as_view(), name="maquinas"),
+    path("v1/estados-reporte/", views.EstadoReporteListAPIView.as_view(), name="estados-reporte"),
+    path("v1/catalogos-reporte/", views.CatalogosReporteAPIView.as_view(), name="catalogos-reporte"),
+    path("v1/reportes/list/", views.ReporteFallaListAPIView.as_view(), name="reportes-list"),
+    # v2 - escritura
+    path("v2/reportes/create/", views.ReporteFallaCreateAPIView.as_view(), name="reportes-create"),
+    
+>>>>>>> origin/main
 ]

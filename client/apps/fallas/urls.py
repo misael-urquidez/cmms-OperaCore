@@ -1,9 +1,11 @@
 from django.urls import path
+
 from . import views
 
 app_name = "fallas"
 
 urlpatterns = [
+<<<<<<< HEAD
     path("", views.Index.as_view(), name="index"),
     #------------TIPO FALLA ----------------------------------------------------------------------------------------
     path("v1/tipo_falla/list/", views.ListTipoFalla.as_view(), name="list_tipos_falla"),
@@ -30,4 +32,9 @@ urlpatterns = [
     path("v1/reporte_falla/<int:pk>/", views.DetailReporteFalla.as_view(), name="detail_reporte_falla"),
     path("v1/reporte_falla/create/", views.CreateReporteFalla.as_view(), name="create_reporte_falla"),
     path("v1/reporte_falla/update/<int:pk>/", views.UpdateReporteFalla.as_view(), name="update_reporte_falla"),
+=======
+    path("", views.ListaReportes.as_view(), name="index"),
+    path("reporte/", views.ReporteFalla.as_view(), name="reporte"),
+    path("lista/", views.ListaReportes.as_view(), name="lista"),
+>>>>>>> origin/main
 ]

@@ -37,7 +37,21 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
                 <span>Dashboard</span>
             </a>
-
+            <a class="sidebar__link {% if seccion == 'monitoreo' %}is-active{% endif %}" href="{% url 'monitoreo:index' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5M4 12h4l2-5 4 10 2-5h4"/><circle cx="20" cy="12" r="1" fill="currentColor"/></svg>
+                <span>Monitoreo</span>
+            </a>
+            <div class="sidebar__group {% if seccion == 'fallas' %}is-open{% endif %}">
+    <button type="button" class="sidebar__link sidebar__group-toggle" aria-expanded="{% if seccion == 'fallas' %}true{% else %}false{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <span>Fallas</span>
+        <svg class="sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="sidebar__submenu">
+        <a href="{% url 'fallas:reporte' %}" class="{% if seccion == 'fallas' and subseccion == 'reporte' %}is-active{% endif %}">Nuevo reporte</a>
+        <a href="{% url 'fallas:lista' %}" class="{% if seccion == 'fallas' and subseccion == 'lista' %}is-active{% endif %}">Ver reportes</a>
+    </div>
+</div>
             {# Aqui iremos agregando las demas secciones conforme esten desarrolladas #}
         </nav>
 

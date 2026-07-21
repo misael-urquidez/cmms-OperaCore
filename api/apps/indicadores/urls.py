@@ -5,10 +5,9 @@ app_name = "indicadores"
 
 urlpatterns = [
     path("ping/", views.PingAPIView.as_view(), name="ping"),
-
-    # v1 / v2 como en las clases de tu maestro, agrega aqui conforme crees
-    # tus vistas de list/detail/create/update/delete:
-    # path("v1/list/", views.ListIndicadoresAPIView.as_view(), name="list"),
-    # path("v1/<int:pk>/", views.DetailIndicadoresAPIView.as_view(), name="detail"),
-    # path("v2/create/", views.CreateIndicadoresAPIView.as_view(), name="create"),
+    # ------------ INDICADOR --------------------------------------------------------
+    path("v1/indicador/list/", views.ListarIndicadorAPIView.as_view(), name="list_indicadores"),
+    path("v1/indicador/create/", views.CrearIndicadorAPIView.as_view(), name="create_indicador"),
+    path("v1/indicador/<int:pk>/", views.DetailIndicadorAPIView.as_view(), name="detail_indicador"),
+    path("v1/indicador/update/<int:pk>/", views.UpdateIndicadorAPIView.as_view(), name="update_indicador"),
 ]

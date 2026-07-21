@@ -1,0 +1,102 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% block title %}Reporte de Falla · OperaCore{% endblock %}
+{% block breadcrumb %}Fallas{% endblock %}
+{% block page_title %}Nuevo reporte de falla{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">{% endblock %}
+{% block content %}
+  <h1>Reporte de Falla</h1>
+
+  <div class="guias">
+    <details open>
+      <summary>¿Que hacer en un reporte de falla?</summary>
+      <p class="guias__intro">Estas instrucciones tienen como objetivo estructurar el levantamiento del reporte ante una anomalia detectada en una maquinaria industrial, guiando al usuario para que la informacion capturada en el sistema sea precisa y tecnica, facilitando la pronta rehabilitacion del servicio y la documentacion tecnica necesaria.</p>
+      <ul class="guias__lista">
+        <li><strong>Asunto:</strong> Define la falla con un nombre preciso (ej. "Engrane de transmision roto", "Fuga de refrigerante en sellado principal"). Debe ser un titulo breve y descriptivo que identifique de inmediato la anomalia.</li>
+        <li><strong>Descripcion:</strong> Brinda una descripcion inicial detallada de que sucede. Analiza la Identidad (que tiene el defecto). Descripcion inicial de que sucede.</li>
+        <li><strong>Causa raiz:</strong> Basado en el diagnostico analitico, identifica que es lo que sucede frente a lo que podria suceder pero no ocurre para delimitar las causas. Busca modificaciones recientes en el ambiente o la operacion que pudieran haber originado el defecto.</li>
+        <li><strong>Tiempo de paro:</strong> Registra el tiempo de paro real generado por la falla, considerando los tiempos de operacion habituales. Si la maquina no se detuvo, registra "0". Este dato es crucial para medir la Magnitud de la afectacion.</li>
+        <li><strong>Maquina:</strong> Selecciona la maquina afectada para registrar correctamente el equipo involucrado.</li>
+        <li><strong>Severidad:</strong> Determina si el recurso afectado es Vital para asignar la urgencia correcta.</li>
+        <li><strong>Tipo de falla:</strong> Categoriza la anomalia para actualizar el historial de la maquina y prevenir futuras recurrencias, en la misma maquina o en otras.</li>
+        <li><strong>Evidencia:</strong> Si es posible y seguro, adjunta imagenes o documentos que sirvan de evidencia de la falla. Esto soporta la descripcion detallada del problema y la identificacion de la causa raiz.</li>
+      </ul>
+    </details>
+  </div>
+
+  <form method="post" action="{% url 'fallas:reporte' %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="contenedor">
+      <div class="left-side">
+        <label for="asunto">Asunto</label>
+        <input type="text" name="asunto" id="asunto" required maxlength="500" />
+
+        <label for="descripcion">Descripcion</label>
+        <textarea name="descripcion" id="descripcion" maxlength="500"></textarea>
+
+        <label for="causaRaiz">Causa raiz</label>
+        <input type="text" name="causaRaiz" id="causaRaiz" required maxlength="500" />
+
+        <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas)</label>
+        <input type="number" name="tiempoParo" id="tiempoParo" min="0" />
+
+        <label for="maquina">Maquina</label>
+        <select name="maquina" id="maquina" required>
+          <option value="">Seleccione...</option>
+          {% for m in maquinas %}
+            <option value="{{ m.codigo }}">{{ m.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="tipo_severidad">Severidad</label>
+        <select name="tipo_severidad" id="tipo_severidad" required>
+          <option value="">Seleccione...</option>
+          {% for s in severidades %}
+            <option value="{{ s.codigo }}">{{ s.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="tipo_falla">Tipo de falla</label>
+        <select name="tipo_falla" id="tipo_falla" required>
+          <option value="">Seleccione...</option>
+          {% for tf in tipos_falla %}
+            <option value="{{ tf.numeroRegistro }}">{{ tf.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="estado_reporte">Estado del reporte</label>
+        <select name="estado_reporte" id="estado_reporte" required>
+          <option value="">Seleccione...</option>
+          {% for e in estados %}
+            <option value="{{ e.codigo }}">{{ e.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="right-side">
+
+        <div class="card drag-drop">
+          <h3>Adjunta evidencia (opcional)</h3>
+          <div class="file-wrapper">
+            <label for="fileDrag" class="drop-zone" id="dropZoneLabel">
+              <div class="icon">📤</div>
+              <p>Haz clic</p>
+              <span>Sube la imagen</span>
+            </label>
+            <input type="file" id="fileDrag" name="imagen" accept="image/*">
+            <div class="preview-box" id="previewDrag">
+              <span class="placeholder">Vista previa</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="contenedor-botones">
+        <button type="submit">Reportar falla</button>
+        <a class="btn-cancel" href="{% url 'fallas:lista' %}">Cancelar</a>
+        </div>
+
+      </div>
+    </div>
+  </form>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'fallas/js/preview-imagenes.js' %}"></script>{% endblock %}

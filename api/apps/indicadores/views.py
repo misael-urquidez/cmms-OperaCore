@@ -11,23 +11,19 @@ class PingAPIView(APIView):
     def get(self, request):
         return Response({"modulo": "indicadores", "status": "ok"}, status=status.HTTP_200_OK)
 
+# ------------ INDICADOR --------------------------------------------------------
+class ListarIndicadorAPIView(generics.ListAPIView):
+    queryset = models.Indicador.objects.all()
+    serializer_class = serializers.ListIndicadorSerializer
 
-# A partir de aqui sigue el patron de tu maestro cuando agregues modelos reales:
-#
-# class ListIndicadoresAPIView(generics.ListAPIView):
-#     queryset = models.MiModelo.objects.all()
-#     serializer_class = serializers.ListMaquinaSerializer
-#
-# class DetailIndicadoresAPIView(generics.RetrieveAPIView):
-#     queryset = models.MiModelo.objects.all()
-#     serializer_class = serializers.DetailMaquinaSerializer
-#
-# class CreateIndicadoresAPIView(generics.CreateAPIView):
-#     serializer_class = serializers.CreateMaquinaSerializer
-#
-# class UpdateIndicadoresAPIView(generics.UpdateAPIView):
-#     queryset = models.MiModelo.objects.all()
-#     serializer_class = serializers.CreateMaquinaSerializer
-#
-# class DeleteIndicadoresAPIView(generics.DestroyAPIView):
-#     queryset = models.MiModelo.objects.all()
+class DetailIndicadorAPIView(generics.RetrieveAPIView):
+    queryset = models.Indicador.objects.all()
+    serializer_class = serializers.DetailIndicadorSerializer
+
+class CrearIndicadorAPIView(generics.CreateAPIView):
+    queryset = models.Indicador.objects.all()
+    serializer_class = serializers.CreateIndicadorSerializer
+
+class UpdateIndicadorAPIView(generics.UpdateAPIView):
+    queryset = models.Indicador.objects.all()
+    serializer_class = serializers.UpdateIndicadorSerializer
