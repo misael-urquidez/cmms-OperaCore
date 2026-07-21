@@ -1,0 +1,62 @@
+{% extends "base_admin.html" %}
+{% load static %}
+
+{% block title %}Piezas · OperaCore{% endblock %}
+{% block breadcrumb %}Inventario{% endblock %}
+{% block page_title %}Catálogo de Piezas{% endblock %}
+
+{% block content %}
+  <h1>Piezas de Maquinaria</h1>
+
+  <div class="guias">
+    <details>
+      <summary>¿Qué información se gestiona en este listado?</summary>
+      <p class="guias__intro">Aquí se listan los componentes físicos asignados o disponibles para las máquinas instaladas:</p>
+      <ul class="guias__lista">
+        <li><strong>Número de Serie y Etiqueta:</strong> Claves únicas para identificación rápida en planta.</li>
+        <li><strong>Máquina:</strong> Muestra la unidad industrial a la que pertenece o se encuentra instalada la pieza.</li>
+        <li><strong>Estado:</strong> Indica la condición operativa del componente (ej. Operativa, En Reparación, Desechada).</li>
+      </ul>
+    </details>
+  </div>
+
+  <div class="contenedor" style="flex-direction: column;">
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 1rem;">
+      <span style="font-size: 0.9rem; color: var(--color-muted);">Listado general de componentes registrados</span>
+      <a href="{% url 'inventario:crear_pieza' %}" class="btn-cancel" style="background: var(--color-primary); color: var(--color-bg); border: none; font-weight: 600;">
+        + Registrar nueva pieza
+      </a>
+    </div>
+
+    <div style="overflow-x: auto; width: 100%;">
+      <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--admin-border); color: var(--color-muted);">
+            <th style="padding: 0.75rem;">N° Serie</th>
+            <th style="padding: 0.75rem;">Código Etiqueta</th>
+            <th style="padding: 0.75rem;">Nombre</th>
+            <th style="padding: 0.75rem;">Máquina</th>
+            <th style="padding: 0.75rem;">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pieza in piezas %}
+            <tr style="border-bottom: 1px solid var(--line);">
+              <td style="padding: 0.75rem;"><strong>{{ pieza.numeroserie }}</strong></td>
+              <td style="padding: 0.75rem;">{{ pieza.codigoetiqueta }}</td>
+              <td style="padding: 0.75rem;">{{ pieza.nombre }}</td>
+              <td style="padding: 0.75rem;">{{ pieza.maquina|default:"Sin asignar" }}</td>
+              <td style="padding: 0.75rem;">{{ pieza.edo_pieza|default:"--" }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" style="padding: 1.5rem; text-align: center; color: var(--color-muted);">
+                No se encontraron piezas registradas en el inventario.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}
