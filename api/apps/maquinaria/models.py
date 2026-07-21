@@ -251,14 +251,6 @@ class Pieza(models.Model):
         related_name="piezas"
     )
 
-    refaccion = models.ForeignKey(
-        Refaccion,
-        on_delete=models.DO_NOTHING,
-        db_column="refaccion",
-        blank=True,
-        null=True,
-        related_name="piezas"
-    )
 
     tipo_pieza = models.IntegerField(blank=True, null=True)
 
@@ -268,7 +260,6 @@ class Pieza(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.numeroSerie})"
-
 
 # ==========================================================
 # INDICADOR

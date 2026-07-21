@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from . import models
+from .models import *
 
 # Aqui van tus serializers, igual que en las clases de tu maestro:
 # uno por accion (list / detail / create / update). Ejemplo de patron
@@ -20,12 +21,10 @@ from . import models
 #         model = models.Maquina
 #         fields = ["nombre", "ubicacion"]
 
-from .models import *
 class PiezaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pieza
-        fields = "__all__"
-
+        fields = "__all__"  # Al ya no existir 'refaccion' en el modelo, Django mapeará automáticamente solo los campos reales.
 
 class RefaccionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -44,8 +43,8 @@ class ReporteFallaSerializer(serializers.ModelSerializer):
         model = ReporteFalla
         fields = "__all__"
 
-class ListMaquinaSerializer(serializers.ModelSerializer):
 
+class ListMaquinaSerializer(serializers.ModelSerializer):
     estado_maquina = serializers.StringRelatedField()
     tipo_maquina = serializers.StringRelatedField()
 
@@ -63,13 +62,14 @@ class ListMaquinaSerializer(serializers.ModelSerializer):
             "modelo_3d",
         )
         
+
 class OrdenMantenimientoSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrdenMantenimiento
         fields = "__all__"
 
-class DetailMaquinaSerializer(serializers.ModelSerializer):
 
+class DetailMaquinaSerializer(serializers.ModelSerializer):
     piezas = PiezaSerializer(many=True, read_only=True)
     indicadores = IndicadorSerializer(many=True, read_only=True)
     reportes_falla = ReporteFallaSerializer(many=True, read_only=True)
