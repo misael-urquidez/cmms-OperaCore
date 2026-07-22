@@ -8,6 +8,13 @@
      switch de "Personalización avanzada", acento/sidebar/textos).
    - plain: modo PROFESIONAL tipo el "Plano" del login — colores sobrios
      fijos; se bloquea la personalización de colores para mantener el look.
+
+   NUEVO: auto-contraste. Cada vez que cambia el fondo, el degradado o el
+   acento, se calcula la luminancia (WCAG) y se elige automáticamente el
+   color de texto/muted/sidebar-text más legible, para evitar combinaciones
+   como "texto claro sobre fondo claro". Si el usuario fija un color a mano
+   en "Personalización avanzada" que igual queda con bajo contraste, no se
+   le pisa su elección: se le muestra una advertencia en el modal.
    ========================================================================== */
 (function () {
   const body = document.body;
@@ -40,18 +47,65 @@
 
   /* ---------- utilidades de color ---------- */
   function clamp(v) { return Math.max(0, Math.min(255, v)); }
+
+  function hexToRgb(hex) {
+    let h = (hex || "#000000").replace("#", "");
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    const n = parseInt(h.padEnd(6, "0").slice(0, 6), 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+  function rgbToHex(r, g, b) {
+    return `#${[r, g, b].map((v) => clamp(Math.round(v)).toString(16).padStart(2, "0")).join("")}`;
+  }
+
   function ajustar(hex, factor) {
     // factor <1 oscurece, >1 aclara
-    const n = parseInt(hex.slice(1), 16);
-    const r = clamp(Math.round(((n >> 16) & 255) * factor));
-    const g = clamp(Math.round(((n >> 8) & 255) * factor));
-    const b = clamp(Math.round((n & 255) * factor));
-    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+    const { r, g, b } = hexToRgb(hex);
+    return rgbToHex(clamp(r * factor), clamp(g * factor), clamp(b * factor));
+  }
+  function mezclar(hexA, hexB, t) {
+    // t=0 -> hexA puro, t=1 -> hexB puro
+    const a = hexToRgb(hexA), b = hexToRgb(hexB);
+    return rgbToHex(
+      a.r + (b.r - a.r) * t,
+      a.g + (b.g - a.g) * t,
+      a.b + (b.b - a.b) * t
+    );
   }
   function esClaro(hex) {
-    const n = parseInt(hex.slice(1), 16);
-    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    const { r, g, b } = hexToRgb(hex);
     return (0.299 * r + 0.587 * g + 0.114 * b) > 150;
+  }
+
+  /* ---------- contraste WCAG ---------- */
+  function luminancia(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    const chan = (c) => {
+      c /= 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b);
+  }
+  function contraste(hexA, hexB) {
+    const l1 = luminancia(hexA), l2 = luminancia(hexB);
+    const [claro, oscuro] = l1 > l2 ? [l1, l2] : [l2, l1];
+    return (claro + 0.05) / (oscuro + 0.05);
+  }
+  // Elige, entre un candidato oscuro y uno claro, el que mejor contraste
+  // da contra el fondo indicado (así el texto siempre se lee).
+  function textoLegible(fondoHex, candidatoOscuro, candidatoClaro) {
+    const co = candidatoOscuro || "#0f172a";
+    const cl = candidatoClaro || "#f1f5f9";
+    return contraste(fondoHex, cl) >= contraste(fondoHex, co) ? cl : co;
+  }
+  function contrasteOK(fg, bg, minimo) {
+    return contraste(fg, bg) >= minimo;
+  }
+
+  function defaultsTema(theme) {
+    return theme === "light"
+      ? { bg: "#eef2f7", surface: "#ffffff" }
+      : { bg: "#0f172a", surface: "#1e293b" };
   }
 
   /* ---------- aplicar preferencias ---------- */
@@ -63,47 +117,79 @@
     else delete body.dataset.theme;
 
     // limpiar todo lo inline antes de re-aplicar
-    ["--color-bg", "--color-surface", "--color-primary", "--color-text",
-     "--sidebar-bg1", "--sidebar-bg2", "--sidebar-text", "--topbar-bg"]
+    ["--color-bg", "--color-surface", "--color-primary", "--color-primary-contrast",
+     "--color-text", "--color-muted", "--sidebar-bg1", "--sidebar-bg2",
+     "--sidebar-text", "--topbar-bg"]
       .forEach((v) => body.style.removeProperty(v));
     body.style.removeProperty("background");
     body.style.removeProperty("background-attachment");
 
     if (esPlano) return; // plano = look fijo profesional, nada custom encima
 
-    // ---- fondo de página (tambien tiñe superficie/menús para que combine) ----
+    const def = defaultsTema(prefs.theme);
+    const fondoBase = prefs.bgColor || def.bg;
+
+    // ---- fondo de página (también tiñe superficie/menús para que combine) ----
+    let superficie = def.surface;
+    let sidebarBg1, sidebarBg2, topbarBg;
+
     if (prefs.bgColor) {
       const c = prefs.bgColor;
-      if (prefs.bgGradient) {
-        body.style.background = `linear-gradient(160deg, ${ajustar(c, 1.45)} 0%, ${c} 45%, ${ajustar(c, 0.55)} 100%)`;
-        body.style.backgroundAttachment = "fixed";
-      } else {
-        body.style.setProperty("--color-bg", c);
-      }
-      // superficie (tarjetas, dropdown del menú de usuario, modal) un paso
-      // más clara que el fondo; sidebar/topbar a juego
-      const superficie = ajustar(c, esClaro(c) ? 1.12 : 1.55);
-      body.style.setProperty("--color-surface", superficie);
-      body.style.setProperty("--sidebar-bg1", ajustar(c, 1.3));
-      body.style.setProperty("--sidebar-bg2", ajustar(c, 0.85));
-      body.style.setProperty("--topbar-bg", superficie);
-    } else if (prefs.bgGradient) {
-      // degradado con el fondo default del tema
-      const base = prefs.theme === "light" ? "#eef2f7" : "#0f172a";
-      body.style.background = `linear-gradient(160deg, ${ajustar(base, 1.35)} 0%, ${base} 45%, ${ajustar(base, 0.6)} 100%)`;
+      superficie = ajustar(c, esClaro(c) ? 1.12 : 1.55);
+      sidebarBg1 = ajustar(c, 1.3);
+      sidebarBg2 = ajustar(c, 0.85);
+      topbarBg = superficie;
+      body.style.setProperty("--color-bg", c);
+    }
+
+    if (prefs.bgGradient) {
+      body.style.background = `linear-gradient(160deg, ${ajustar(fondoBase, 1.45)} 0%, ${fondoBase} 45%, ${ajustar(fondoBase, 0.55)} 100%)`;
       body.style.backgroundAttachment = "fixed";
     }
+
+    if (superficie !== def.surface || prefs.bgColor) body.style.setProperty("--color-surface", superficie);
+    if (sidebarBg1) body.style.setProperty("--sidebar-bg1", sidebarBg1);
+    if (sidebarBg2) body.style.setProperty("--sidebar-bg2", sidebarBg2);
+    if (topbarBg) body.style.setProperty("--topbar-bg", topbarBg);
+
+    // ---- AUTO-CONTRASTE: si el fondo o el degradado cambiaron, recalcular
+    // el texto para que siempre sea legible sobre el nuevo fondo/superficie ----
+    if (prefs.bgColor || prefs.bgGradient) {
+      const textoAuto = textoLegible(fondoBase);
+      const mutedAuto = mezclar(textoAuto, fondoBase, 0.4);
+      body.style.setProperty("--color-text", textoAuto);
+      body.style.setProperty("--color-muted", mutedAuto);
+
+      if (sidebarBg1 && sidebarBg2) {
+        const sidebarProm = mezclar(sidebarBg1, sidebarBg2, 0.5);
+        body.style.setProperty("--sidebar-text", textoLegible(sidebarProm));
+      }
+    }
+
+    // ---- acento: siempre calculamos qué texto se lee mejor encima de él,
+    // (botones, avatar, toggle activo) aunque el usuario no lo haya tocado ----
+    const accentEfectivo = (prefs.advanced && prefs.accent) || "#38bdf8";
+    body.style.setProperty("--color-primary-contrast", textoLegible(accentEfectivo, "#08131f", "#f8fafc"));
 
     // ---- colores finos (solo con avanzado activado) ----
     if (!prefs.advanced) return;
 
     if (prefs.accent) body.style.setProperty("--color-primary", prefs.accent);
+
     if (prefs.sidebarBg) {
       body.style.setProperty("--sidebar-bg1", prefs.sidebarBg);
       body.style.setProperty("--sidebar-bg2", ajustar(prefs.sidebarBg, 0.75));
+      // si el usuario no fijó también el texto de sidebar a mano, lo
+      // recalculamos para que combine con el fondo que sí eligió
+      if (!prefs.sidebarText) {
+        body.style.setProperty("--sidebar-text", textoLegible(prefs.sidebarBg));
+      }
     }
     if (prefs.sidebarText) body.style.setProperty("--sidebar-text", prefs.sidebarText);
-    if (prefs.textColor) body.style.setProperty("--color-text", prefs.textColor);
+    if (prefs.textColor) {
+      body.style.setProperty("--color-text", prefs.textColor);
+      body.style.setProperty("--color-muted", mezclar(prefs.textColor, fondoBase, 0.4));
+    }
   }
 
   let prefs = leer();
@@ -138,6 +224,40 @@
   const textColorInput = document.getElementById("textColorInput");
   const resetBtn = document.getElementById("appearanceReset");
   const note = document.getElementById("appearanceNote");
+  const warningEl = document.getElementById("appearanceWarning");
+
+  /* ---------- DETECCIÓN de inconsistencias visuales ----------
+     Esto es distinto al auto-contraste de arriba: aquí solo avisamos
+     cuando el propio usuario, a mano, fijó un color de texto/acento/
+     sidebar que no se lee bien — no se lo pisamos, se le informa. */
+  function chequearInconsistencias() {
+    if (!warningEl) return;
+    const problemas = [];
+    const def = defaultsTema(prefs.theme);
+    const fondoBase = prefs.bgColor || def.bg;
+
+    if (prefs.advanced && prefs.textColor && !contrasteOK(prefs.textColor, fondoBase, 4.5)) {
+      problemas.push("El color de texto elegido casi no se distingue del fondo.");
+    }
+    if (prefs.advanced && prefs.accent) {
+      const superficie = prefs.bgColor ? ajustar(prefs.bgColor, esClaro(prefs.bgColor) ? 1.12 : 1.55) : def.surface;
+      if (!contrasteOK(prefs.accent, superficie, 1.6)) {
+        problemas.push("El color de acento se pierde contra el fondo de las tarjetas.");
+      }
+    }
+    if (prefs.advanced && prefs.sidebarBg && prefs.sidebarText &&
+        !contrasteOK(prefs.sidebarText, prefs.sidebarBg, 4.5)) {
+      problemas.push("El texto de la barra lateral no contrasta con su fondo.");
+    }
+
+    if (problemas.length) {
+      warningEl.textContent = "⚠ " + problemas.join(" ");
+      warningEl.classList.add("is-visible");
+    } else {
+      warningEl.textContent = "";
+      warningEl.classList.remove("is-visible");
+    }
+  }
 
   function pintarControles() {
     const esPlano = prefs.theme === "plain";
@@ -178,8 +298,10 @@
     if (note) {
       note.textContent = esPlano
         ? "Modo plano: look profesional con colores fijos. Cambia a Oscuro o Claro para personalizar."
-        : "Los cambios se aplican al instante y se recuerdan en este navegador.";
+        : "Los cambios se aplican al instante y se recuerdan en este navegador. El contraste de texto se ajusta solo.";
     }
+
+    chequearInconsistencias();
   }
   pintarControles();
 

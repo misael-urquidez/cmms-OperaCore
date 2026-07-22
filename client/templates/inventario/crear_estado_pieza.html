@@ -1,0 +1,33 @@
+{% extends "base_admin.html" %}
+{% load static %}
+
+{% block title %}Nuevo Estado Pieza · OperaCore{% endblock %}
+{% block breadcrumb %}Inventario{% endblock %}
+{% block page_title %}Registrar Estado Pieza{% endblock %}
+
+{% block content %}
+  <h1>Registro Estado Pieza</h1>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="contenedor">
+      <div class="left-side">
+        {% if tiene_codigo %}
+          <label for="codigo">Código identificador</label>
+          <input type="text" name="codigo" id="codigo" required maxlength="20" placeholder="Ej. OP, REP, DES" />
+        {% endif %}
+
+        <label for="nombre">Nombre</label>
+        <input type="text" name="nombre" id="nombre" required maxlength="100" />
+
+        <label for="descripcion">Descripción</label>
+        <textarea name="descripcion" id="descripcion" rows="3"></textarea>
+
+        <div class="contenedor-botones">
+          <button type="submit">Guardar registro</button>
+          <a class="btn-cancel" href="{{ url_cancelar }}">Cancelar</a>
+        </div>
+      </div>
+    </div>
+  </form>
+{% endblock %}

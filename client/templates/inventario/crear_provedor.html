@@ -1,0 +1,49 @@
+{% extends "base_admin.html" %}
+{% load static %}
+
+{% block title %}Nuevo Proveedor · OperaCore{% endblock %}
+{% block breadcrumb %}Inventario{% endblock %}
+{% block page_title %}Registrar Proveedor{% endblock %}
+
+{% block content %}
+  <h1>Registro de Proveedor</h1>
+
+  <div class="guias">
+    <details open>
+      <summary>¿Para qué se registran los proveedores?</summary>
+      <p class="guias__intro">Mantiene un directorio centralizado de contactos comerciales para compras de refacciones y servicios de mantenimiento externo.</p>
+    </details>
+  </div>
+
+  <form method="post" action="{% url 'inventario:crear_proveedor' %}">
+    {% csrf_token %}
+    <div class="contenedor">
+      <div class="left-side">
+        <label for="nombre">Nombre de la empresa / Proveedor</label>
+        <input type="text" name="nombre" id="nombre" required maxlength="255" />
+
+        <label for="rfc">RFC / Tax ID</label>
+        <input type="text" name="rfc" id="rfc" maxlength="20" />
+
+        <label for="contacto">Persona de contacto</label>
+        <input type="text" name="contacto" id="contacto" maxlength="255" />
+      </div>
+
+      <div class="right-side">
+        <label for="telefono">Teléfono</label>
+        <input type="text" name="telefono" id="telefono" maxlength="50" />
+
+        <label for="email">Correo electrónico</label>
+        <input type="email" name="email" id="email" maxlength="255" />
+
+        <label for="direccion">Dirección física</label>
+        <input type="text" name="direccion" id="direccion" maxlength="255" />
+
+        <div class="contenedor-botones">
+          <button type="submit">Guardar proveedor</button>
+          <a class="btn-cancel" href="{% url 'inventario:lista_proveedores' %}">Cancelar</a>
+        </div>
+      </div>
+    </div>
+  </form>
+{% endblock %}

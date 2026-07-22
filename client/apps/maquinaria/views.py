@@ -1,22 +1,49 @@
 import requests
 from django.conf import settings
+<<<<<<< HEAD
 from django.shortcuts import render, redirect, get_object_or_404
+=======
+from django.core.cache import cache
+from django.shortcuts import render
+>>>>>>> 35c7fe2ef22a405e758ee1f3f550909d9ca8b569
 from django.views import generic
 from .forms import MaquinaForm
 
 API_URL = f"{settings.API_BASE_URL}/maquinaria"
 
+<<<<<<< HEAD
+=======
+# Sesion HTTP a nivel de modulo: reusa la conexion TCP con el api/.
+SESSION = requests.Session()
+
+# El ping es solo un status, no data real: cache de 30 seg para no
+# pegarle al api/ en cada click al modulo.
+PING_TTL = 30
+
+
+>>>>>>> 35c7fe2ef22a405e758ee1f3f550909d9ca8b569
 class Index(generic.View):
     """Dashboard principal: Muestra métricas generales y el listado de estado de la maquinaria."""
 
     template_name = "maquinaria/index.html"
 
     def get(self, request):
+<<<<<<< HEAD
         try:
             res = requests.get(f"{API_URL}/api/v1/list/", timeout=5)
             maquinas = res.json() if res.status_code == 200 else []
         except requests.exceptions.RequestException:
             maquinas = []
+=======
+        response = cache.get("maquinaria_ping")
+        if response is None:
+            try:
+                response = SESSION.get(f"{API_URL}/ping/", timeout=5).json()
+            except requests.exceptions.RequestException:
+                response = {"status": "sin conexion con el api"}
+            cache.set("maquinaria_ping", response, PING_TTL)
+        return render(request, self.template_name, {"modulo": "Maquinaria", "api_status": response})
+>>>>>>> 35c7fe2ef22a405e758ee1f3f550909d9ca8b569
 
         total_maquinas = len(maquinas)
         operativas = sum(
