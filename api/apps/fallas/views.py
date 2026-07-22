@@ -157,6 +157,59 @@ class TrabajadorListAPIView(generics.ListAPIView):
     serializer_class = serializers.TrabajadorLightSerializer
 
 
+# ------------ TIPO_REPORTE (llave compuesta) ------------------------------
+class TipoReporteListAPIView(generics.ListAPIView):
+    queryset = models.TipoReporte.objects.all()
+    serializer_class = serializers.ListTipoReporteSerializer
+
+
+class TipoReporteCreateAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateTipoReporteSerializer
+
+
+class TipoReporteDetailAPIView(generics.GenericAPIView):
+    queryset = models.TipoReporte.objects.all()
+    serializer_class = serializers.DetailTipoReporteSerializer
+
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return serializers.CreateTipoReporteSerializer
+        return serializers.DetailTipoReporteSerializer
+
+    def get_object(self):
+        obj = generics.get_object_or_404(
+            self.get_queryset(),
+            tipo_falla=self.kwargs["tipo_falla"],
+            reporte_falla=self.kwargs["reporte_falla"],
+        )
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def get(self, request, *args, **kwargs):
+        obj = self.get_object()
+        serializer = self.get_serializer(obj)
+        return Response(serializer.data)
+
+    def put(self, request, *args, **kwargs):
+        obj = self.get_object()
+        serializer = self.get_serializer(obj, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def patch(self, request, *args, **kwargs):
+        obj = self.get_object()
+        serializer = self.get_serializer(obj, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def delete(self, request, *args, **kwargs):
+        obj = self.get_object()
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class CatalogosReporteAPIView(APIView):
     """Junta los catalogos que usa el formulario de 'Reportar Falla' en
     una sola respuesta, para que el client no tenga que hacer N llamadas

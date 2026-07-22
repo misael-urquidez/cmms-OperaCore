@@ -20,4 +20,8 @@ urlpatterns = [
     path("v2/tipos-falla/create/", views.TipoFallaCreateAPIView.as_view(), name="tipos-falla-create"),
     path("v2/reportes/create/", views.ReporteFallaCreateAPIView.as_view(), name="reportes-create"),
     path("v2/reportes/update/<int:pk>/", views.ReporteFallaUpdateAPIView.as_view(), name="reportes-update"),
+    # tipo-reporte (llave compuesta)
+    path("v1/tipo-reporte/list/", views.TipoReporteListAPIView.as_view(), name="tipo-reporte-list"),
+    path("v2/tipo-reporte/create/", views.TipoReporteCreateAPIView.as_view(), name="tipo-reporte-create"),
+    path("v1/tipo-reporte/<int:tipo_falla>/<int:reporte_falla>/", views.TipoReporteDetailAPIView.as_view(), name="tipo-reporte-detail"),
 ]
