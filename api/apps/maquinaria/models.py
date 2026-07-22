@@ -13,7 +13,7 @@ class Planta(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'planta'
+        db_table = 'PLANTA'
 
 class Area(models.Model):
     codigo = models.CharField(primary_key=True, max_length=10)
@@ -24,7 +24,7 @@ class Area(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'area'
+        db_table = 'AREA'
 
 class EdoMaquina(models.Model):
     codigo = models.CharField(primary_key=True, max_length=5)
@@ -33,7 +33,7 @@ class EdoMaquina(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'edo_maquina'
+        db_table = 'EDO_MAQUINA'
 
 class Linea(models.Model):
     codigo = models.CharField(primary_key=True, max_length=10)
@@ -43,7 +43,7 @@ class Linea(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'linea'
+        db_table = 'LINEA'
     
 class Marca(models.Model):
     clave = models.CharField(primary_key=True, max_length=10)
@@ -52,7 +52,7 @@ class Marca(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'marca'
+        db_table = 'MARCA'
 
 
 class Modelo(models.Model):
@@ -63,7 +63,7 @@ class Modelo(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'modelo'
+        db_table = 'MODELO'
 
 class TipoMaquina(models.Model):
     numeroregistro = models.AutoField(db_column='numeroRegistro', primary_key=True)  # Field name made lowercase.
@@ -72,7 +72,7 @@ class TipoMaquina(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'tipo_maquina'
+        db_table = 'TIPO_MAQUINA'
     
 class Maquina(models.Model):
     codigo = models.CharField(primary_key=True, max_length=10)
@@ -89,4 +89,4 @@ class Maquina(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'maquina'
+        db_table = 'MAQUINA'

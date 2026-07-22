@@ -196,5 +196,5 @@ class TipoReporte(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'tipo_reporte'
+        db_table = 'TIPO_REPORTE'
         unique_together = (('tipo_falla', 'reporte_falla'),)
