@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import PingAPIView, ListMaquinariaAPIView, DetailMaquinariaAPIView
+from .views import *
 
 app_name = "maquinaria"
 
@@ -12,7 +12,7 @@ urlpatterns = [
     # =====================================================
     # Lista de máquinas (Devuelve JSON)
     path("api/v1/list/", ListMaquinariaAPIView.as_view(), name="maquinaria-api-list"),
-    
+    path("api/v1/create/", CreateMaquinariaAPIView.as_view(), name="maquinaria-api-create"),
     # Detalle API por código (Devuelve JSON)
     path("api/v1/<str:codigo>/", DetailMaquinariaAPIView.as_view(), name="maquinaria-api-detail"),
 ]

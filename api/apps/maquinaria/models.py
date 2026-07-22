@@ -186,6 +186,7 @@ class Maquina(models.Model):
         return f"{self.codigo} - {self.nombre}"
 
 
+
 # ==========================================================
 # REFACCIONES COMPATIBLES CON MAQUINA
 # ==========================================================

@@ -78,3 +78,8 @@ class DetailMaquinaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Maquina
         fields = "__all__"
+
+class CreateMaquinaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Maquina
+        fields = "__all__"

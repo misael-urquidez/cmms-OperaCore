@@ -3,10 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Maquina
-from .serializers import (
-    DetailMaquinaSerializer, 
-    ListMaquinaSerializer
-)
+from .serializers import *
 
 
 class PingAPIView(APIView):
@@ -35,3 +32,8 @@ class DetailMaquinariaAPIView(generics.RetrieveAPIView):
     queryset = Maquina.objects.all()
     serializer_class = DetailMaquinaSerializer
     lookup_field = "codigo"
+
+class CreateMaquinariaAPIView(generics.CreateAPIView):
+    """Permite registrar una nueva máquina mediante la API REST."""
+    queryset = Maquina.objects.all()
+    serializer_class = CreateMaquinaSerializer

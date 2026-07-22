@@ -5,6 +5,7 @@ app_name = "maquinaria"
 
 urlpatterns = [
     path("", views.Index.as_view(), name="index"),
-    path("lista/", views.ListarMaquinas.as_view(), name="list"),
-    path("<str:codigo>/", views.DetalleMaquina.as_view(), name="detail"),
+    path("listar/", views.ListarMaquinas.as_view(), name="listar"),
+    path("crear/", views.CrearMaquina.as_view(), name="crear_maquina"), 
+    path("<str:codigo>/", views.DetalleMaquina.as_view(), name="detail"), 
 ]
