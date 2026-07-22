@@ -49,6 +49,9 @@ class Linea(models.Model):
     class Meta:
         managed = False
         db_table = 'linea'
+
+    def __str__(self):
+        return self.nombre
     
 class Marca(models.Model):
     clave = models.CharField(primary_key=True, max_length=10)

@@ -22,7 +22,6 @@ LINEA_CHOICES = [
 ]
 
 class MaquinaForm(forms.Form):
-    # Usamos 'label' para mostrar textos limpios, con espacios y acentos
     numeroSerie = forms.CharField(
         max_length=100, 
         label="Número de Serie"
@@ -39,15 +38,24 @@ class MaquinaForm(forms.Form):
     
     imagen_url = forms.ImageField(
         required=False, 
-        label="Fotografía del Equipo"
+        label="Fotografía del Equipo",
+        widget=forms.ClearableFileInput(attrs={
+            "style": "position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none;"
+        })
     )
     modelo_3d = forms.FileField(
         required=False, 
-        label="Archivo Modelo 3D (.glb)"
+        label="Archivo Modelo 3D (.glb)",
+        widget=forms.ClearableFileInput(attrs={
+            "style": "position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none;"
+        })
     )
     
     fechaInstalacion = forms.DateField(
-        widget=forms.DateInput(attrs={"type": "date"}), 
+        widget=forms.DateInput(attrs={
+            "type": "date",
+            "style": "color-scheme: dark;"  # Esto hace que el calendario desplegable del navegador combine con el tema oscuro
+        }), 
         label="Fecha de Instalación"
     )
     
@@ -78,4 +86,6 @@ class MaquinaForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
-            field.widget.attrs.update({"class": "form-control-custom"})
+            if field_name not in ['imagen_url', 'modelo_3d']:
+                existing_classes = field.widget.attrs.get("class", "")
+                field.widget.attrs["class"] = f"{existing_classes}".strip()

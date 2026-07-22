@@ -1,59 +1,118 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>OPERACORE | Registrar Nueva Máquina</title>
-    <style>
-        :root {
-            --bg-main: #0f1115;
-            --bg-card: #161920;
-            --bg-info: #1f242e;
-            --border-color: #2a313e;
-            --accent: #00adb5;
-            --text-main: #e3e8f0;
-            --text-muted: #94a3b8;
-            --transition: all 0.25s ease-in-out;
-        }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-main); color: var(--text-main); }
-        header { background-color: var(--bg-card); padding: 24px 40px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        header h1 { margin: 0; color: #ffffff; font-size: 26px; }
-        .container { padding: 40px; max-width: 900px; margin: 0 auto; }
-        .form-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 30px; }
-        .form-group { margin-bottom: 20px; }
-        .form-control-custom { width: 100%; padding: 12px 16px; background-color: var(--bg-info); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 14px; box-sizing: border-box; }
-        .form-control-custom:focus { outline: none; border-color: var(--accent); }
-        .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 30px; }
-        .btn-primary { background-color: var(--accent); color: var(--bg-main); padding: 12px 24px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; text-decoration: none; }
-        .btn-secondary { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-main); padding: 12px 24px; border-radius: 6px; font-weight: 600; text-decoration: none; }
-        
-        /* Estilos adicionales para etiquetas de Django y campos de archivo */
-        form p { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
-        form label { font-weight: 600; font-size: 13px; color: var(--text-muted); text-transform: uppercase; }
-        form input[type="file"] { padding: 8px; background-color: var(--bg-info); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); }
-    </style>
-</head>
-<body>
-    <header>
-        <div>
-            <h1>⚙ OPERACORE | Registro de Maquinaria</h1>
-            <p style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 13px;">Dar de alta un nuevo equipo SMT</p>
+{% extends 'base_admin.html' %}
+{% load static %}
+
+{% block title %}OPERACORE | Registrar Nueva Máquina{% endblock %}
+
+{% block breadcrumb %}Maquinaria / Registrar{% endblock %}
+{% block page_title %}Dar de alta un nuevo equipo SMT{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'maquinaria/css/crear_maquina.css' %}">
+{% endblock %}
+
+{% block content %}
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="contenedor">
+        <!-- Columna Izquierda: Campos del formulario filtrados (sin duplicar archivos) -->
+        <div class="left-side">
+            {% for field in form %}
+                {% if field.name not in 'imagen_url,modelo_3d' %}
+                    <p style="display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.75rem;">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {{ field.errors }}
+                    </p>
+                {% endif %}
+            {% endfor %}
         </div>
-        <div>
-            <a class="btn-secondary" href="javascript:history.back()">&larr; Volver</a>
-        </div>
-    </header>
-    <div class="container">
-        <div class="form-card">
-            <!-- Se agregó enctype="multipart/form-data" para permitir subir archivos e imágenes -->
-            <form method="POST" enctype="multipart/form-data">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <div class="form-actions">
-                    <a href="javascript:history.back()" class="btn-secondary">Cancelar</a>
-                    <button type="submit" class="btn-primary">Guardar Máquina</button>
+
+        <!-- Columna Derecha: Multimedia (Fotografía y Visor 3D interactivo) -->
+        <div class="right-side" style="gap: 1.25rem;">
+            
+            <!-- 1. Sección para la Fotografía -->
+            <div style="width: 100%;">
+                <label>Fotografía del Equipo</label>
+                <div class="drag-drop">
+                    <div class="drop-zone" onclick="document.getElementById('id_imagen_url').click();">
+                        <div class="icon">📁</div>
+                        <p>Haz clic o arrastra una imagen</p>
+                        <span>PNG, JPG, JPEG</span>
+                    </div>
+                    {{ form.imagen_url }}
                 </div>
-            </form>
+                <div class="preview-box" style="min-height: 80px;">
+                    <div class="placeholder" style="font-size: 0.8rem;">Vista previa de imagen</div>
+                </div>
+            </div>
+
+            <!-- 2. Sección para el Modelo 3D con Three.js -->
+            <div style="width: 100%;">
+                <label>Archivo Modelo 3D (.glb)</label>
+                <div class="drag-drop">
+                    <div class="drop-zone" onclick="document.getElementById('id_modelo_3d').click();">
+                        <div class="icon">🧊</div>
+                        <p>Haz clic o arrastra tu archivo 3D</p>
+                        <span>Formato: .glb</span>
+                    </div>
+                    {{ form.modelo_3d }}
+                </div>
+                <div class="preview-box" id="canvas-container" style="min-height: 180px; position: relative;">
+                    <div class="placeholder" style="font-size: 0.8rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%;">
+                        Vista previa 3D del equipo
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
-</body>
-</html>
+
+    <div class="contenedor-botones">
+        <a href="{% url 'maquinaria:index' %}" class="btn-cancel-custom">Cancelar</a>
+        <button type="submit" class="btn-guardar-maquina">Guardar Máquina</button>
+    </div>
+</form>
+
+<!-- Scripts de control visual y carga del visor Three.js -->
+<script type="module">
+    import { initMaquinaViewer } from "{% static 'maquinaria/js/maquina3d.js' %}";
+
+    // 1. Manejo de vista previa para la Imagen
+    const inputImagen = document.getElementById('id_imagen_url');
+    if (inputImagen) {
+        inputImagen.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const previewBox = inputImagen.closest('.right-side').querySelector('.preview-box');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewBox.innerHTML = `<img src="${e.target.result}" alt="Vista previa" style="max-width: 100%; max-height: 180px; object-fit: contain; display: block; margin: auto;">`;
+                }
+                reader.readAsDataURL(file);
+            } else {
+                previewBox.innerHTML = `<div class="placeholder" style="font-size: 0.8rem;">Vista previa de imagen</div>`;
+            }
+        });
+    }
+
+    // 2. Manejo de renderizado interactivo con Three.js para el Modelo 3D
+    const inputModelo = document.getElementById('id_modelo_3d');
+    if (inputModelo) {
+        inputModelo.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const container = document.getElementById('canvas-container');
+            
+            if (file) {
+                container.innerHTML = '';
+                setTimeout(() => {
+                    const objectURL = URL.createObjectURL(file);
+                    initMaquinaViewer(objectURL, '');
+                }, 50);
+            } else {
+                container.innerHTML = `<div class="placeholder" style="font-size: 0.8rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%;">Vista previa 3D del equipo</div>`;
+            }
+        });
+    }
+</script>
+{% endblock %}

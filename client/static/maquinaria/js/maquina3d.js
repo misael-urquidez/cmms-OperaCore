@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/addons/loaders/OrbitControls.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export function initMaquinaViewer(modelPath, staticUrl) {
     const container = document.getElementById('canvas-container');
@@ -27,9 +27,14 @@ export function initMaquinaViewer(modelPath, staticUrl) {
         directionalLight.position.set(5, 10, 7);
         scene.add(directionalLight);
 
-        // 4. Carga del archivo .glb (añadiendo 'images/' a la ruta estática)
+        // 4. Carga del archivo .glb (soporta tanto URLs locales blob: como rutas estáticas del servidor)
         const loader = new GLTFLoader();
-        const fullUrl = staticUrl + 'images/' + modelPath;
+        let fullUrl = modelPath;
+        
+        // Si no es una URL local de blob, concatenamos la ruta estática
+        if (!modelPath.startsWith('blob:')) {
+            fullUrl = staticUrl + 'images/' + modelPath;
+        }
 
         loader.load(fullUrl, function (gltf) {
             const model = gltf.scene;
