@@ -186,8 +186,6 @@ class ReporteFalla(models.Model):
 
 
 class TipoReporte(models.Model):
-    # La tabla real usa la llave primaria compuesta (tipo_falla, reporte_falla).
-    pk = models.CompositePrimaryKey("tipo_falla", "reporte_falla")
     tipo_falla = models.ForeignKey(
         TipoFalla, on_delete=models.DO_NOTHING, db_column="tipo_falla"
     )

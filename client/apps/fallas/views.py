@@ -174,7 +174,7 @@ class DetailReporte(generic.View):
 
 
 class ActualizarReporte(generic.View):
-    template_name = "fallas/fallas-modal/actualizar.html"
+    template_name = "fallas/actualizar_reporte.html"
 
     def get(self, request, pk):
         cache_key = f"fallas_reporte_{pk}"
@@ -187,7 +187,8 @@ class ActualizarReporte(generic.View):
                 ).json()
                 cache.set(cache_key, reporte, 30)
             except (requests.exceptions.RequestException, ValueError):
-                return render(request, self.template_name, {"reporte": None})
+                messages.warning(request, "No se pudo cargar el reporte.")
+                return redirect("fallas:lista")
 
         severidades, tipos_falla, maquinas, estados, trabajadores, _ = _cargar_catalogos()
 
@@ -198,9 +199,54 @@ class ActualizarReporte(generic.View):
             "maquinas": maquinas,
             "estados": estados,
             "trabajadores": trabajadores,
-            "api_base_url": settings.API_BASE_URL,
         }
         return render(request, self.template_name, context)
+
+    def post(self, request, pk):
+        payload = {
+            "asunto": request.POST.get("asunto"),
+            "descripcion": request.POST.get("descripcion"),
+            "causaRaiz": request.POST.get("causaRaiz"),
+            "tiempoParo": request.POST.get("tiempoParo"),
+            "fechaResolucion": request.POST.get("fechaSolucion") or None,
+            "maquina": request.POST.get("maquina"),
+            "trabajador": request.POST.get("trabajador"),
+            "tipo_severidad": request.POST.get("tipo_severidad"),
+            "estado_reporte": request.POST.get("estado_reporte"),
+        }
+
+        tipo_falla_ids = []
+        valor_base = request.POST.get("tipo_falla")
+        if valor_base:
+            tipo_falla_ids.append(int(valor_base))
+        idx = 1
+        while True:
+            val = request.POST.get(f"tipo_falla_{idx}")
+            if val is None:
+                break
+            if val:
+                tipo_falla_ids.append(int(val))
+            idx += 1
+        payload["tipo_falla_ids"] = tipo_falla_ids
+
+        archivo = request.FILES.get("imagen")
+        files = {"imagen": archivo} if archivo else None
+
+        try:
+            api_url = f"{API_URL}/v2/reportes/update/{pk}/"
+            response = SESSION.patch(url=api_url, data=payload, files=files, timeout=10)
+        except requests.exceptions.RequestException:
+            messages.warning(request, "No se pudo conectar con la API para actualizar el reporte.")
+            return redirect("fallas:actualizar_reporte", pk=pk)
+
+        if response.status_code == 200:
+            cache.delete(f"fallas_reporte_{pk}")
+            cache.delete("fallas_reportes_list")
+            messages.success(request, "El reporte ha sido actualizado correctamente.")
+            return redirect("fallas:lista")
+        else:
+            messages.warning(request, "Error al actualizar el reporte.")
+            return redirect("fallas:actualizar_reporte", pk=pk)
 
 
 class InvalidarCacheReportes(generic.View):

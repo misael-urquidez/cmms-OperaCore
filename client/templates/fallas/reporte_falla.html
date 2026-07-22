@@ -28,17 +28,19 @@
     {% csrf_token %}
     <div class="contenedor">
       <div class="left-side">
+    <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
+
         <label for="asunto">Asunto  <span id="asunto-error"></span></label>
-        <input type="text" name="asunto" id="asunto" required maxlength="500" />
+        <input type="text" name="asunto" id="asunto" data-error-id="asunto-error"  required maxlength="500" />
 
-        <label for="descripcion">Descripcion</label>
-        <textarea name="descripcion" id="descripcion" maxlength="500"></textarea>
+        <label for="descripcion">Descripcion <span id="descripcion-error"></span></label>
+        <textarea name="descripcion" id="descripcion" maxlength="500" data-error-id="descripcion-error"></textarea>
 
-        <label for="causaRaiz">Causa raiz</label>
-        <input type="text" name="causaRaiz" id="causaRaiz" required maxlength="500" />
+        <label for="causaRaiz">Causa raiz <span id="causaRaiz-error"></span></label>
+        <input type="text" name="causaRaiz" id="causaRaiz" required maxlength="500" data-error-id="causaRaiz-error" />
 
         <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas) <span id="horas-error"></span></label>
-        <input type="number" name="tiempoParo" id="tiempoParo" min="0" />
+        <input type="number" name="tiempoParo" id="tiempoParo" min="0" data-error-id="horas-error"  />
 
         <label for="fechaSolucion">Fecha de solucion</label>
         <input type="date" name="fechaSolucion" id="fechaSolucion" />
@@ -91,8 +93,6 @@
           {% endfor %}
         </select>
 
-            <h3>📊 Estado de validaciones:</h3>
-    <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
 
 
 
@@ -116,7 +116,7 @@
         </div>
 
         <div class="contenedor-botones">
-        <button type="submit">Reportar falla</button>
+        <button type="submit" id="boton-registrar">Reportar falla</button>
         <a class="btn-cancel" href="{% url 'fallas:lista' %}">Cancelar</a>
         </div>
 

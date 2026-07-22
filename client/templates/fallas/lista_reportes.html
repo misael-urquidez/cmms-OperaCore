@@ -44,7 +44,7 @@
                 <td>{{ r.maquina_nombre|default:"-" }}</td>
                 <td>{{ r.trabajador_nombre|default:"-" }}</td>
                 <td><button type="button" onclick="abrir_modal_detalle({{ r.numeroRegistro }})">Ver detalles</button></td>
-                <td><button type="button" onclick="abrir_modal_actualizar({{ r.numeroRegistro }})">Actualizar</button></td>
+                <td><a href="{% url 'fallas:actualizar_reporte' pk=r.numeroRegistro %}">Actualizar</a></td>
               </tr>
             {% endfor %}
           </tbody>
@@ -56,9 +56,6 @@
   </section>
 
   <div class="fallas-modal" id="detalle-falla" role="dialog">
-  </div>
-
-    <div class="fallas-modal" id="actualizar-falla" role="dialog">
   </div>
 
 {% endblock %}

@@ -12,12 +12,6 @@ function validarInputTexto(value, options = {}) {
     notAllowedChars: null,
     minWords: null,
     maxWords: null,
-    email: false,
-    url: false,
-    alphanumeric: false,
-    lowercase: false,
-    uppercase: false,
-    noSpaces: false,
     ...options,
   };
 
@@ -27,7 +21,7 @@ function validarInputTexto(value, options = {}) {
     errors.push("Este campo es obligatorio");
   }
 
-  if (!config.required && (!cleanValue || cleanValue.length === 0)) {
+  if (!cleanValue || cleanValue.length === 0) {
     return { isValid: true, errors: [], value: cleanValue };
   }
 
@@ -58,57 +52,7 @@ function validarInputTexto(value, options = {}) {
   }
 
   if (config.pattern && !config.pattern.test(cleanValue)) {
-    errors.push(`El formato no es válido`);
-  }
-
-  if (config.allowedChars) {
-    const allowedSet = new Set(config.allowedChars);
-    const hasInvalidChars = [...cleanValue].some(
-      (char) => !allowedSet.has(char),
-    );
-    if (hasInvalidChars) {
-      errors.push(`Solo se permiten los caracteres: ${config.allowedChars}`);
-    }
-  }
-
-  if (config.notAllowedChars) {
-    const notAllowedSet = new Set(config.notAllowedChars);
-    const hasInvalidChars = [...cleanValue].some((char) =>
-      notAllowedSet.has(char),
-    );
-    if (hasInvalidChars) {
-      errors.push(`No se permiten los caracteres: ${config.notAllowedChars}`);
-    }
-  }
-  if (config.email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(cleanValue)) {
-      errors.push("Debe ser un email válido");
-    }
-  }
-
-  if (config.url) {
-    try {
-      new URL(cleanValue);
-    } catch {
-      errors.push("Debe ser una URL válida");
-    }
-  }
-
-  if (config.alphanumeric && !/^[a-zA-Z0-9]+$/.test(cleanValue)) {
-    errors.push("Solo se permiten caracteres alfanuméricos");
-  }
-
-  if (config.lowercase && cleanValue !== cleanValue.toLowerCase()) {
-    errors.push("Solo se permiten minúsculas");
-  }
-
-  if (config.uppercase && cleanValue !== cleanValue.toUpperCase()) {
-    errors.push("Solo se permiten mayúsculas");
-  }
-
-  if (config.noSpaces && /\s/.test(cleanValue)) {
-    errors.push("No se permiten espacios");
+    errors.push("El formato no es válido");
   }
 
   if (config.customValidator && typeof config.customValidator === "function") {
@@ -127,13 +71,13 @@ function setupInputValidation(
   errorElement,
   estadoElement = null,
 ) {
+  if (!inputElement) return;
+
   function validarYMostrarError(mostrarError) {
     const result = validarInputTexto(inputElement.value, validationOptions);
 
     if (errorElement) {
       if (!result.isValid && mostrarError) {
-        console.log("aa");
-
         errorElement.textContent = "Error: " + result.errors.join(" | ");
         errorElement.style.color = "red";
         inputElement.style.borderColor = "red";
@@ -173,21 +117,19 @@ function actualizarEstado(estadoElement) {
   let html = "";
 
   inputs.forEach((input) => {
-    const errorId = input.dataset.errorId; // viene del atributo data-error-id
-    if (!errorId) return; // si el input no tiene validación configurada, lo saltamos
+    const errorId = input.dataset.errorId;
+    if (!errorId) return;
 
     const errorSpan = document.getElementById(errorId);
     if (errorSpan) {
       const tieneError = errorSpan.textContent.length > 0;
-      const status = tieneError ? "Inválido" : "Válido";
-
       if (tieneError) todosValidos = false;
     }
   });
 
   html += `${
-    todosValidos ? "" : "El boton no se activara porque hay erroes"
-  }</strong>`;
+    todosValidos ? "" : "El boton no se activara porque hay errores"
+  }`;
   estadoElement.innerHTML = html;
 
   const boton = document.getElementById("boton-registrar");
@@ -204,18 +146,7 @@ function actualizarEstado(estadoElement) {
   }
 }
 
-// Validaciones para el reporte de falla
-
 document.addEventListener("DOMContentLoaded", function () {
-  const fechaSolucion = document.getElementById("fechaSolucion");
-  if (fechaSolucion) {
-    const hoy = new Date();
-    const año = hoy.getFullYear();
-    const mes = String(hoy.getMonth() + 1).padStart(2, "0");
-    const dia = String(hoy.getDate()).padStart(2, "0");
-    fechaSolucion.min = `${año}-${mes}-${dia}`;
-  }
-
   const estadoElement = document.getElementById("estado");
 
   setupInputValidation(
@@ -227,21 +158,6 @@ document.addEventListener("DOMContentLoaded", function () {
       pattern: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/,
     },
     document.getElementById("asunto-error"),
-    estadoElement,
-  );
-
-  setupInputValidation(
-    document.getElementById("tiempoParo"),
-    {
-      required: true,
-      customValidator: (value) => {
-        const num = parseFloat(value);
-        if (isNaN(num)) return "Debe ser un número válido";
-        if (num < 0) return "No puede ser un número negativo";
-        return true;
-      },
-    },
-    document.getElementById("horas-error"),
     estadoElement,
   );
 
@@ -272,6 +188,21 @@ document.addEventListener("DOMContentLoaded", function () {
       minWords: 3,
     },
     document.getElementById("causaRaiz-error"),
+    estadoElement,
+  );
+
+  setupInputValidation(
+    document.getElementById("tiempoParo"),
+    {
+      required: true,
+      customValidator: (value) => {
+        const num = parseFloat(value);
+        if (isNaN(num)) return "Debe ser un número válido";
+        if (num < 0) return "No puede ser un número negativo";
+        return true;
+      },
+    },
+    document.getElementById("horas-error"),
     estadoElement,
   );
 });
