@@ -166,9 +166,6 @@ class ReporteFalla(models.Model):
         db_column="tipo_severidad",
     )
     estado_reporte = models.ForeignKey(
-        EstadoReporte, on_delete=models.DO_NOTHING, db_column="estado_reporte"
-    )
-    estado_reporte = models.ForeignKey(
         EstadoReporte,
         on_delete=models.DO_NOTHING,
         db_column="estado_reporte",

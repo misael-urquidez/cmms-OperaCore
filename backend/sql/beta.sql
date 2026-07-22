@@ -395,22 +395,21 @@ CREATE TABLE REPORTE_FALLA (
     CONSTRAINT fk_repfalla_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo),
     CONSTRAINT fk_repfalla_trabajador FOREIGN KEY (trabajador) REFERENCES TRABAJADOR(numeroNomina),
     CONSTRAINT fk_repfalla_severidad FOREIGN KEY (tipo_severidad) REFERENCES TIPO_SEVERIDAD(codigo),
-    CONSTRAINT fk_estado_reporte  FOREIGN KEY (estado_reporte) REFERENCES EDO_REPORTE(codigo); */
-
+    CONSTRAINT fk_estado_reporte  FOREIGN KEY (estado_reporte) REFERENCES EDO_REPORTE(codigo)
 ) ENGINE=InnoDB;
 
-
-    /* CONSTRAINT fk_repfalla_tipofalla FOREIGN KEY (tipo_falla) REFERENCES TIPO_FALLA(numeroRegistro), */
-
-    /* tipo_falla      INT  NOT NULL, */
+/* tipo_falla ya no vive en REPORTE_FALLA: ahora es muchos-a-muchos vía TIPO_REPORTE.
+CONSTRAINT fk_repfalla_tipofalla FOREIGN KEY (tipo_falla) REFERENCES TIPO_FALLA(numeroRegistro),
+tipo_falla      INT  NOT NULL, */
 
 /* ALTER TABLE REPORTE_FALLA ADD COLUMN estado_reporte VARCHAR(5) NULL;
 ALTER TABLE REPORTE_FALLA ADD FOREIGN KEY (estado_reporte) REFERENCES EDO_REPORTE(codigo); */
 
 CREATE TABLE TIPO_REPORTE (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
     tipo_falla      INT NOT NULL,
     reporte_falla  INT  NOT NULL,
-    PRIMARY KEY (tipo_falla, reporte_falla),
+    UNIQUE KEY uq_tiporep_falla_reporte (tipo_falla, reporte_falla),
     CONSTRAINT fk_tiporep_tipofalla FOREIGN KEY (tipo_falla) REFERENCES TIPO_FALLA(numeroRegistro),
     CONSTRAINT fk_tiporep_reportefalla FOREIGN KEY (reporte_falla) REFERENCES REPORTE_FALLA(numeroRegistro)
 ) ENGINE=InnoDB;
