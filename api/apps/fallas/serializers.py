@@ -1,7 +1,10 @@
 from datetime import date, datetime
+import os
 
+from django.conf import settings
 from rest_framework import serializers
 
+from apps.usuarios.models import Trabajador
 from . import models
 
 
@@ -59,14 +62,19 @@ class EstadoReporteSerializer(serializers.ModelSerializer):
         fields = ["codigo", "nombre"]
 
 
+class TrabajadorLightSerializer(serializers.ModelSerializer):
+    """Serializer ligero para el select de trabajadores en el reporte de falla."""
+
+    class Meta:
+        model = Trabajador
+        fields = ["numeroNomina", "nombre", "apellidoPat"]
+
+
 class ReporteFallaListSerializer(serializers.ModelSerializer):
 
 
     maquina_nombre = serializers.CharField(source="maquina.nombre", read_only=True, default=None)
     trabajador_nombre = serializers.SerializerMethodField()
-    tipo_falla_nombre = serializers.CharField(
-        source="tipo_falla.nombre", read_only=True, default=None
-    )
     tipo_severidad_nombre = serializers.CharField(
         source="tipo_severidad.nombre", read_only=True, default=None
     )
@@ -78,7 +86,6 @@ class ReporteFallaListSerializer(serializers.ModelSerializer):
             "tiempoParo", "causaRaiz", "descripcion",
             "maquina", "maquina_nombre",
             "trabajador", "trabajador_nombre",
-            "tipo_falla", "tipo_falla_nombre",
             "tipo_severidad", "tipo_severidad_nombre",
         ]
 
@@ -93,12 +100,13 @@ class ReporteFallaDetailSerializer(serializers.ModelSerializer):
 
     maquina_nombre = serializers.CharField(source="maquina.nombre", read_only=True, default=None)
     trabajador_nombre = serializers.SerializerMethodField()
-    tipo_falla_nombre = serializers.CharField(
-        source="tipo_falla.nombre", read_only=True, default=None
+    estado_reporte_nombre = serializers.CharField(
+        source="estado_reporte.nombre", read_only=True, default=None
     )
     tipo_severidad_nombre = serializers.CharField(
         source="tipo_severidad.nombre", read_only=True, default=None
     )
+    fallas_asociadas = serializers.SerializerMethodField()
 
     class Meta:
         model = models.ReporteFalla
@@ -109,46 +117,78 @@ class ReporteFallaDetailSerializer(serializers.ModelSerializer):
             return f"{obj.trabajador.nombre} {obj.trabajador.apellidoPat}"
         return None
 
+    def get_fallas_asociadas(self, obj):
+        registros = (
+            models.TipoReporte.objects
+            .filter(reporte_falla=obj)
+            .values_list("tipo_falla_id", flat=True)
+        )
+        fallas = []
+        for tf_id in registros:
+            try:
+                tf = models.TipoFalla.objects.get(pk=tf_id)
+                fallas.append({"id": tf.numeroRegistro, "nombre": tf.nombre})
+            except models.TipoFalla.DoesNotExist:
+                continue
+        return fallas
+
 
 class ReporteFallaCreateSerializer(serializers.ModelSerializer):
+    imagen = serializers.FileField(required=False, allow_null=True)
+    tipo_falla_ids = serializers.ListField(
+        child=serializers.IntegerField(), required=False, write_only=True
+    )
 
     class Meta:
         model = models.ReporteFalla
         fields = [
-            "asunto", "descripcion", "causaRaiz", "tiempoParo",
-            "maquina", "tipo_falla", "tipo_severidad",
+            "asunto", "descripcion", "causaRaiz", "tiempoParo", "fechaResolucion",
+            "maquina", "trabajador", "tipo_severidad", "imagen",
+            "estado_reporte", "tipo_falla_ids",
         ]
 
     def create(self, validated_data):
+        imagen_file = validated_data.pop("imagen", None)
+        tipo_falla_ids = validated_data.pop("tipo_falla_ids", [])
+
         validated_data["fechaCreacion"] = date.today()
         validated_data["horaCreacion"] = datetime.now().time()
-        validated_data["estado_reporte"] = models.EstadoReporte.objects.get(codigo="ABIER")
-        trabajador = self.context["request"].session.get("usuario")
-        if trabajador:
-            validated_data["trabajador_id"] = trabajador["numeroNomina"]
-        return super().create(validated_data)
+
+        if not validated_data.get("fechaResolucion"):
+            validated_data["fechaResolucion"] = date.today()
+
+        if not validated_data.get("trabajador"):
+            trabajador = self.context["request"].session.get("usuario")
+            if trabajador:
+                validated_data["trabajador"] = trabajador["numeroNomina"]
+
+        reporte = super().create(validated_data)
+
+        for tf_id in tipo_falla_ids:
+            models.TipoReporte.objects.create(
+                tipo_falla_id=tf_id,
+                reporte_falla=reporte,
+            )
+
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "fallas")
+            os.makedirs(carpeta, exist_ok=True)
+            ruta = os.path.join(carpeta, imagen_file.name)
+            with open(ruta, "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            reporte.imagen = f"fallas/{imagen_file.name}"
+            reporte.save(update_fields=["imagen"])
+
+        return reporte
 
 
-# ------------ TIPO_REPORTE (llave compuesta: tipo_falla, reporte_falla) --
-class ListTipoReporteSerializer(serializers.ModelSerializer):
+class ReporteFallaUpdateSerializer(serializers.ModelSerializer):
+    imagen = serializers.FileField(required=False, allow_null=True)
+
     class Meta:
-        model = models.TipoReporte
-        fields = ["tipo_falla", "reporte_falla"]
-
-
-class DetailTipoReporteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.TipoReporte
-        fields = "__all__"
-
-
-class CreateTipoReporteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.TipoReporte
-        fields = ["tipo_falla", "reporte_falla"]
-
-
-class UpdateTipoReporteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.TipoReporte
-        fields = ["tipo_falla", "reporte_falla"]
+        model = models.ReporteFalla
+        fields = [
+            "asunto", "descripcion", "causaRaiz", "tiempoParo", "fechaResolucion",
+            "maquina", "trabajador", "tipo_severidad", "imagen", "estado_reporte",
+        ]

@@ -13,7 +13,7 @@ class EstadoOrden(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'estado_orden'
+        db_table = 'ESTADO_ORDEN'
 
 class TipoMantenimiento(models.Model):
     codigo = models.CharField(primary_key=True, max_length=5)
@@ -22,7 +22,7 @@ class TipoMantenimiento(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'tipo_mantenimiento'
+        db_table = 'TIPO_MANTENIMIENTO'
 
 
 class Tareas(models.Model):
@@ -32,7 +32,7 @@ class Tareas(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'tareas'
+        db_table = 'TAREAS'
 
 
 class TipoMovimiento(models.Model):
@@ -41,7 +41,7 @@ class TipoMovimiento(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'tipo_movimiento'
+        db_table = 'TIPO_MOVIMIENTO'
 
 
 class OrdenMantenimiento(models.Model):
@@ -85,7 +85,7 @@ class OrdenMantenimiento(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'orden_mantenimiento'
+        db_table = 'ORDEN_MANTENIMIENTO'
 
 class Movimiento(models.Model):
     numeroregistro = models.AutoField(db_column='numeroRegistro', primary_key=True)  # Field name made lowercase.
@@ -99,7 +99,7 @@ class Movimiento(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'movimiento'
+        db_table = 'MOVIMIENTO'
 
 class TareaOrden(models.Model):
     tarea = models.OneToOneField(Tareas, models.DO_NOTHING, db_column='tarea', primary_key=True)  # The composite primary key (tarea, orden_mantenimiento) found, that is not supported. The first column is selected.
@@ -113,7 +113,7 @@ class TareaOrden(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'tarea_orden'
+        db_table = 'TAREA_ORDEN'
         unique_together = (('tarea', 'orden_mantenimiento'),)
 
 class HerraOrden(models.Model):
@@ -122,7 +122,7 @@ class HerraOrden(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'herra_orden'
+        db_table = 'HERRA_ORDEN'
         unique_together = (('herramienta', 'orden_mantenimiento'),)
 
 
@@ -132,5 +132,5 @@ class TrabaOrdePersonal(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'traba_orde_personal'
+        db_table = 'TRABA_ORDE_PERSONAL'
         unique_together = (('trabajador', 'orden_mantenimiento'),)

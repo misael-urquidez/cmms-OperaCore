@@ -1,4 +1,5 @@
 {% extends "base_admin.html" %}
+{% load static %}
 
 {% block title %}{% if modo == "editar" %}Editar{% else %}Nuevo{% endif %} · {{ config.label }}{% endblock %}
 {% block breadcrumb %}Gestión{% endblock %}
@@ -8,7 +9,7 @@
 <div class="gestion-header">
   <div>
     <a href="{% url 'gestion:list' config.slug %}">← {{ config.label }}</a>
-    <h1>{% if modo == "editar" %}Editar{% else %}Nuevo registro{% endif %} · {{ config.label }}</h1>
+    <h1>{% if modo == "editar" %}Editar{% else %}Nuevo registro{% endif %} · {{ config.label }} <span id="estado" style="font-family: monospace; font-size: 14px;"></span></h1>
   </div>
 </div>
 
@@ -16,17 +17,19 @@
       action="{% if modo == 'editar' %}{% url 'gestion:editar' config.slug pk %}{% else %}{% url 'gestion:crear' config.slug %}{% endif %}"
       class="form-generico">
   {% csrf_token %}
+
   {% for campo in campos %}
     <div class="form-generico__campo">
       <label for="id_{{ campo.name }}">
         {{ campo.label }}{% if campo.requerido %} *{% endif %}
+        <span id="{{ campo.name }}-error"></span>
       </label>
 
       {% if campo.tipo == "textarea" %}
-        <textarea name="{{ campo.name }}" id="id_{{ campo.name }}" {% if campo.requerido %}required{% endif %}>{{ campo.valor|default:"" }}</textarea>
+        <textarea name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" {% if campo.requerido %}required{% endif %}>{{ campo.valor|default:"" }}</textarea>
 
       {% elif campo.tipo == "select" %}
-        <select name="{{ campo.name }}" id="id_{{ campo.name }}" {% if campo.requerido %}required{% endif %}>
+        <select name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" {% if campo.requerido %}required{% endif %}>
           <option value="">Selecciona…</option>
           {% for opcion in campo.opciones %}
             <option value="{{ opcion.value }}" {% if opcion.value|stringformat:"s" == campo.valor|stringformat:"s" %}selected{% endif %}>{{ opcion.label }}</option>
@@ -34,26 +37,37 @@
         </select>
 
       {% elif campo.tipo == "date" %}
-        <input type="date" name="{{ campo.name }}" id="id_{{ campo.name }}" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
+        <input type="date" name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
 
       {% elif campo.tipo == "time" %}
-        <input type="time" name="{{ campo.name }}" id="id_{{ campo.name }}" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
+        <input type="time" name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
 
       {% elif campo.tipo == "int" or campo.tipo == "float" %}
-        <input type="number" {% if campo.tipo == "float" %}step="any"{% endif %} name="{{ campo.name }}" id="id_{{ campo.name }}" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
+        <input type="number" {% if campo.tipo == "float" %}step="any"{% endif %} name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
 
       {% elif campo.tipo == "password" %}
-        <input type="password" name="{{ campo.name }}" id="id_{{ campo.name }}"
+        <input type="password" name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error"
                autocomplete="new-password"
                placeholder="{% if modo == 'editar' %}Dejar en blanco para no cambiarla{% endif %}"
                {% if campo.requerido and modo != "editar" %}required{% endif %}>
 
       {% else %}
-        <input type="text" name="{{ campo.name }}" id="id_{{ campo.name }}" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
+        <input type="text" name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
       {% endif %}
     </div>
   {% endfor %}
 
-  <button type="submit" class="btn-primary-sm">{% if modo == "editar" %}Guardar cambios{% else %}Guardar{% endif %}</button>
+  <button type="submit" id="boton-registrar" class="btn-primary-sm">{% if modo == "editar" %}Guardar cambios{% else %}Guardar{% endif %}</button>
 </form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/validaciones-inputs.js' %}"></script>
+{% if config.slug == "rol" %}
+  <script src="{% static 'gestion/js/validaciones-rol.js' %}"></script>
+{% elif config.slug == "especialidad" %}
+  <script src="{% static 'gestion/js/validaciones-especialidad.js' %}"></script>
+{% elif config.slug == "trabajador" %}
+  <script src="{% static 'gestion/js/validaciones-trabajador.js' %}"></script>
+{% endif %}
 {% endblock %}
