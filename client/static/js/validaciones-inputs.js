@@ -132,8 +132,6 @@ function setupInputValidation(
 
     if (errorElement) {
       if (!result.isValid && mostrarError) {
-        console.log("aa");
-
         errorElement.textContent = "Error: " + result.errors.join(" | ");
         errorElement.style.color = "red";
         inputElement.style.borderColor = "red";
@@ -167,30 +165,27 @@ function setupInputValidation(
 
 function actualizarEstado(estadoElement) {
   const inputs = document.querySelectorAll(
-    'input[type="text"], textarea, input[type="number"]',
+    'input[type="text"], textarea, input[type="number"], input[type="password"], input[type="email"], input[type="date"], input[type="time"], select',
   );
   let todosValidos = true;
-  let html = "";
 
   inputs.forEach((input) => {
-    const errorId = input.dataset.errorId; // viene del atributo data-error-id
-    if (!errorId) return; // si el input no tiene validación configurada, lo saltamos
+    const errorId = input.dataset.errorId;
+    if (!errorId) return;
 
     const errorSpan = document.getElementById(errorId);
     if (errorSpan) {
       const tieneError = errorSpan.textContent.length > 0;
-      const status = tieneError ? "Inválido" : "Válido";
-
       if (tieneError) todosValidos = false;
     }
   });
 
-  html += `${
-    todosValidos ? "" : "El boton no se activara porque hay erroes"
-  }</strong>`;
-  estadoElement.innerHTML = html;
+  estadoElement.textContent = todosValidos ? "" : "Hay errores en el formulario, corrígelos antes de enviar.";
 
-  const boton = document.getElementById("boton-registrar");
+  const form = estadoElement.closest("form");
+  const boton = form
+    ? form.querySelector('button[type="submit"]')
+    : document.getElementById("boton-registrar");
   if (boton) {
     if (!todosValidos) {
       boton.disabled = true;
