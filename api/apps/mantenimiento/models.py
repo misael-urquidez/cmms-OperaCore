@@ -1,5 +1,10 @@
 from django.db import models
 
+from apps.fallas.models import ReporteFalla
+from apps.inventario.models import Herramienta, Refaccion
+from apps.maquinaria.models import Maquina
+from apps.usuarios.models import Trabajador
+
 # Create your models here.
 class EstadoOrden(models.Model):
     codigo = models.CharField(primary_key=True, max_length=5)

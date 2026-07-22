@@ -11,10 +11,40 @@ class TipoSeveridadSerializer(serializers.ModelSerializer):
         fields = ["codigo", "nombre"]
 
 
+class TipoSeveridadCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoSeveridad
+        fields = ["codigo", "nombre", "descripcion"]
+
+
 class TipoFallaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoFalla
         fields = ["numeroRegistro", "nombre"]
+
+
+class TipoFallaCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoFalla
+        fields = ["nombre", "descripcion"]
+
+
+class TipoSeveridadDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoSeveridad
+        fields = "__all__"
+
+
+class TipoFallaDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoFalla
+        fields = "__all__"
+
+
+class EstadoReporteDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.EstadoReporte
+        fields = "__all__"
 
 
 class MaquinaSerializer(serializers.ModelSerializer):
@@ -97,3 +127,28 @@ class ReporteFallaCreateSerializer(serializers.ModelSerializer):
         if trabajador:
             validated_data["trabajador_id"] = trabajador["numeroNomina"]
         return super().create(validated_data)
+
+
+# ------------ TIPO_REPORTE (llave compuesta: tipo_falla, reporte_falla) --
+class ListTipoReporteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoReporte
+        fields = ["tipo_falla", "reporte_falla"]
+
+
+class DetailTipoReporteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoReporte
+        fields = "__all__"
+
+
+class CreateTipoReporteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoReporte
+        fields = ["tipo_falla", "reporte_falla"]
+
+
+class UpdateTipoReporteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoReporte
+        fields = ["tipo_falla", "reporte_falla"]

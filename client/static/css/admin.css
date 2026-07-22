@@ -495,3 +495,34 @@
 
 .sidebar__submenu a.is-active { color: var(--color-primary); background: var(--admin-hover); font-weight: 600; }
 .sidebar__submenu a.is-active::before { opacity: 1; }
+
+
+/* Gestión: tablas configurables que consumen la API. */
+.gestion-grid { display: grid; gap: 1.5rem; }
+.gestion-grupo { background: var(--color-surface); border: 1px solid var(--admin-border); border-radius: .8rem; padding: 1.2rem; }
+.gestion-grupo__titulo { margin: 0 0 .9rem; font-size: .82rem; text-transform: uppercase; letter-spacing: .08em; color: var(--color-muted); }
+.gestion-grupo__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .7rem; }
+.gestion-card { display: flex; flex-direction: column; gap: .45rem; min-width: 0; padding: .95rem; color: var(--color-text); text-decoration: none; border: 1px solid var(--admin-border); border-radius: .65rem; background: color-mix(in srgb, var(--color-surface) 92%, var(--color-bg)); transition: border-color .15s ease, transform .15s ease, background .15s ease; }
+.gestion-card:hover { border-color: var(--color-primary); background: var(--admin-hover); transform: translateY(-1px); }
+.gestion-card:focus-visible, .gestion-header a:focus-visible, .form-generico input:focus-visible, .form-generico textarea:focus-visible, .form-generico select:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.gestion-card__titulo { font-weight: 700; overflow-wrap: anywhere; }
+.gestion-card__cta { font-size: .78rem; color: var(--color-primary); }
+.gestion-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.2rem; }
+.gestion-header h1 { margin: .35rem 0 0; font-size: 1.35rem; }
+.gestion-header a:not(.btn-primary-sm) { color: var(--color-primary); font-size: .84rem; text-decoration: none; }
+.gestion-header a:not(.btn-primary-sm):hover { text-decoration: underline; }
+.gestion-table-wrap { overflow-x: auto; border: 1px solid var(--admin-border); border-radius: .75rem; background: var(--color-surface); }
+.gestion-table-wrap .data-table { min-width: 620px; }
+.gestion-acciones { display: flex; gap: .75rem; white-space: nowrap; }
+.gestion-acciones a { color: var(--color-primary); text-decoration: none; font-size: .84rem; }
+.gestion-acciones a:hover { text-decoration: underline; }
+.link-danger { background: none; border: none; padding: 0; font: inherit; color: #e5484d; cursor: pointer; font-size: .84rem; }
+.link-danger:hover { text-decoration: underline; }
+.form-generico { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; max-width: 780px; padding: 1.2rem; border: 1px solid var(--admin-border); border-radius: .8rem; background: var(--color-surface); }
+.form-generico__campo { display: grid; gap: .4rem; min-width: 0; }
+.form-generico__campo label { color: var(--color-muted); font-size: .8rem; font-weight: 600; }
+.form-generico__campo input, .form-generico__campo textarea, .form-generico__campo select { width: 100%; min-width: 0; padding: .6rem .7rem; border: 1px solid var(--admin-border); border-radius: .5rem; background: var(--input-bg); color: var(--color-text); font: inherit; }
+.form-generico__campo textarea { min-height: 92px; resize: vertical; }
+.form-generico__campo:has(textarea) { grid-column: 1 / -1; }
+.form-generico .btn-primary-sm { justify-self: start; }
+@media (max-width: 620px) { .gestion-header { flex-direction: column; } .form-generico { grid-template-columns: minmax(0, 1fr); padding: 1rem; } .form-generico__campo:has(textarea) { grid-column: auto; } }

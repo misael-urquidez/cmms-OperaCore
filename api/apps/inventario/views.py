@@ -285,29 +285,92 @@ class RefaccionCreateAPIView(generics.CreateAPIView):
         return Response(data, status=status.HTTP_201_CREATED)
 
 
-# ------------ TABLAS DE RELACION / INTERMEDIAS ----------------------------
-class RefaccMaquiListAPIView(generics.ListCreateAPIView):
+# ------------ TABLAS DE RELACION / INTERMEDIAS (llave compuesta) ---------
+# Estas 3 tienen PK compuesta en la BD (ver Meta.unique_together en
+# models.py). DRF no soporta lookup_field de varias columnas, asi que el
+# Detail busca el objeto a mano con get_object_or_404 usando los dos
+# segmentos de la URL. Cada Detail es independiente, no comparten mixin
+# a proposito (para que se puedan tocar por separado sin efectos cruzados).
+
+class RefaccMaquiListAPIView(generics.ListAPIView):
     queryset = models.RefaccMaqui.objects.all()
-    
+    serializer_class = serializers.ListRefaccMaquiSerializer
+
+
+class RefaccMaquiCreateAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateRefaccMaquiSerializer
+
+
+class RefaccMaquiDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.RefaccMaqui.objects.all()
+    serializer_class = serializers.DetailRefaccMaquiSerializer
+
     def get_serializer_class(self):
-        if self.request.method == "POST":
-            return serializers.CreateRefaccMaquiSerializer
-        return serializers.ListRefaccMaquiSerializer
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateRefaccMaquiSerializer
+        return serializers.DetailRefaccMaquiSerializer
+
+    def get_object(self):
+        obj = generics.get_object_or_404(
+            self.get_queryset(),
+            maquina=self.kwargs["maquina"],
+            refaccion=self.kwargs["refaccion"],
+        )
+        self.check_object_permissions(self.request, obj)
+        return obj
 
 
-class EstadoHerramientaListAPIView(generics.ListCreateAPIView):
+class EstadoHerramientaListAPIView(generics.ListAPIView):
     queryset = models.EstadoHerramienta.objects.all()
+    serializer_class = serializers.ListEstadoHerramientaSerializer
+
+
+class EstadoHerramientaCreateAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateEstadoHerramientaSerializer
+
+
+class EstadoHerramientaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.EstadoHerramienta.objects.all()
+    serializer_class = serializers.DetailEstadoHerramientaSerializer
 
     def get_serializer_class(self):
-        if self.request.method == "POST":
-            return serializers.CreateEstadoHerramientaSerializer
-        return serializers.ListEstadoHerramientaSerializer
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateEstadoHerramientaSerializer
+        return serializers.DetailEstadoHerramientaSerializer
+
+    def get_object(self):
+        obj = generics.get_object_or_404(
+            self.get_queryset(),
+            herramienta=self.kwargs["herramienta"],
+            edo_herramienta=self.kwargs["edo_herramienta"],
+        )
+        self.check_object_permissions(self.request, obj)
+        return obj
 
 
-class EstadoRefaccionListAPIView(generics.ListCreateAPIView):
+class EstadoRefaccionListAPIView(generics.ListAPIView):
     queryset = models.EstadoRefaccion.objects.all()
+    serializer_class = serializers.ListEstadoRefaccionSerializer
+
+
+class EstadoRefaccionCreateAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateEstadoRefaccionSerializer
+
+
+class EstadoRefaccionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.EstadoRefaccion.objects.all()
+    serializer_class = serializers.DetailEstadoRefaccionSerializer
 
     def get_serializer_class(self):
-        if self.request.method == "POST":
-            return serializers.CreateEstadoRefaccionSerializer
-        return serializers.ListEstadoRefaccionSerializer
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.UpdateEstadoRefaccionSerializer
+        return serializers.DetailEstadoRefaccionSerializer
+
+    def get_object(self):
+        obj = generics.get_object_or_404(
+            self.get_queryset(),
+            estado_refaccion=self.kwargs["estado_refaccion"],
+            refaccion=self.kwargs["refaccion"],
+        )
+        self.check_object_permissions(self.request, obj)
+        return obj

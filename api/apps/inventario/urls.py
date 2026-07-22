@@ -60,4 +60,17 @@ urlpatterns = [
     path("v1/tipos-refaccion/list/", views.TipoRefaccionListAPIView.as_view(), name="tipos-refaccion-list"),
     path("v1/tipos-refaccion/<int:pk>/", views.TipoRefaccionDetailAPIView.as_view(), name="tipos-refaccion-detail"),
     path("v2/tipos-refaccion/create/", views.TipoRefaccionCreateAPIView.as_view(), name="tipos-refaccion-create"),
+
+    # ------------ RELACIONES (llave compuesta) ------------
+    path("v1/refacc-maqui/list/", views.RefaccMaquiListAPIView.as_view(), name="refacc-maqui-list"),
+    path("v1/refacc-maqui/<str:maquina>/<int:refaccion>/", views.RefaccMaquiDetailAPIView.as_view(), name="refacc-maqui-detail"),
+    path("v2/refacc-maqui/create/", views.RefaccMaquiCreateAPIView.as_view(), name="refacc-maqui-create"),
+
+    path("v1/existencia-herramienta/list/", views.EstadoHerramientaListAPIView.as_view(), name="existencia-herramienta-list"),
+    path("v1/existencia-herramienta/<int:herramienta>/<str:edo_herramienta>/", views.EstadoHerramientaDetailAPIView.as_view(), name="existencia-herramienta-detail"),
+    path("v2/existencia-herramienta/create/", views.EstadoHerramientaCreateAPIView.as_view(), name="existencia-herramienta-create"),
+
+    path("v1/existencia-refaccion/list/", views.EstadoRefaccionListAPIView.as_view(), name="existencia-refaccion-list"),
+    path("v1/existencia-refaccion/<str:estado_refaccion>/<int:refaccion>/", views.EstadoRefaccionDetailAPIView.as_view(), name="existencia-refaccion-detail"),
+    path("v2/existencia-refaccion/create/", views.EstadoRefaccionCreateAPIView.as_view(), name="existencia-refaccion-create"),
 ]
