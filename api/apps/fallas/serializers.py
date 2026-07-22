@@ -14,10 +14,40 @@ class TipoSeveridadSerializer(serializers.ModelSerializer):
         fields = ["codigo", "nombre"]
 
 
+class TipoSeveridadCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoSeveridad
+        fields = ["codigo", "nombre", "descripcion"]
+
+
 class TipoFallaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoFalla
         fields = ["numeroRegistro", "nombre"]
+
+
+class TipoFallaCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoFalla
+        fields = ["nombre", "descripcion"]
+
+
+class TipoSeveridadDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoSeveridad
+        fields = "__all__"
+
+
+class TipoFallaDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoFalla
+        fields = "__all__"
+
+
+class EstadoReporteDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.EstadoReporte
+        fields = "__all__"
 
 
 class MaquinaSerializer(serializers.ModelSerializer):

@@ -126,6 +126,14 @@ class ReporteFalla(generic.View):
             messages.warning(request, "Error al registrar el reporte")
             return redirect("fallas:reporte")
 
+#---------------------------------------------------------------------------
+#------------TIPO FALLA ----------------------------------------------------
+#---------------------------------------------------------------------------
+class ListTipoFalla(generic.View):
+    template_name = "fallas/list_tipo_falla.html"
+    context = {}
+    url_base = f"http://localhost:8000/api/{API_URL}/v1/tipo_falla/list/"
+    response = None
 
 class ListaReportes(generic.View):
     template_name = "fallas/lista_reportes.html"

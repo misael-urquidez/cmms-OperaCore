@@ -27,6 +27,41 @@ class TipoFallaListAPIView(generics.ListAPIView):
     serializer_class = serializers.TipoFallaSerializer
 
 
+class TipoFallaCreateAPIView(generics.CreateAPIView):
+
+    serializer_class = serializers.TipoFallaCreateSerializer
+
+
+class TipoSeveridadCreateAPIView(generics.CreateAPIView):
+
+    serializer_class = serializers.TipoSeveridadCreateSerializer
+
+
+class TipoSeveridadDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """GET trae un registro, PUT/PATCH lo edita, DELETE lo borra.
+    Reutiliza el CreateSerializer para escritura porque tiene los mismos
+    campos editables que el de detalle."""
+
+    queryset = models.TipoSeveridad.objects.all()
+    lookup_field = "codigo"
+
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return serializers.TipoSeveridadCreateSerializer
+        return serializers.TipoSeveridadDetailSerializer
+
+
+class TipoFallaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+
+    queryset = models.TipoFalla.objects.all()
+    lookup_field = "numeroRegistro"
+
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return serializers.TipoFallaCreateSerializer
+        return serializers.TipoFallaDetailSerializer
+
+
 class MaquinaListAPIView(generics.ListAPIView):
 
     queryset = models.Maquina.objects.all()
@@ -37,6 +72,17 @@ class EstadoReporteListAPIView(generics.ListAPIView):
 
     queryset = models.EstadoReporte.objects.all()
     serializer_class = serializers.EstadoReporteSerializer
+
+
+class EstadoReporteCreateAPIView(generics.CreateAPIView):
+    queryset = models.EstadoReporte.objects.all()
+    serializer_class = serializers.EstadoReporteDetailSerializer
+
+
+class EstadoReporteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.EstadoReporte.objects.all()
+    serializer_class = serializers.EstadoReporteDetailSerializer
+    lookup_field = "codigo"
 
 
 class ReporteFallaListAPIView(generics.ListAPIView):

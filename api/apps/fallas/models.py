@@ -1,4 +1,6 @@
 from django.db import models
+from apps.maquinaria.models import Maquina
+from apps.usuarios.models import Trabajador
 
 
 class TipoSeveridad(models.Model):
@@ -187,10 +189,12 @@ class TipoReporte(models.Model):
         TipoFalla, on_delete=models.DO_NOTHING, db_column="tipo_falla"
     )
     reporte_falla = models.ForeignKey(
-        ReporteFalla, on_delete=models.DO_NOTHING, db_column="reporte_falla"
+        ReporteFalla, 
+        models.DO_NOTHING, 
+        db_column='reporte_falla'
     )
 
     class Meta:
         managed = False
-        db_table = "TIPO_REPORTE"
-        unique_together = ("tipo_falla", "reporte_falla")
+        db_table = 'tipo_reporte'
+        unique_together = (('tipo_falla', 'reporte_falla'),)
