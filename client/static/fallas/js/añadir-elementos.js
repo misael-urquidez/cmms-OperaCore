@@ -1,5 +1,26 @@
 var contador = 0;
 
+function sincronizarFallas() {
+    var base = document.getElementById("tipo_falla");
+    var dynamic = document.querySelectorAll("#nuevas-fallas select");
+    var allSelects = [base].concat(Array.from(dynamic));
+
+    var selectedBySelect = allSelects.map(function(sel) {
+        return sel.value;
+    });
+
+    allSelects.forEach(function(sel, idx) {
+        var opciones = sel.options;
+        for (var i = 0; i < opciones.length; i++) {
+            if (opciones[i].value === "") continue;
+            var usadoEnOtro = selectedBySelect.some(function(v, j) {
+                return j !== idx && v === opciones[i].value;
+            });
+            opciones[i].disabled = usadoEnOtro;
+        }
+    });
+}
+
 function anadirFalla() {
     contador++;
     var contenedor = document.getElementById("nuevas-fallas");
@@ -27,8 +48,11 @@ function anadirFalla() {
         nuevoSelect.appendChild(opt);
     }
 
+    nuevoSelect.addEventListener("change", sincronizarFallas);
+
     nuevoDiv.appendChild(nuevoSelect);
     contenedor.appendChild(nuevoDiv);
+    sincronizarFallas();
 }
 
 function quitarSelect(tipo) {
@@ -41,6 +65,15 @@ function quitarSelect(tipo) {
         var items = contenedor.querySelectorAll(selector);
         if (items.length > 0) {
             contenedor.removeChild(items[items.length - 1]);
+            sincronizarFallas();
         }
     }
 }
+
+document.addEventListener("DOMContentLoaded", function() {
+    var base = document.getElementById("tipo_falla");
+    if (base) {
+        base.addEventListener("change", sincronizarFallas);
+        sincronizarFallas();
+    }
+});

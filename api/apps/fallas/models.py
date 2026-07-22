@@ -158,9 +158,6 @@ class ReporteFalla(models.Model):
         on_delete=models.DO_NOTHING,
         db_column="trabajador",
     )
-    tipo_falla = models.ForeignKey(
-        TipoFalla, on_delete=models.DO_NOTHING, db_column="tipo_falla"
-    )
     tipo_severidad = models.ForeignKey(
         TipoSeveridad,
         on_delete=models.DO_NOTHING,

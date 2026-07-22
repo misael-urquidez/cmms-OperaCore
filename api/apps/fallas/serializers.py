@@ -45,9 +45,6 @@ class ReporteFallaListSerializer(serializers.ModelSerializer):
 
     maquina_nombre = serializers.CharField(source="maquina.nombre", read_only=True, default=None)
     trabajador_nombre = serializers.SerializerMethodField()
-    tipo_falla_nombre = serializers.CharField(
-        source="tipo_falla.nombre", read_only=True, default=None
-    )
     tipo_severidad_nombre = serializers.CharField(
         source="tipo_severidad.nombre", read_only=True, default=None
     )
@@ -59,7 +56,6 @@ class ReporteFallaListSerializer(serializers.ModelSerializer):
             "tiempoParo", "causaRaiz", "descripcion",
             "maquina", "maquina_nombre",
             "trabajador", "trabajador_nombre",
-            "tipo_falla", "tipo_falla_nombre",
             "tipo_severidad", "tipo_severidad_nombre",
         ]
 
@@ -74,12 +70,13 @@ class ReporteFallaDetailSerializer(serializers.ModelSerializer):
 
     maquina_nombre = serializers.CharField(source="maquina.nombre", read_only=True, default=None)
     trabajador_nombre = serializers.SerializerMethodField()
-    tipo_falla_nombre = serializers.CharField(
-        source="tipo_falla.nombre", read_only=True, default=None
+    estado_reporte_nombre = serializers.CharField(
+        source="estado_reporte.nombre", read_only=True, default=None
     )
     tipo_severidad_nombre = serializers.CharField(
         source="tipo_severidad.nombre", read_only=True, default=None
     )
+    fallas_asociadas = serializers.SerializerMethodField()
 
     class Meta:
         model = models.ReporteFalla
@@ -89,6 +86,21 @@ class ReporteFallaDetailSerializer(serializers.ModelSerializer):
         if obj.trabajador:
             return f"{obj.trabajador.nombre} {obj.trabajador.apellidoPat}"
         return None
+
+    def get_fallas_asociadas(self, obj):
+        registros = (
+            models.TipoReporte.objects
+            .filter(reporte_falla=obj)
+            .values_list("tipo_falla_id", flat=True)
+        )
+        fallas = []
+        for tf_id in registros:
+            try:
+                tf = models.TipoFalla.objects.get(pk=tf_id)
+                fallas.append({"id": tf.numeroRegistro, "nombre": tf.nombre})
+            except models.TipoFalla.DoesNotExist:
+                continue
+        return fallas
 
 
 class ReporteFallaCreateSerializer(serializers.ModelSerializer):

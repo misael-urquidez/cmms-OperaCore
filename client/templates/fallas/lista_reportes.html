@@ -26,11 +26,9 @@
               <th>Asunto</th>
               <th>Fecha</th>
               <th>Severidad</th>
-              <th>Tipo</th>
               <th>Máquina</th>
               <th>Trabajador</th>
               <th>Acciones</th>
-              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -40,7 +38,6 @@
                 <td>{{ r.asunto }}</td>
                 <td>{{ r.fechaCreacion }}</td>
                 <td><span class="badge">{{ r.tipo_severidad_nombre|default:"-" }}</span></td>
-                <td>{{ r.tipo_falla_nombre|default:"-" }}</td>
                 <td>{{ r.maquina_nombre|default:"-" }}</td>
                 <td>{{ r.trabajador_nombre|default:"-" }}</td>
                 <td><button type="button" onclick="abrir_modal_detalle({{ r.numeroRegistro }})">Ver detalles</button></td>

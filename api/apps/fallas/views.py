@@ -43,7 +43,7 @@ class ReporteFallaListAPIView(generics.ListAPIView):
 
     queryset = (
         models.ReporteFalla.objects
-        .select_related("maquina", "trabajador", "tipo_falla", "tipo_severidad")
+        .select_related("maquina", "trabajador", "tipo_severidad")
         .order_by("-fechaCreacion", "-horaCreacion")
     )
     serializer_class = serializers.ReporteFallaListSerializer
@@ -53,7 +53,7 @@ class ReporteFallaListAPIView(generics.ListAPIView):
 class ReporteFallaDetailAPIView(generics.RetrieveAPIView):
 
     queryset = models.ReporteFalla.objects.select_related(
-        "maquina", "trabajador", "tipo_falla", "tipo_severidad"
+        "maquina", "trabajador", "tipo_severidad"
     )
     serializer_class = serializers.ReporteFallaDetailSerializer
 

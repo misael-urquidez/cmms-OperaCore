@@ -52,13 +52,13 @@
         <select name="tipo_falla" id="tipo_falla" required>
           <option value="">Seleccione...</option>
           {% for tf in tipos_falla %}
-            <option value="{{ tf.numeroRegistro }}" {% if reporte.tipo_falla == tf.numeroRegistro %}selected{% endif %}>{{ tf.nombre }}</option>
+            <option value="{{ tf.numeroRegistro }}">{{ tf.nombre }}</option>
           {% endfor %}
         </select>
         <div class="contenedor-tipo-fallas" id="nuevas-fallas"></div>
         <div class="botones">
-            <button onclick="quitarSelect('tipo-falla')">- Quitar</button>
-            <button onclick="anadirFalla()">+ Añadir</button>
+            <button type="button" onclick="quitarSelect('tipo-falla')">- Quitar</button>
+            <button type="button" onclick="anadirFalla()">+ Añadir</button>
         </div>
 
         <label for="estado_reporte">Estado del reporte</label>
@@ -114,4 +114,24 @@
 <script src="{% static 'fallas/js/preview-imagenes.js' %}"></script>
 <script src="{% static 'fallas/js/añadir-elementos.js' %}"></script>
 <script src="{% static 'fallas/js/validaciones-actualizar.js' %}"></script>
+<script>
+(function(){
+  var fallas = {{ reporte.fallas_asociadas|safe }};
+  if (!fallas || fallas.length === 0) return;
+  var base = document.getElementById('tipo_falla');
+  if (fallas.length >= 1) {
+    base.value = fallas[0].id;
+    base.dispatchEvent(new Event('change'));
+  }
+  for (var i = 1; i < fallas.length; i++) {
+    anadirFalla();
+    var dynamic = document.querySelectorAll('#nuevas-fallas select');
+    var last = dynamic[dynamic.length - 1];
+    if (last) {
+      last.value = fallas[i].id;
+      last.dispatchEvent(new Event('change'));
+    }
+  }
+})();
+</script>
 {% endblock %}

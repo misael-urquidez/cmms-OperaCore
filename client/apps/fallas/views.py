@@ -162,9 +162,10 @@ class DetailReporte(generic.View):
 
         if reporte is None:
             try:
-                reporte = SESSION.get(
-                    f"{API_URL}/v1/reportes/{pk}/", timeout=5
-                ).json()
+                resp = SESSION.get(f"{API_URL}/v1/reportes/{pk}/", timeout=5)
+                if resp.status_code != 200:
+                    return render(request, self.template_name, {"reporte": None})
+                reporte = resp.json()
                 cache.set(cache_key, reporte, 30)
             except (requests.exceptions.RequestException, ValueError):
                 return render(request, self.template_name, {"reporte": None})
@@ -182,12 +183,14 @@ class ActualizarReporte(generic.View):
 
         if reporte is None:
             try:
-                reporte = SESSION.get(
-                    f"{API_URL}/v1/reportes/{pk}/", timeout=5
-                ).json()
+                resp = SESSION.get(f"{API_URL}/v1/reportes/{pk}/", timeout=5)
+                if resp.status_code != 200:
+                    messages.warning(request, "No se pudo cargar el reporte.")
+                    return redirect("fallas:lista")
+                reporte = resp.json()
                 cache.set(cache_key, reporte, 30)
             except (requests.exceptions.RequestException, ValueError):
-                messages.warning(request, "No se pudo cargar el reporte.")
+                messages.warning(request, "No se pudo conectar con la API.")
                 return redirect("fallas:lista")
 
         severidades, tipos_falla, maquinas, estados, trabajadores, _ = _cargar_catalogos()

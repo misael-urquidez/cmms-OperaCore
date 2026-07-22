@@ -31,13 +31,15 @@
         </div>
 
         <div class="fallas-modal__field">
-          <span class="fallas-modal__label">Tipo de falla</span>
-          <span class="fallas-modal__value">{{ reporte.tipo_falla_nombre|default:"-" }}</span>
+          <span class="fallas-modal__label">Estado</span>
+          <span class="fallas-modal__value">{{ reporte.estado_reporte_nombre|default:reporte.estado_reporte|default:"-" }}</span>
         </div>
 
         <div class="fallas-modal__field">
-          <span class="fallas-modal__label">Estado</span>
-          <span class="fallas-modal__value">{{ reporte.estado_reporte|default:"-" }}</span>
+          <span class="fallas-modal__label">Tipo de falla</span>
+          <span class="fallas-modal__value">
+            {% for f in reporte.fallas_asociadas %}{{ f.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
+          </span>
         </div>
 
         <div class="fallas-modal__field">
