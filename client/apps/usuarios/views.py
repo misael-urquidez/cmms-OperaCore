@@ -8,10 +8,15 @@ from django.views import generic
 
 API_URL = f"{settings.API_BASE_URL}/usuarios"
 
+# Sesion HTTP a nivel de modulo: se crea una vez y reusa la conexion TCP
+# con el api/ en vez de abrir una nueva por cada request (menos latencia).
+SESSION = requests.Session()
+
 # Roles y especialidades casi nunca cambian, asi que los cacheamos para no
 # pegarle al api/ en cada carga del login. TTL de 10 min. Para forzar un
 # refresco inmediato hay un comando en comandos.txt (o reinicia el server).
 CATALOGOS_TTL = 60 * 10
+REPORTES_TTL = 15  # mismo TTL que usa fallas/views.py para la lista
 
 
 def _cargar_catalogos():
@@ -23,8 +28,8 @@ def _cargar_catalogos():
         return roles, especialidades, True
 
     try:
-        roles = requests.get(f"{API_URL}/roles/", timeout=5).json()
-        especialidades = requests.get(f"{API_URL}/especialidades/", timeout=5).json()
+        roles = SESSION.get(f"{API_URL}/roles/", timeout=5).json()
+        especialidades = SESSION.get(f"{API_URL}/especialidades/", timeout=5).json()
     except requests.exceptions.RequestException:
         return [], [], False
 
@@ -41,7 +46,11 @@ class AuthView(generic.View):
     template_name = "usuarios/index.html"
 
     def get(self, request):
-        if request.session.get("usuario"):
+        usuario = request.session.get("usuario")
+        if usuario:
+            # Ya hay sesion: mandarlo a su pantalla segun rol.
+            if usuario.get("rol") == "ADMIN":
+                return redirect("usuarios:admin_dashboard")
             return redirect("home")
 
         tab = request.GET.get("tab", "login")
@@ -69,7 +78,7 @@ class LoginView(generic.View):
             return redirect(volver)
 
         try:
-            response = requests.post(
+            response = SESSION.post(
                 f"{API_URL}/login/",
                 json={"identificador": identificador, "password": password},
                 timeout=5,
@@ -89,6 +98,11 @@ class LoginView(generic.View):
         trabajador = response.json()
         request.session["usuario"] = trabajador
         messages.success(request, f"Bienvenido, {trabajador.get('nombre') or trabajador.get('usuario')}.")
+
+        # Redirigir segun el rol: ADMIN va a su panel; los demas (TECNI,
+        # ENCLN o sin rol) al home normal mientras desarrollamos sus menus.
+        if trabajador.get("rol") == "ADMIN":
+            return redirect("usuarios:admin_dashboard")
         return redirect("home")
 
 
@@ -111,7 +125,7 @@ class RegistroView(generic.View):
         volver = f"{reverse('usuarios:index')}?tab=registro"
 
         try:
-            response = requests.post(f"{API_URL}/registro/", json=payload, timeout=5)
+            response = SESSION.post(f"{API_URL}/registro/", json=payload, timeout=5)
         except requests.exceptions.RequestException:
             messages.error(request, "No se pudo conectar con el servidor. Intenta más tarde.")
             return redirect(volver)
@@ -135,4 +149,47 @@ class LogoutView(generic.View):
     def get(self, request):
         request.session.flush()
         messages.success(request, "Sesión cerrada.")
-        return redirect("home")
+        return redirect("usuarios:index")
+
+
+class AdminDashboardView(generic.View):
+    """Panel principal del ADMINISTRADOR. Solo entra quien tiene sesion
+    iniciada Y rol ADMIN; cualquier otro caso se regresa con aviso."""
+
+    template_name = "usuarios/admin_dashboard.html"
+
+    def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
+        if usuario.get("rol") != "ADMIN":
+            messages.error(request, "No tienes permisos para entrar al panel de administración.")
+            return redirect("home")
+
+        # stats: por ahora solo fallas; aqui despues pegamos al api/ para
+        # llenar el resto de las tarjetas (maquinas, ordenes, etc.).
+        # La lista de reportes comparte cache con fallas/views.py: si alguien
+        # visito "Ver reportes" hace menos de 15 seg, no volvemos a pegarle
+        # al api/, usamos el mismo dato cacheado.
+        stats = {}
+        reportes = cache.get("fallas_reportes_list")
+        if reportes is None:
+            try:
+                reportes = SESSION.get(
+                    url=f"{settings.API_BASE_URL}/fallas/v1/reportes/list/", timeout=3
+                ).json()
+                cache.set("fallas_reportes_list", reportes, REPORTES_TTL)
+            except (requests.RequestException, ValueError):
+                # si la API no responde no tumbamos el dashboard, solo se
+                # queda esa tarjeta/panel en su estado por defecto ("—").
+                reportes = []
+        stats["fallas_abiertas"] = len(reportes)
+        ultimas_fallas = reportes[:5]
+
+        return render(
+            request,
+            self.template_name,
+            {"seccion": "dashboard", "stats": stats, "ultimas_fallas": ultimas_fallas},
+        )

@@ -12,10 +12,22 @@ class RolSerializer(serializers.ModelSerializer):
         fields = ["codigo", "nombre"]
 
 
+class RolDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Rol
+        fields = ["codigo", "nombre", "descripcion"]
+
+
 class EspecialidadSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Especialidad
         fields = ["codigo", "nombre"]
+
+
+class EspecialidadDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Especialidad
+        fields = ["codigo", "nombre", "descripcion"]
 
 
 class TrabajadorSerializer(serializers.ModelSerializer):
@@ -97,6 +109,30 @@ class RegistroTrabajadorSerializer(serializers.ModelSerializer):
         raise serializers.ValidationError(
             {"detail": "No se pudo asignar un número de nómina disponible. Intenta de nuevo."}
         )
+
+
+class UpdateTrabajadorSerializer(serializers.ModelSerializer):
+    """Edición de un TRABAJADOR existente. password es opcional: si viene
+    vacío/ausente, no se toca la contraseña actual; si viene, se re-hashea."""
+
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = models.Trabajador
+        fields = [
+            "nombre", "apellidoPat", "apellidoMat", "telefono", "correo",
+            "usuario", "actividad", "rol", "especialidad", "password",
+        ]
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            from django.contrib.auth.hashers import make_password
+            instance.contrasena = make_password(password)
+        instance.save()
+        return instance
 
 
 class LoginSerializer(serializers.Serializer):

@@ -1,4 +1,3 @@
--- mi usuario
 INSERT INTO TRABAJADOR (
     numeroNomina,
     nombre,
@@ -21,6 +20,6 @@ INSERT INTO TRABAJADOR (
     'za',
     'za',
     TRUE,
-    NULL,
+    'ADMIN',
     NULL
 );

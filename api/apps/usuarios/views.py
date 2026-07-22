@@ -48,11 +48,33 @@ class RolListAPIView(generics.ListAPIView):
     serializer_class = serializers.RolSerializer
 
 
+class RolCreateAPIView(generics.CreateAPIView):
+    queryset = models.Rol.objects.all()
+    serializer_class = serializers.RolDetailSerializer
+
+
+class RolDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.Rol.objects.all()
+    serializer_class = serializers.RolDetailSerializer
+    lookup_field = "codigo"
+
+
 class EspecialidadListAPIView(generics.ListAPIView):
     """Catalogo de especialidades, para llenar el <select> del formulario de registro."""
 
     queryset = models.Especialidad.objects.all()
     serializer_class = serializers.EspecialidadSerializer
+
+
+class EspecialidadCreateAPIView(generics.CreateAPIView):
+    queryset = models.Especialidad.objects.all()
+    serializer_class = serializers.EspecialidadDetailSerializer
+
+
+class EspecialidadDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.Especialidad.objects.all()
+    serializer_class = serializers.EspecialidadDetailSerializer
+    lookup_field = "codigo"
 
 
 class RegistroAPIView(generics.CreateAPIView):
@@ -66,6 +88,25 @@ class RegistroAPIView(generics.CreateAPIView):
         trabajador = serializer.save()
         data = serializers.TrabajadorSerializer(trabajador).data
         return Response(data, status=status.HTTP_201_CREATED)
+
+
+# ------------ TRABAJADOR ------------
+class TrabajadorListAPIView(generics.ListAPIView):
+    queryset = models.Trabajador.objects.select_related("rol", "especialidad").order_by("nombre")
+    serializer_class = serializers.TrabajadorSerializer  # ya excluye password, no cambiar
+
+
+class TrabajadorDetailAPIView(generics.RetrieveUpdateAPIView):
+    # SIN Destroy a propósito: un trabajador no se borra físico (rompería
+    # FKs de ordenes/reportes ya asignados), se da de baja con el campo
+    # 'actividad' via PATCH. No agregues DELETE aquí.
+    queryset = models.Trabajador.objects.select_related("rol", "especialidad")
+    lookup_field = "numeroNomina"
+
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return serializers.UpdateTrabajadorSerializer
+        return serializers.TrabajadorSerializer
 
 
 class LoginAPIView(APIView):

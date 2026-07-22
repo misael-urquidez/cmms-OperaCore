@@ -1,0 +1,28 @@
+{% extends "base_admin.html" %}
+{% load static %}
+
+{% block title %}Nueva Clasificación · OperaCore{% endblock %}
+{% block breadcrumb %}Inventario{% endblock %}
+{% block page_title %}Registrar Clasificación{% endblock %}
+
+{% block content %}
+  <h1>Registro de Clasificación de Refacciones</h1>
+
+  <form method="post" action="{% url 'inventario:crear_clasificacion' %}">
+    {% csrf_token %}
+    <div class="contenedor">
+      <div class="left-side">
+        <label for="nombre">Nombre de la clasificación</label>
+        <input type="text" name="nombre" id="nombre" required maxlength="100" placeholder="Ej. Neumática, Eléctrica, Rodamientos" />
+
+        <label for="descripcion">Descripción</label>
+        <textarea name="descripcion" id="descripcion" rows="3"></textarea>
+
+        <div class="contenedor-botones">
+          <button type="submit">Guardar clasificación</button>
+          <a class="btn-cancel" href="{% url 'inventario:lista_clasificaciones' %}">Cancelar</a>
+        </div>
+      </div>
+    </div>
+  </form>
+{% endblock %}

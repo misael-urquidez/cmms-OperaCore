@@ -1,0 +1,46 @@
+{% extends "base_admin.html" %}
+{% load static %}
+
+{% block title %} Estados Pieza · OperaCore{% endblock %}
+{% block breadcrumb %}Inventario{% endblock %}
+{% block page_title %}Catalogo de Estados Pieza{% endblock %}
+
+{% block content %}
+  <h1>Estados de Pieza</h1>
+
+  <div class="contenedor" style="flex-direction: column;">
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 1rem;">
+      <span style="font-size: 0.9rem; color: var(--color-muted);">Valores paramétricos registrados</span>
+      <a href="{{ url_crear }}" class="btn-cancel" style="background: var(--color-primary); color: var(--color-bg); border: none; font-weight: 600;">
+        + Agregar nuevo
+      </a>
+    </div>
+
+    <div style="overflow-x: auto; width: 100%;">
+      <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--admin-border); color: var(--color-muted);">
+            <th style="padding: 0.75rem;">Clave / ID</th>
+            <th style="padding: 0.75rem;">Nombre</th>
+            <th style="padding: 0.75rem;">Descripción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+            <tr style="border-bottom: 1px solid var(--line);">
+              <td style="padding: 0.75rem;"><strong>{{ item.codigo|default:item.numeroregistro }}</strong></td>
+              <td style="padding: 0.75rem;">{{ item.nombre }}</td>
+              <td style="padding: 0.75rem;">{{ item.descripcion|default:"--" }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="3" style="padding: 1.5rem; text-align: center; color: var(--color-muted);">
+                No hay registros disponibles en este catálogo.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

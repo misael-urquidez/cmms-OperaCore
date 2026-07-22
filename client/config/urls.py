@@ -19,6 +19,9 @@ urlpatterns = [
     path("fallas/", include("apps.fallas.urls")),
     path("inventario/", include("apps.inventario.urls")),
     path("indicadores/", include("apps.indicadores.urls")),
+    path("elipse/", include("apps.elipse.urls")),
+    path("monitoreo/", include("apps.monitoreo.urls")),
+    path("gestion/", include("apps.gestion.urls")),
 ]
 
 if settings.DEBUG:

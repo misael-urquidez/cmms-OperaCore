@@ -1,0 +1,285 @@
+/* ==========================================================================
+   Sistema de apariencia del sitio (admin y páginas normales).
+   - Tokens con valores por defecto (tema oscuro, el original).
+   - Tema claro via body[data-theme="light"].
+   - Tema PLANO via body[data-theme="plain"]: look profesional, neutro,
+     sin degradados ni colores llamativos (como el modo "Plano" del login).
+   - Los colores personalizados (fondo, acento, sidebar, textos) los aplica
+     static/js/theme.js como variables inline sobre <body>, encima de esto.
+   - También estilos de las pestañas y controles del modal de configuración.
+   ========================================================================== */
+
+body {
+    --line: rgba(255, 255, 255, 0.1);          /* bordes/divisores sutiles   */
+    --hover-soft: rgba(255, 255, 255, 0.06);   /* hover neutro               */
+    --input-bg: rgba(0, 0, 0, 0.25);           /* fondo de inputs            */
+    --sidebar-bg1: #131c31;                    /* degradado del sidebar      */
+    --sidebar-bg2: #0f172a;
+    --sidebar-text: #94a3b8;                   /* texto de la barra lateral  */
+    --topbar-bg: rgba(30, 41, 59, 0.6);
+}
+
+/* ---------------- TEMA CLARO ---------------- */
+
+body[data-theme="light"] {
+    --color-bg: #eef2f7;
+    --color-surface: #ffffff;
+    --color-text: #0f172a;
+    --color-muted: #64748b;
+
+    --line: rgba(15, 23, 42, 0.12);
+    --hover-soft: rgba(15, 23, 42, 0.05);
+    --input-bg: #f8fafc;
+    --sidebar-bg1: #ffffff;
+    --sidebar-bg2: #f8fafc;
+    --sidebar-text: #475569;
+    --topbar-bg: rgba(255, 255, 255, 0.78);
+
+    --admin-border: rgba(15, 23, 42, 0.1);
+    --admin-hover: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+/* ---------------- TEMA PLANO (profesional, sin tanto color) ---------------- */
+
+body[data-theme="plain"] {
+    --color-bg: #f4f5f7;
+    --color-surface: #ffffff;
+    --color-text: #1f2430;
+    --color-muted: #5f6b7a;
+    --color-primary: #3b5b7d;                  /* azul acero sobrio */
+
+    --line: rgba(31, 36, 48, 0.14);
+    --hover-soft: rgba(31, 36, 48, 0.05);
+    --input-bg: #fafbfc;
+    --sidebar-bg1: #ffffff;                    /* sidebar sólido, sin degradado */
+    --sidebar-bg2: #ffffff;
+    --sidebar-text: #3f4754;
+    --topbar-bg: #ffffff;
+
+    --admin-border: rgba(31, 36, 48, 0.13);
+    --admin-hover: rgba(59, 91, 125, 0.07);
+}
+
+/* En plano se apagan adornos: iconos de stats a un solo tono, sin
+   "levantarse" al hover, sombras mínimas. */
+body[data-theme="plain"] .stat-card__icon--sky,
+body[data-theme="plain"] .stat-card__icon--green,
+body[data-theme="plain"] .stat-card__icon--amber,
+body[data-theme="plain"] .stat-card__icon--rose {
+    background: rgba(31, 36, 48, 0.06);
+    color: #3f4754;
+}
+body[data-theme="plain"] .stat-card:hover { transform: none; }
+body[data-theme="plain"] .sidebar__foot-dot { box-shadow: none; }
+body[data-theme="plain"] .sidebar__link.is-active {
+    background: rgba(59, 91, 125, 0.09);
+}
+
+/* ---------------- Ajustes comunes claro + plano ----------------
+   Donde el CSS original trae blancos/rgba fijos pensados para oscuro. */
+
+body:is([data-theme="light"], [data-theme="plain"]) .navbar { border-bottom-color: var(--line); }
+body:is([data-theme="light"], [data-theme="plain"]) .navbar__auth a { border-color: var(--line); }
+body:is([data-theme="light"], [data-theme="plain"]) .module-card,
+body:is([data-theme="light"], [data-theme="plain"]) .stat-card,
+body:is([data-theme="light"], [data-theme="plain"]) .panel { border-color: var(--admin-border); }
+
+body:is([data-theme="light"], [data-theme="plain"]) .user-menu__trigger { border-color: var(--line); background: rgba(15, 23, 42, 0.03); }
+body:is([data-theme="light"], [data-theme="plain"]) .user-menu__dropdown,
+body:is([data-theme="light"], [data-theme="plain"]) .config-modal__panel { border-color: var(--line); box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16); }
+body:is([data-theme="light"], [data-theme="plain"]) .user-menu__header { border-bottom-color: var(--line); }
+body:is([data-theme="light"], [data-theme="plain"]) .user-menu__item:hover { background: var(--hover-soft); }
+body:is([data-theme="light"], [data-theme="plain"]) .user-menu__divider { background: var(--line); }
+
+body:is([data-theme="light"], [data-theme="plain"]) .config-field input {
+    background: var(--input-bg);
+    border-color: var(--line);
+    color: var(--color-text);
+}
+
+body:is([data-theme="light"], [data-theme="plain"]) .sidebar__collapse,
+body:is([data-theme="light"], [data-theme="plain"]) .admin-topbar__menu { border-color: var(--line); }
+body:is([data-theme="light"], [data-theme="plain"]) .quick-action { background: #f8fafc; }
+body:is([data-theme="light"], [data-theme="plain"]) .messages__item { border: 1px solid var(--line); }
+
+/* ---------------- PESTAÑAS DEL MODAL DE CONFIG ---------------- */
+
+.config-tabs {
+    display: flex;
+    gap: 0.35rem;
+    margin: 1.1rem 0 1rem;
+    padding: 0.25rem;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: 0.6rem;
+}
+.config-tabs__btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0.5rem 0.6rem;
+    background: none;
+    border: none;
+    border-radius: 0.45rem;
+    color: var(--color-muted);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.config-tabs__btn svg { width: 16px; height: 16px; }
+.config-tabs__btn:hover { color: var(--color-text); }
+.config-tabs__btn.is-active {
+    background: var(--color-surface);
+    color: var(--color-primary);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+body:is([data-theme="light"], [data-theme="plain"]) .config-tabs__btn.is-active { box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12); }
+
+.config-tabpanel { display: none; }
+.config-tabpanel.is-active { display: block; }
+
+/* ---------------- SECCIÓN "APARIENCIA" DEL MODAL ---------------- */
+
+.config-appearance { margin: 0.2rem 0 0.3rem; }
+
+.config-appearance__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin-bottom: 0.75rem;
+}
+.config-appearance__label { font-size: 0.82rem; color: var(--color-muted); }
+
+/* fila apagada (p.ej. fondo/degradado cuando el tema es Plano) */
+.config-appearance__row.is-disabled { opacity: 0.4; pointer-events: none; }
+
+/* Las opciones de la barra lateral solo aplican dentro del panel admin */
+body:not(.admin-body) .config-appearance__row--admin { display: none; }
+
+/* bloque avanzado (se muestra solo con el switch activado) */
+.config-appearance__advanced { display: none; }
+.config-appearance__advanced.is-open {
+    display: block;
+    margin-top: 0.2rem;
+    padding: 0.75rem 0.8rem 0.35rem;
+    border: 1px dashed var(--line);
+    border-radius: 0.6rem;
+}
+
+/* toggle Oscuro/Claro/Plano */
+.theme-toggle {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.theme-toggle button {
+    background: none;
+    border: none;
+    color: var(--color-muted);
+    padding: 0.34rem 0.8rem;
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.theme-toggle button.is-active {
+    background: var(--color-primary);
+    color: var(--color-primary-contrast, #fff);
+    font-weight: 700;
+}
+
+/* swatches (acento y fondo) */
+.accent-swatches { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; justify-content: flex-end; }
+.accent-swatches button {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background: var(--sw);
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.accent-swatches button:hover { transform: scale(1.12); }
+.accent-swatches button.is-active { border-color: var(--color-text); }
+
+/* input nativo de color, estilizado chiquito */
+.color-input {
+    width: 36px;
+    height: 25px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 0.35rem;
+    background: none;
+    cursor: pointer;
+}
+.color-input::-webkit-color-swatch-wrapper { padding: 2px; }
+.color-input::-webkit-color-swatch { border: none; border-radius: 0.22rem; }
+
+/* switch (degradado / personalización avanzada) */
+.switch { position: relative; display: inline-block; width: 38px; height: 21px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch__slider {
+    position: absolute;
+    inset: 0;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease;
+}
+.switch__slider::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--color-muted);
+    transform: translateY(-50%);
+    transition: transform 0.18s ease, background 0.18s ease;
+}
+.switch input:checked + .switch__slider {
+    background: color-mix(in srgb, var(--color-primary) 30%, transparent);
+    border-color: var(--color-primary);
+}
+.switch input:checked + .switch__slider::before {
+    background: var(--color-primary);
+    transform: translate(17px, -50%);
+}
+
+.config-appearance__reset {
+    margin-top: 0.55rem;
+    background: none;
+    border: 1px dashed var(--line);
+    border-radius: 0.5rem;
+    color: var(--color-muted);
+    font: inherit;
+    font-size: 0.76rem;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+    width: 100%;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+.config-appearance__reset:hover { color: var(--color-primary); border-color: var(--color-primary); }
+
+/* ---------------- ADVERTENCIA de contraste/inconsistencias ---------------- */
+.config-appearance__warning {
+    display: none;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+    border-radius: 0.5rem;
+    font-size: 0.76rem;
+    line-height: 1.4;
+}
+.config-appearance__warning.is-visible { display: block; }

@@ -289,14 +289,15 @@ INSERT INTO REFACC_MAQUI (maquina, refaccion) VALUES
 ('MAQ004', 2),
 ('MAQ005', 4);
 
-INSERT INTO REPORTE_FALLA (numeroRegistro, asunto, fechaResolucion, fechaCreacion, horaCreacion, tiempoParo, causaRaiz, descripcion, imagen, maquina, trabajador, tipo_falla, tipo_severidad) VALUES
-(1, 'Ruido anormal en cabezal de pickup', '2026-01-20', '2026-01-20', '08:30:00', 2, 'Desgaste de rodamiento del eje principal', 'Se detectó ruido metálico al operar el cabezal a alta velocidad', '/img/reportes/ruido_cabezal.jpg', 'MAQ001', 'NOM-001', 1, 'MEDIA');
+INSERT INTO REPORTE_FALLA (numeroRegistro, asunto, fechaResolucion, fechaCreacion, horaCreacion, tiempoParo, causaRaiz, descripcion, imagen, maquina, trabajador, tipo_falla, tipo_severidad, estado_reporte) VALUES
+(1, 'Ruido anormal en cabezal de pickup', '2026-01-20', '2026-01-20', '08:30:00', 2, 'Desgaste de rodamiento del eje principal', 'Se detectó ruido metálico al operar el cabezal a alta velocidad', '/img/reportes/ruido_cabezal.jpg', 'MAQ001', 'NOM-001', 1, 'MEDIA', 'CERRA');
 
-INSERT INTO REPORTE_FALLA (numeroRegistro, asunto, fechaResolucion, fechaCreacion, horaCreacion, tiempoParo, causaRaiz, descripcion, imagen, maquina, trabajador, tipo_falla, tipo_severidad) VALUES
-(2, 'Temperatura inestable en zona 3', '2026-03-17', '2026-03-15', '10:15:00', 16, 'Termoparo dañado en zona 3 del horno', 'La temperatura oscilaba ±15°C impidiendo soldadura correcta', '/img/reportes/temp_inestable.jpg', 'MAQ002', 'NOM-003', 2, 'ALTA'),
-(3, 'Error de imagen en inspección AOI', '2026-05-14', '2026-05-10', '07:45:00', 72, 'Falla en cámara principal del AOI', 'La cámara no logra enfocar correctamente, genera falsos positivos', '/img/reportes/error_aoi.jpg', 'MAQ003', 'NOM-001', 5, 'ALTA'),
-(4, 'Fuga de pasta de soldadura', '2026-06-03', '2026-06-01', '09:00:00', 4, 'Boquilla desgastada en dispensador', 'Se observó fuga de pasta por la boquilla principal', '/img/reportes/fuga_pasta.jpg', 'MAQ004', 'NOM-003', 1, 'MEDIA'),
-(5, 'Pantalla de control congelada', NULL, '2026-07-10', '14:20:00', NULL, 'Fallo en software de control de la estación', 'La pantalla táctil dejó de responder, equipo detenido completamente', '/img/reportes/pantalla_congelada.jpg', 'MAQ006', 'NOM-001', 4, 'CRITI');
+INSERT INTO REPORTE_FALLA (numeroRegistro, asunto, fechaResolucion, fechaCreacion, horaCreacion, tiempoParo, causaRaiz, descripcion, imagen, maquina, trabajador, tipo_falla, tipo_severidad, estado_reporte) VALUES
+(2, 'Temperatura inestable en zona 3', '2026-03-17', '2026-03-15', '10:15:00', 16, 'Termoparo dañado en zona 3 del horno', 'La temperatura oscilaba ±15°C impidiendo soldadura correcta', '/img/reportes/temp_inestable.jpg', 'MAQ002', 'NOM-003', 2, 'ALTA', 'CERRA'),
+(3, 'Error de imagen en inspección AOI', '2026-05-14', '2026-05-10', '07:45:00', 72, 'Falla en cámara principal del AOI', 'La cámara no logra enfocar correctamente, genera falsos positivos', '/img/reportes/error_aoi.jpg', 'MAQ003', 'NOM-001', 5, 'ALTA', 'CERRA'),
+(4, 'Fuga de pasta de soldadura', '2026-06-03', '2026-06-01', '09:00:00', 4, 'Boquilla desgastada en dispensador', 'Se observó fuga de pasta por la boquilla principal', '/img/reportes/fuga_pasta.jpg', 'MAQ004', 'NOM-003', 1, 'MEDIA', 'CERRA'),
+(5, 'Pantalla de control congelada', NULL, '2026-07-10', '14:20:00', NULL, 'Fallo en software de control de la estación', 'La pantalla táctil dejó de responder, equipo detenido completamente', '/img/reportes/pantalla_congelada.jpg', 'MAQ006', 'NOM-001', 4, 'CRITI', 'ENATE');
+
 
 INSERT INTO TIPO_REPORTE (tipo_falla, reporte_falla) VALUES
 (1, 1);
@@ -320,12 +321,12 @@ INSERT INTO ORDEN_MANTENIMIENTO (folio, descripcion, diagnostico, notas, fechaPr
 ('OM-2026-005', 'Reparación de pantalla de control', 'Fallo en software de control', 'En espera de técnico especializado en software', '2026-07-15', '2026-07-11', '08:00:00', NULL, NULL, NULL, 25.00, '/img/ordenes/om_2026_005.jpg', 'MAQ006', 'NOM-001', 5, 'CORRE', 'ENPRO');
 
 INSERT INTO MOVIMIENTO (numeroRegistro, descripcion, fecha, hora, tipoMovimiento, orden_mantenimiento, refaccion, PIEZA) VALUES
-(1, 'Instalación de rodamiento 6205 en cabezal', '2026-01-22', '10:15:00', 'INSTA', 'OM-2026-001', 1, 1);
+(1, 'Instalación de rodamiento 6205 en cabezal', '2026-01-22', '10:15:00', 'INSTA', 'OM-2026-001', 1, 'PS-6205-001');
 
 INSERT INTO MOVIMIENTO (numeroRegistro, descripcion, fecha, hora, tipoMovimiento, orden_mantenimiento, refaccion, PIEZA) VALUES
-(2, 'Reemplazo de termoparo zona 3', '2026-03-16', '14:30:00', 'INSTA', 'OM-2026-002', 3, 3),
-(3, 'Retiro de cámara AOI dañada', '2026-05-12', '09:00:00', 'DESMO', 'OM-2026-003', NULL, 3),
-(4, 'Instalación de boquilla dispensadora', '2026-06-02', '10:00:00', 'INSTA', 'OM-2026-004', 2, 4);
+(2, 'Reemplazo de termoparo zona 3', '2026-03-16', '14:30:00', 'INSTA', 'OM-2026-002', 3, 'PS-CAM-001'),
+(3, 'Retiro de cámara AOI dañada', '2026-05-12', '09:00:00', 'DESMO', 'OM-2026-003', NULL, 'PS-CAM-001'),
+(4, 'Instalación de boquilla dispensadora', '2026-06-02', '10:00:00', 'INSTA', 'OM-2026-004', 2, 'PS-NZ0402-001');
 
 
 

@@ -1,0 +1,59 @@
+{% extends "base_admin.html" %}
+
+{% block title %}{% if modo == "editar" %}Editar{% else %}Nuevo{% endif %} · {{ config.label }}{% endblock %}
+{% block breadcrumb %}Gestión{% endblock %}
+{% block page_title %}{% if modo == "editar" %}Editar registro{% else %}Nuevo registro{% endif %}{% endblock %}
+
+{% block content %}
+<div class="gestion-header">
+  <div>
+    <a href="{% url 'gestion:list' config.slug %}">← {{ config.label }}</a>
+    <h1>{% if modo == "editar" %}Editar{% else %}Nuevo registro{% endif %} · {{ config.label }}</h1>
+  </div>
+</div>
+
+<form method="post"
+      action="{% if modo == 'editar' %}{% url 'gestion:editar' config.slug pk %}{% else %}{% url 'gestion:crear' config.slug %}{% endif %}"
+      class="form-generico">
+  {% csrf_token %}
+  {% for campo in campos %}
+    <div class="form-generico__campo">
+      <label for="id_{{ campo.name }}">
+        {{ campo.label }}{% if campo.requerido %} *{% endif %}
+      </label>
+
+      {% if campo.tipo == "textarea" %}
+        <textarea name="{{ campo.name }}" id="id_{{ campo.name }}" {% if campo.requerido %}required{% endif %}>{{ campo.valor|default:"" }}</textarea>
+
+      {% elif campo.tipo == "select" %}
+        <select name="{{ campo.name }}" id="id_{{ campo.name }}" {% if campo.requerido %}required{% endif %}>
+          <option value="">Selecciona…</option>
+          {% for opcion in campo.opciones %}
+            <option value="{{ opcion.value }}" {% if opcion.value|stringformat:"s" == campo.valor|stringformat:"s" %}selected{% endif %}>{{ opcion.label }}</option>
+          {% endfor %}
+        </select>
+
+      {% elif campo.tipo == "date" %}
+        <input type="date" name="{{ campo.name }}" id="id_{{ campo.name }}" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
+
+      {% elif campo.tipo == "time" %}
+        <input type="time" name="{{ campo.name }}" id="id_{{ campo.name }}" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
+
+      {% elif campo.tipo == "int" or campo.tipo == "float" %}
+        <input type="number" {% if campo.tipo == "float" %}step="any"{% endif %} name="{{ campo.name }}" id="id_{{ campo.name }}" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
+
+      {% elif campo.tipo == "password" %}
+        <input type="password" name="{{ campo.name }}" id="id_{{ campo.name }}"
+               autocomplete="new-password"
+               placeholder="{% if modo == 'editar' %}Dejar en blanco para no cambiarla{% endif %}"
+               {% if campo.requerido and modo != "editar" %}required{% endif %}>
+
+      {% else %}
+        <input type="text" name="{{ campo.name }}" id="id_{{ campo.name }}" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <button type="submit" class="btn-primary-sm">{% if modo == "editar" %}Guardar cambios{% else %}Guardar{% endif %}</button>
+</form>
+{% endblock %}
