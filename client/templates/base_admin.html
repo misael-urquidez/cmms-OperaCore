@@ -63,6 +63,7 @@
                 <div class="sidebar__submenu">
                     <a href="{% url 'maquinaria:index' %}" class="{% if seccion == 'maquinaria' and subseccion == 'lista' %}is-active{% endif %}">Ver lista</a>
                     <a href="{% url 'maquinaria:crear_maquina' %}" class="{% if seccion == 'maquinaria' and subseccion == 'crear' %}is-active{% endif %}">Registrar nueva</a>
+                    <a href="{% url 'maquinaria:wiki_maquinas' %}" class="{% if seccion == 'maquinaria' and subseccion == 'wiki' %}is-active{% endif %}">Wiki de equipos</a>
                 </div>
             </div>
 
