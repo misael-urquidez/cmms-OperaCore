@@ -81,28 +81,27 @@ class RegistroTrabajadorSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        validated_data.pop("password2")
-        password = validated_data.pop("password")
-        hashed = make_password(password)
+            validated_data.pop("password2")
+            password = validated_data.pop("password")
+            hashed = make_password(password)
 
-        for _ in range(5):
-            trabajador = Trabajador(
-                numeroNomina=generar_numero_nomina(),
-                contrasena=hashed,
-                **validated_data,
+            for _ in range(5):
+                trabajador = Trabajador(
+                    numeroNomina=generar_numero_nomina(),
+                    contrasena=hashed,
+                    **validated_data,
+                )
+                try:
+                    with transaction.atomic():
+                        trabajador.save(force_insert=True)
+                    return trabajador
+                except IntegrityError as exc:
+                    if "PRIMARY" not in str(exc):
+                        raise
+
+            raise serializers.ValidationError(
+                {"detail": "No se pudo asignar un número de nómina disponible. Intenta de nuevo."}
             )
-            try:
-                with transaction.atomic():
-                    trabajador.save(force_insert=True)
-                return trabajador
-            except IntegrityError as exc:
-                if "PRIMARY" not in str(exc):
-                    raise
-
-        raise serializers.ValidationError(
-            {"detail": "No se pudo asignar un número de nómina disponible. Intenta de nuevo."}
-        )
-
 
 class UpdateTrabajadorSerializer(serializers.ModelSerializer):
     """Edición de un TRABAJADOR existente. password es opcional."""
