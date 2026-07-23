@@ -1,4 +1,6 @@
 from rest_framework import serializers
+import os
+from django.conf import settings
 from .models import (
     Planta,
     Area,
@@ -105,12 +107,12 @@ class DetailLineaSerializer(serializers.ModelSerializer):
 class CreateLineaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Linea
-        fields = ["codigo", "nombre", "descripcion", "area"]
+        fields = ["codigo", "nombre", "descripcion", "telefono", "area"]
 
 class UpdateLineaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Linea
-        fields = ["codigo", "nombre", "descripcion", "area"]
+        fields = ["codigo", "nombre", "descripcion", "telefono", "area"]
 
 
 # ==========================================================
@@ -206,22 +208,52 @@ class DetailMaquinaSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class CreateMaquinaSerializer(serializers.ModelSerializer):
+    imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
+
     class Meta:
         model = Maquina
         fields = [
             "codigo", "numeroserie", "nombre", "descripcion", "imagen_url",
+            "imagen",
             "modelo_3d", "fechainstalacion", "linea", "marca", "modelo",
             "estado_maquina", "tipo_maquina"
         ]
 
+    def create(self, validated_data):
+        imagen_file = validated_data.pop("imagen", None)
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "maquinaria")
+            os.makedirs(carpeta, exist_ok=True)
+            ruta = os.path.join(carpeta, imagen_file.name)
+            with open(ruta, "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            validated_data["imagen_url"] = f"maquinaria/{imagen_file.name}"
+        return super().create(validated_data)
+
 class UpdateMaquinaSerializer(serializers.ModelSerializer):
+    imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
+
     class Meta:
         model = Maquina
         fields = [
             "codigo", "numeroserie", "nombre", "descripcion", "imagen_url",
+            "imagen",
             "modelo_3d", "fechainstalacion", "linea", "marca", "modelo",
             "estado_maquina", "tipo_maquina"
         ]
+
+    def update(self, instance, validated_data):
+        imagen_file = validated_data.pop("imagen", None)
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "maquinaria")
+            os.makedirs(carpeta, exist_ok=True)
+            ruta = os.path.join(carpeta, imagen_file.name)
+            with open(ruta, "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            validated_data["imagen_url"] = f"maquinaria/{imagen_file.name}"
+        return super().update(instance, validated_data)
 
 
 # ==========================================================

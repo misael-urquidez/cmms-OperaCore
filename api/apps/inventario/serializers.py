@@ -1,4 +1,6 @@
 from rest_framework import serializers
+import os
+from django.conf import settings
 from . import models
 
 # ------------ CLASIFICACION ----------------------------------------------------
@@ -215,14 +217,42 @@ class DetailHerramientaSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class CreateHerramientaSerializer(serializers.ModelSerializer):
+    imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
+
     class Meta:
         model = models.Herramienta
         fields = ["nombre", "descripcion", "imagen", "tipo_herramienta"]
 
+    def create(self, validated_data):
+        imagen_file = validated_data.pop("imagen", None)
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "inventario")
+            os.makedirs(carpeta, exist_ok=True)
+            ruta = os.path.join(carpeta, imagen_file.name)
+            with open(ruta, "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            validated_data["imagen"] = f"inventario/{imagen_file.name}"
+        return super().create(validated_data)
+
 class UpdateHerramientaSerializer(serializers.ModelSerializer):
+    imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
+
     class Meta:
         model = models.Herramienta
         fields = ["nombre", "descripcion", "imagen", "tipo_herramienta"]
+
+    def update(self, instance, validated_data):
+        imagen_file = validated_data.pop("imagen", None)
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "inventario")
+            os.makedirs(carpeta, exist_ok=True)
+            ruta = os.path.join(carpeta, imagen_file.name)
+            with open(ruta, "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            validated_data["imagen"] = f"inventario/{imagen_file.name}"
+        return super().update(instance, validated_data)
 
 
 # ------------ PIEZA ------------------------------------------------------------

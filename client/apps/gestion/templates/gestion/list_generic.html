@@ -35,7 +35,7 @@
         <td>{{ pk_val }}</td>
         {% for col in columnas %}
           {% if not col.name|es_pk:config.pk_field %}
-            <td>{{ registro|get_item:col.name }}</td>
+            <td>{% if col.es_booleano %}{{ registro|get_item:col.name|si_no }}{% else %}{{ registro|get_item:col.name }}{% endif %}</td>
           {% endif %}
         {% endfor %}
         {% if config.detail_path or config.delete_path %}

@@ -44,6 +44,7 @@ class Linea(models.Model):
     codigo = models.CharField(primary_key=True, max_length=10)
     nombre = models.CharField(unique=True, max_length=100)
     descripcion = models.CharField(max_length=255, blank=True, null=True)
+    telefono = models.CharField(max_length=15, blank=True, null=True)
     area = models.ForeignKey(Area, models.DO_NOTHING, db_column='area')
 
     class Meta:

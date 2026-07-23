@@ -30,18 +30,11 @@ document.addEventListener("DOMContentLoaded", function () {
   );
 
   setupInputValidation(
-    document.getElementById("id_imagen_url"),
-    { required: false, maxLength: 255, customValidator: function(v){
-      if (!v) return true;
-      try { new URL(v); return true; } catch(e) { return "Debe ser una URL válida"; }
-    } },
-    document.getElementById("imagen_url-error"),
-    estadoElement,
-  );
-
-  setupInputValidation(
     document.getElementById("id_fechainstalacion"),
-    { required: true },
+    { required: true, customValidator: function(v) {
+      if (!v) return true;
+      return new Date(v) <= new Date(new Date().toDateString()) ? true : "La fecha no puede ser mayor a la actual";
+    }},
     document.getElementById("fechainstalacion-error"),
     estadoElement,
   );

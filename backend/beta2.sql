@@ -234,6 +234,7 @@ CREATE TABLE LINEA (
     codigo          VARCHAR(10)  PRIMARY KEY,
     nombre          VARCHAR(100) NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL,
+    telefono        VARCHAR(15)  NULL,
     area            VARCHAR(10)  NOT NULL,
     CONSTRAINT fk_linea_area FOREIGN KEY (area) REFERENCES AREA(codigo)
 ) ENGINE=InnoDB;

@@ -48,14 +48,22 @@ def _fetch_fk_choices(fk_slug):
 
 
 def _resolver_choices(config):
-    """Para cada campo tipo 'select' con fk, agrega sus opciones (value/label)."""
+    """Para cada campo tipo 'select' con fk, agrega sus opciones (value/label).
+    Si el campo tiene 'fk_parent', incluye 'parent' en cada opcion para
+    permitir cascading en el template.
+    Si el campo tiene 'opciones' inline, las usa directamente."""
     campos = []
     for campo in config["campos"]:
         campo = dict(campo)
         if campo.get("tipo") == "select" and campo.get("fk"):
             crudos = _fetch_fk_choices(campo["fk"])
+            parent_key = campo.get("fk_parent_key")
             campo["opciones"] = [
-                {"value": item.get(campo["fk_value"]), "label": item.get(campo["fk_label"])}
+                {
+                    "value": item.get(campo["fk_value"]),
+                    "label": item.get(campo["fk_label"]),
+                    "parent": item.get(parent_key) if parent_key else None,
+                }
                 for item in crudos
             ]
         campos.append(campo)
@@ -97,7 +105,8 @@ def _fetch_detail(config, pk):
 
 def _resolver_choices_con_valores(config, valores=None):
     """Igual que _resolver_choices pero, si hay 'valores' (edicion), marca
-    la opcion seleccionada y precarga el valor de cada campo."""
+    la opcion seleccionada y precarga el valor de cada campo.
+    Tambien soporta opciones inline en el registry."""
     valores = valores or {}
     campos = []
     for campo in config["campos"]:
@@ -105,18 +114,26 @@ def _resolver_choices_con_valores(config, valores=None):
         campo["valor"] = "" if campo.get("tipo") == "password" else valores.get(campo["name"], "")
         if campo.get("tipo") == "select" and campo.get("fk"):
             crudos = _fetch_fk_choices(campo["fk"])
+            parent_key = campo.get("fk_parent_key")
             campo["opciones"] = [
-                {"value": item.get(campo["fk_value"]), "label": item.get(campo["fk_label"])}
+                {
+                    "value": item.get(campo["fk_value"]),
+                    "label": item.get(campo["fk_label"]),
+                    "parent": item.get(parent_key) if parent_key else None,
+                }
                 for item in crudos
             ]
         campos.append(campo)
     return campos
 
 
-def _build_payload(config, post_data, es_edicion=False):
+def _build_payload(config, post_data, es_edicion=False, archivos=None):
     payload = {}
     errores = []
+    file_names = {c["name"] for c in config["campos"] if c.get("tipo") == "file"}
     for campo in config["campos"]:
+        if campo.get("tipo") == "file":
+            continue
         valor = post_data.get(campo["name"], "").strip()
         requerido = campo.get("requerido") and not (es_edicion and campo.get("tipo") == "password")
         if requerido and not valor:
@@ -124,6 +141,17 @@ def _build_payload(config, post_data, es_edicion=False):
         if valor:
             payload[campo["name"]] = valor
     return payload, errores
+
+
+def _extraer_archivos(config, archivos):
+    """Extrae de request.FILES los campos declarados como tipo 'file'.
+    Usa 'file_api_name' como key si existe, si no usa el name del campo."""
+    files = {}
+    for campo in config["campos"]:
+        if campo.get("tipo") == "file" and campo["name"] in archivos:
+            api_name = campo.get("file_api_name") or campo["name"]
+            files[api_name] = archivos[campo["name"]]
+    return files or None
 
 
 def _invalidar_cache(config):
@@ -189,7 +217,8 @@ class GestionCreateView(generic.View):
 
         url = f"{_api_base(config['api_app'])}/{config['create_path']}"
         try:
-            res = SESSION.post(url, data=payload, timeout=10)
+            files = _extraer_archivos(config, request.FILES)
+            res = SESSION.post(url, data=payload, files=files, timeout=10)
             if res.status_code in (200, 201):
                 _invalidar_cache(config)
                 messages.success(request, f"{config['label']} registrado exitosamente.")
@@ -252,7 +281,8 @@ class GestionEditView(generic.View):
         metodo = config.get("update_method", "PATCH")
         url = self._url_update(config, pk)
         try:
-            res = SESSION.request(metodo, url, data=payload, timeout=10)
+            files = _extraer_archivos(config, request.FILES)
+            res = SESSION.request(metodo, url, data=payload, files=files, timeout=10)
             if res.status_code in (200, 201):
                 _invalidar_cache(config)
                 messages.success(request, f"{config['label']} actualizado exitosamente.")

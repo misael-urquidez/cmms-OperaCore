@@ -15,6 +15,7 @@
 
 <form method="post"
       action="{% if modo == 'editar' %}{% url 'gestion:editar' config.slug pk %}{% else %}{% url 'gestion:crear' config.slug %}{% endif %}"
+      enctype="multipart/form-data"
       class="form-generico">
   {% csrf_token %}
 
@@ -29,10 +30,13 @@
         <textarea name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" {% if campo.requerido %}required{% endif %}>{{ campo.valor|default:"" }}</textarea>
 
       {% elif campo.tipo == "select" %}
-        <select name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" {% if campo.requerido %}required{% endif %}>
+        <select name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error"
+                {% if campo.fk_parent %}data-parent-field="id_{{ campo.fk_parent }}"{% endif %}
+                {% if campo.requerido %}required{% endif %}>
           <option value="">Selecciona…</option>
           {% for opcion in campo.opciones %}
-            <option value="{{ opcion.value }}" {% if opcion.value|stringformat:"s" == campo.valor|stringformat:"s" %}selected{% endif %}>{{ opcion.label }}</option>
+            <option value="{{ opcion.value }}" {% if opcion.value|stringformat:"s" == campo.valor|stringformat:"s" %}selected{% endif %}
+                    {% if opcion.parent %}data-parent="{{ opcion.parent }}"{% endif %}>{{ opcion.label }}</option>
           {% endfor %}
         </select>
 
@@ -44,6 +48,10 @@
 
       {% elif campo.tipo == "int" or campo.tipo == "float" %}
         <input type="number" {% if campo.tipo == "float" %}step="any"{% endif %} name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
+
+      {% elif campo.tipo == "file" %}
+        <input type="file" name="{{ campo.name }}" id="id_{{ campo.name }}" accept="image/*">
+        <span class="file-name" id="{{ campo.name }}-filename" style="margin-left:8px;color:#64748b;font-size:13px;"></span>
 
       {% elif campo.tipo == "password" %}
         <input type="password" name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error"
@@ -59,6 +67,44 @@
 
   <button type="submit" id="boton-registrar" class="btn-primary-sm">{% if modo == "editar" %}Guardar cambios{% else %}Guardar{% endif %}</button>
 </form>
+<script>
+document.querySelectorAll('input[type="file"]').forEach(function(input) {
+  var span = document.getElementById(input.id + '-filename');
+  if (!span) return;
+  input.addEventListener('change', function() {
+    span.textContent = this.files[0] ? this.files[0].name : '';
+  });
+});
+
+document.querySelectorAll('select[data-parent-field]').forEach(function(hijo) {
+  var padreId = hijo.getAttribute('data-parent-field');
+  var padre = document.getElementById(padreId);
+  if (!padre) return;
+
+  function filtrar() {
+    var valPadre = padre.value;
+    var seleccionado = hijo.value;
+    var encontrado = false;
+
+    Array.from(hijo.options).forEach(function(opt) {
+      if (opt.value === '') return;
+      var coincide = !valPadre || opt.getAttribute('data-parent') === valPadre;
+      opt.hidden = !coincide;
+      opt.disabled = !coincide;
+      if (!coincide && opt.value === seleccionado) {
+        encontrado = true;
+      }
+    });
+
+    if (encontrado) {
+      hijo.value = '';
+    }
+  }
+
+  padre.addEventListener('change', filtrar);
+  filtrar();
+});
+</script>
 {% endblock %}
 
 {% block extra_js %}
