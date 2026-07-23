@@ -13,4 +13,7 @@ urlpatterns = [
     path("maquinas/crear/", views.CrearMaquinaAPIView.as_view(), name="crear-maquina"),
     path("catalogos/", views.CatalogosMaquinaAPIView.as_view(), name="catalogos"),
     path("reportar-falla/", views.ReportarFallaManualAPIView.as_view(), name="reportar-falla"),
+    path("maquinas/<str:codigo>/modo/", views.ModoMonitoreoAPIView.as_view(), name="modo-monitoreo"),
+    path("maquinas/<str:codigo>/simular/", views.SimularLecturaAPIView.as_view(), name="simular-lectura"),
+    path("maquinas/<str:codigo>/registro-ops/", views.RegistroOpsAPIView.as_view(), name="registro-ops"),
 ]

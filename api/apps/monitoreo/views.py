@@ -11,8 +11,12 @@ from apps.fallas.models import (
 )
 from apps.usuarios.models import Trabajador
 
+from . import services
 from .models import Indicador, LecturaSensor
-from .serializers import CrearMaquinaSerializer, LecturaSensorSerializer, ReporteFallaManualSerializer
+from .serializers import (
+    CrearMaquinaSerializer, LecturaSensorSerializer, ModoMonitoreoSerializer,
+    RegistroOpsSerializer, ReporteFallaManualSerializer,
+)
 
 
 class LecturaCreateAPIView(APIView):
@@ -139,3 +143,59 @@ class ReportarFallaManualAPIView(APIView):
             fechaCreacion=timezone.localdate(), horaCreacion=timezone.localtime().time(),
         )
         return Response({"numeroRegistro": reporte.numeroRegistro}, status=status.HTTP_201_CREATED)
+
+
+class ModoMonitoreoAPIView(APIView):
+    """Cambia el modo de monitoreo (manual/simulado/iot) de una máquina."""
+
+    def patch(self, request, codigo):
+        try:
+            maquina = Maquina.objects.get(codigo=codigo)
+        except Maquina.DoesNotExist as exc:
+            raise NotFound("Máquina no encontrada.") from exc
+        serializer = ModoMonitoreoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        maquina.modo_monitoreo = serializer.validated_data["modo_monitoreo"]
+        maquina.save(update_fields=["modo_monitoreo"])
+        return Response({"codigo": maquina.codigo, "modo_monitoreo": maquina.modo_monitoreo})
+
+
+class SimularLecturaAPIView(APIView):
+    """Genera una lectura simulada bajo demanda (botón 'Simular ahora').
+    Requiere que la máquina esté en modo_monitoreo='simulado'."""
+
+    def post(self, request, codigo):
+        try:
+            maquina = Maquina.objects.get(codigo=codigo)
+        except Maquina.DoesNotExist as exc:
+            raise NotFound("Máquina no encontrada.") from exc
+        if maquina.modo_monitoreo != LecturaSensor.ORIGEN_SIMULADO:
+            return Response(
+                {"detail": "La máquina no está en modo simulado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        lectura, reporte, requiere_revision = services.generar_lectura_simulada(maquina)
+        data = LecturaSensorSerializer(lectura).data
+        data["reporte_automatico"] = reporte.numeroRegistro if reporte else None
+        data["requiere_revision_preventiva"] = requiere_revision
+        return Response(data, status=status.HTTP_201_CREATED)
+
+
+class RegistroOpsAPIView(APIView):
+    """Registra un periodo de horas de operación de la máquina.
+    No recibe ni escribe mtbf/mttr/disponibilidad -- eso lo calculan
+    los triggers de MySQL en cuanto se inserta el registro."""
+
+    def post(self, request, codigo):
+        try:
+            maquina = Maquina.objects.get(codigo=codigo)
+        except Maquina.DoesNotExist as exc:
+            raise NotFound("Máquina no encontrada.") from exc
+        serializer = RegistroOpsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        registro = services.registrar_horas_operacion(maquina=maquina, **serializer.validated_data)
+        return Response({
+            "numeroRegistro": registro.numeroRegistro,
+            "maquina": maquina.codigo,
+            "horasOperacion": registro.horasOperacion,
+        }, status=status.HTTP_201_CREATED)

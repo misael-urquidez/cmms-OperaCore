@@ -11,7 +11,11 @@
          data-historial-url-base="{% url 'monitoreo:historial' codigo='__CODIGO__' %}"
          data-estado-url-base="{% url 'monitoreo:estado' codigo='__CODIGO__' %}"
          data-catalogos-url="{% url 'monitoreo:catalogos' %}"
-         data-crear-url="{% url 'monitoreo:crear-maquina' %}">
+         data-crear-url="{% url 'monitoreo:crear-maquina' %}"
+         data-modo-url-base="{% url 'monitoreo:modo' codigo='__CODIGO__' %}"
+         data-lectura-manual-url="{% url 'monitoreo:lectura-manual' %}"
+         data-simular-url-base="{% url 'monitoreo:simular' codigo='__CODIGO__' %}"
+         data-registro-ops-url-base="{% url 'monitoreo:registro-ops' codigo='__CODIGO__' %}">
 
   {{ maquinas|json_script:"maquinas-data" }}
 
@@ -81,6 +85,47 @@
         <div class="metric-card__bar"><div class="metric-card__bar-fill" id="drawerDispoFill"></div></div>
         <strong class="metric-card__value" id="drawerDispo">—</strong>
       </div>
+    </div>
+
+    <div class="machine-drawer__section">
+      <h3>Modo de monitoreo</h3>
+      <div class="modo-monitoreo">
+        <select id="drawerModoSelect">
+          <option value="manual">Manual</option>
+          <option value="simulado">Simulado</option>
+          <option value="iot" disabled>IoT (próximamente)</option>
+        </select>
+        <button type="button" class="btn-plant-secondary" id="drawerModoGuardar">Guardar</button>
+      </div>
+      <p class="feedback-msg" id="drawerModoMsg" hidden></p>
+    </div>
+
+    <div class="machine-drawer__section" id="drawerManualSection" hidden>
+      <h3>Captura manual</h3>
+      <form id="drawerManualForm" class="manual-form">
+        <label>Vibración<input type="number" step="0.01" min="0" id="mVibracion" required></label>
+        <label>Temperatura (°C)<input type="number" step="0.1" id="mTemperatura"></label>
+        <label class="manual-form__check"><input type="checkbox" id="mGolpe"> Se detectó un golpe/impacto</label>
+        <button type="submit" class="btn-plant-new">Registrar lectura</button>
+      </form>
+      <p class="feedback-msg" id="drawerManualMsg" hidden></p>
+    </div>
+
+    <div class="machine-drawer__section" id="drawerSimuladoSection" hidden>
+      <h3>Simulación</h3>
+      <button type="button" class="btn-plant-secondary" id="drawerSimularBtn">Generar lectura simulada ahora</button>
+      <p class="feedback-msg" id="drawerSimularMsg" hidden></p>
+    </div>
+
+    <div class="machine-drawer__section">
+      <h3>Horas de operación <span class="section-hint">(alimenta el MTBF)</span></h3>
+      <form id="drawerOpsForm" class="manual-form">
+        <label>Fecha inicio<input type="date" id="opsFechaInicio" required></label>
+        <label>Fecha fin<input type="date" id="opsFechaFin" required></label>
+        <label>Horas operadas<input type="number" step="1" min="0" id="opsHoras" required></label>
+        <button type="submit" class="btn-plant-secondary">Registrar horas</button>
+      </form>
+      <p class="feedback-msg" id="drawerOpsMsg" hidden></p>
     </div>
 
     <div class="machine-drawer__section">

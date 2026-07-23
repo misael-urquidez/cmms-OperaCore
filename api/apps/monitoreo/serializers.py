@@ -82,3 +82,29 @@ class ReporteFallaManualSerializer(serializers.Serializer):
     tiempoParo = serializers.IntegerField(required=False, allow_null=True, min_value=0)
     tipo_falla = serializers.IntegerField()
     tipo_severidad = serializers.CharField(max_length=5)
+
+
+class ModoMonitoreoSerializer(serializers.Serializer):
+    """Cambia el modo de monitoreo de una máquina (manual/simulado/iot).
+    iot queda bloqueado hasta que el puente del Wiimote / app móvil exista."""
+    modo_monitoreo = serializers.ChoiceField(choices=LecturaSensor.ORIGENES)
+
+    def validate_modo_monitoreo(self, valor):
+        if valor == LecturaSensor.ORIGEN_IOT:
+            raise serializers.ValidationError(
+                "El modo IoT aún no está habilitado en este entorno."
+            )
+        return valor
+
+
+class RegistroOpsSerializer(serializers.Serializer):
+    """Registra un periodo de horas de operación de la máquina.
+    No expone mtbf/mttr/disponibilidad: esos los calculan los triggers."""
+    fechaInicio = serializers.DateField()
+    fechaFin = serializers.DateField()
+    horasOperacion = serializers.IntegerField(min_value=0)
+
+    def validate(self, datos):
+        if datos["fechaFin"] < datos["fechaInicio"]:
+            raise serializers.ValidationError("fechaFin no puede ser anterior a fechaInicio.")
+        return datos

@@ -111,3 +111,16 @@
   .machine-drawer__metrics, .new-machine-form__grid { grid-template-columns:1fr; }
   .content { padding:1.25rem; }
 }
+
+/* -------- modo de monitoreo / captura manual / simulación -------- */
+.modo-monitoreo { display:flex; gap:.5rem; }
+.modo-monitoreo select { flex:1; background:var(--input-bg); border:1px solid var(--line); border-radius:.45rem; padding:.5rem .6rem; color:var(--color-text); font-size:.85rem; font-family:inherit; }
+.manual-form { display:flex; flex-direction:column; gap:.6rem; }
+.manual-form label { display:flex; flex-direction:column; gap:.3rem; font-size:.78rem; color:var(--color-muted); }
+.manual-form input[type="number"] { background:var(--input-bg); border:1px solid var(--line); border-radius:.45rem; padding:.5rem .6rem; color:var(--color-text); font-size:.88rem; font-family:inherit; }
+.manual-form__check { flex-direction:row !important; align-items:center; gap:.4rem !important; }
+.feedback-msg { margin:.5rem 0 0; font-size:.78rem; }
+.feedback-msg.is-ok { color:#22c55e; }
+.feedback-msg.is-error { color:#fca5a5; }
+.manual-form input[type="date"] { background:var(--input-bg); border:1px solid var(--line); border-radius:.45rem; padding:.5rem .6rem; color:var(--color-text); font-size:.88rem; font-family:inherit; }
+.section-hint { text-transform:none; letter-spacing:normal; font-weight:400; color:var(--color-muted); opacity:.8; }
