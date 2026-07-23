@@ -52,4 +52,12 @@ urlpatterns = [
     path("v1/maquina/create/", views.CrearMaquinaAPIView.as_view(), name="create_maquina"),
     path("v1/maquina/<str:codigo>/", views.DetailMaquinaAPIView.as_view(), name="detail_maquina"),
     path("v1/maquina/update/<str:codigo>/", views.UpdateMaquinaAPIView.as_view(), name="update_maquina"),
+    # ------------ REGISTRO OPERACIONES ---------------------------------------
+    path("v1/registro-ops/list/",views.ListRegistroOpsView.as_view(),name="registro-ops-list",),
+    path("v2/registro-ops/create/",views.CreateRegistroOpsView.as_view(),name="registro-ops-create",),
+    path("v1/registro-ops/<int:numeroregistro>/",views.DetailRegistroOpsView.as_view(),name="registro-ops-detail",),
+    # ------------ INDICADOR ------------
+    path("v1/indicador/list/", views.IndicadorListAPIView.as_view(), name="indicador-list"),
+    path("v2/indicador/create/", views.IndicadorCreateAPIView.as_view(), name="indicador-create"),
+    path("v1/indicador/<int:numeroregistro>/", views.IndicadorDetailAPIView.as_view(), name="indicador-detail"),
 ]

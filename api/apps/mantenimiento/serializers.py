@@ -157,3 +157,100 @@ class UpdateTrabaOrdePersonalSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TrabaOrdePersonal
         fields = ["trabajador", "orden_mantenimiento"]
+
+# ------------ ORDEN_MANTENIMIENTO -------------------------------------
+class ListOrdenMantenimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.OrdenMantenimiento
+        fields = [
+            "folio",
+            "fechacreacion",
+            "maquina",
+            "tipo_mantenimiento",
+            "estado_orden",
+            "porcentaje",
+        ]
+
+
+class DetailOrdenMantenimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.OrdenMantenimiento
+        fields = "__all__"
+
+
+class CreateOrdenMantenimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.OrdenMantenimiento
+        fields = [
+            "folio",
+            "descripcion",
+            "diagnostico",
+            "notas",
+            "fechaprogramada",
+            "fechacreacion",
+            "horacreacion",
+            "fechacierre",
+            "horacierre",
+            "horasintervenidas",
+            "porcentaje",
+            "imagen",
+            "maquina",
+            "trabajador",
+            "reporte_falla",
+            "tipo_mantenimiento",
+            "estado_orden",
+        ]
+
+class UpdateOrdenMantenimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.OrdenMantenimiento
+        fields = [
+            "descripcion",
+            "diagnostico",
+            "notas",
+            "fechaprogramada",
+            "fechacierre",
+            "horacierre",
+            "horasintervenidas",
+            "porcentaje",
+            "imagen",
+            "maquina",
+            "trabajador",
+            "reporte_falla",
+            "tipo_mantenimiento",
+            "estado_orden",
+        ]
+
+
+# ------------ MOVIMIENTO -----------------------------------------------
+class ListMovimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Movimiento
+        fields = [
+            "numeroregistro",
+            "fecha",
+            "hora",
+            "tipomovimiento",
+            "orden_mantenimiento",
+        ]
+
+
+class DetailMovimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Movimiento
+        fields = "__all__"
+
+
+class CreateMovimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Movimiento
+        fields = [
+            "descripcion",
+            "fecha",
+            "hora",
+            "tipomovimiento",
+            "orden_mantenimiento",
+            "refaccion",
+            "pieza",
+        ]
+

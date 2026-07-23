@@ -168,3 +168,41 @@ class UpdateMaquinaAPIView(generics.UpdateAPIView):
     queryset = models.Maquina.objects.all()
     serializer_class = serializers.UpdateMaquinaSerializer
     lookup_field = 'codigo'
+
+# ------------ REGISTRO OPERACIONES------------------------------------------------
+
+class ListRegistroOpsView(generics.ListAPIView):
+    queryset = models.RegistroOps.objects.all().order_by("-numeroregistro")
+    serializer_class = serializers.ListRegistroOpsSerializer
+
+class CreateRegistroOpsView(generics.CreateAPIView):
+    queryset = models.RegistroOps.objects.all()
+    serializer_class = serializers.CreateRegistroOpsSerializer
+
+class DetailRegistroOpsView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.RegistroOps.objects.all()
+    lookup_field = "numeroregistro"
+
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return serializers.CreateRegistroOpsSerializer
+        return serializers.DetailRegistroOpsSerializer
+
+# ------------ INDICADOR ------------------------------------------------
+class IndicadorListAPIView(generics.ListAPIView):
+    queryset = models.Indicador.objects.all().order_by("-numeroregistro")
+    serializer_class = serializers.ListIndicadorSerializer
+
+
+class IndicadorCreateAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateIndicadorSerializer
+
+
+class IndicadorDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.Indicador.objects.all()
+    lookup_field = "numeroregistro"
+
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return serializers.CreateIndicadorSerializer
+        return serializers.DetailIndicadorSerializer

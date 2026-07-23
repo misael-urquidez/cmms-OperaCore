@@ -181,5 +181,42 @@ class TrabaOrdePersonalDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         self.check_object_permissions(self.request, obj)
         return obj
 
-# A partir de aqui sigue el mismo patron cuando quieras exponer
-# OrdenMantenimiento / Movimiento.
+
+# ------------ ORDEN_MANTENIMIENTO -------------------------------------
+class OrdenMantenimientoListAPIView(generics.ListAPIView):
+    queryset = models.OrdenMantenimiento.objects.all().order_by("-fechacreacion", "-horacreacion")
+    serializer_class = serializers.ListOrdenMantenimientoSerializer
+
+
+class OrdenMantenimientoCreateAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateOrdenMantenimientoSerializer
+
+
+class OrdenMantenimientoDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.OrdenMantenimiento.objects.all()
+    lookup_field = "folio"
+
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return serializers.UpdateOrdenMantenimientoSerializer
+        return serializers.DetailOrdenMantenimientoSerializer
+
+
+# ------------ MOVIMIENTO -----------------------------------------------
+class MovimientoListAPIView(generics.ListAPIView):
+    queryset = models.Movimiento.objects.all().order_by("-fecha", "-hora")
+    serializer_class = serializers.ListMovimientoSerializer
+
+
+class MovimientoCreateAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateMovimientoSerializer
+
+
+class MovimientoDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.Movimiento.objects.all()
+    lookup_field = "numeroregistro"
+
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return serializers.CreateMovimientoSerializer
+        return serializers.DetailMovimientoSerializer
