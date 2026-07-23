@@ -1,3 +1,5 @@
+import random
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -5,7 +7,8 @@ from django.utils import timezone
 from apps.fallas.models import EstadoReporte, ReporteFalla, TipoFalla, TipoSeveridad
 from apps.usuarios.models import Trabajador
 
-from .models import EstadoOrden, LecturaSensor, OrdenMantenimiento, TipoMantenimiento
+from .models import EstadoOrden, LecturaSensor, OrdenMantenimiento, RegistroOps, TipoMantenimiento
+
 
 LECTURAS_TENDENCIA = 5
 MINIMO_FUERA_UMBRAL = 3
@@ -67,3 +70,34 @@ def registrar_lectura(maquina, origen, vibracion, golpe=False, temperatura=None)
     reporte = _crear_falla_y_orden_por_golpe(maquina) if golpe else None
     requiere_revision = evaluar_tendencia(maquina) if not golpe else maquina.requiere_revision_preventiva
     return lectura, reporte, requiere_revision
+
+
+def generar_lectura_simulada(maquina, golpe_probabilidad=0.02):
+    """Genera una lectura simulada realista para una máquina.
+    Usado por el comando `simular_lecturas` y por el botón
+    'Generar lectura simulada ahora' del panel de monitoreo."""
+    fuera_de_rango = random.random() < 0.12
+    vibracion = (
+        random.uniform(maquina.umbral_vibracion * 1.05, maquina.umbral_vibracion * 1.6)
+        if fuera_de_rango else random.uniform(0.1, maquina.umbral_vibracion * 0.85)
+    )
+    golpe = random.random() < golpe_probabilidad
+    return registrar_lectura(
+        maquina=maquina, origen=LecturaSensor.ORIGEN_SIMULADO,
+        vibracion=round(vibracion, 3), golpe=golpe,
+        temperatura=round(random.uniform(20, 45), 1),
+    )
+
+
+def registrar_horas_operacion(maquina, fechaInicio, fechaFin, horasOperacion):
+    """Registra un periodo de operación (INSERT en REGISTRO_OPS).
+    Esto es lo que en realidad mueve el MTBF: el trigger
+    `tg_actualizar_mtbf_registroops` recalcula el MTBF de la máquina
+    y lo guarda en el periodo vigente de INDICADOR. El MTBF/MTTR/
+    disponibilidad en sí NUNCA se escriben a mano; solo se alimentan
+    los datos de origen (horas operadas, fallas, cierres de orden) y
+    los triggers hacen el cálculo."""
+    return RegistroOps.objects.create(
+        maquina=maquina, fechaInicio=fechaInicio, fechaFin=fechaFin,
+        horasOperacion=horasOperacion,
+    )

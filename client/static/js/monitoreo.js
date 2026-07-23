@@ -10,6 +10,10 @@
   var ESTADO_TPL = root.dataset.estadoUrlBase;
   var CATALOGOS_URL = root.dataset.catalogosUrl;
   var CREAR_URL = root.dataset.crearUrl;
+  var MODO_TPL = root.dataset.modoUrlBase;
+  var LECTURA_MANUAL_URL = root.dataset.lecturaManualUrl;
+  var SIMULAR_TPL = root.dataset.simularUrlBase;
+  var REGISTRO_OPS_TPL = root.dataset.registroOpsUrlBase;
 
   var canvas = document.getElementById("plantCanvas");
   var linksSvg = document.getElementById("plantLinks");
@@ -221,6 +225,18 @@
   var trendChart = document.getElementById("trendChart");
   var trendEmpty = document.getElementById("trendEmpty");
 
+  var drawerModoSelect = document.getElementById("drawerModoSelect");
+  var drawerModoGuardar = document.getElementById("drawerModoGuardar");
+  var drawerModoMsg = document.getElementById("drawerModoMsg");
+  var drawerManualSection = document.getElementById("drawerManualSection");
+  var drawerManualForm = document.getElementById("drawerManualForm");
+  var drawerManualMsg = document.getElementById("drawerManualMsg");
+  var drawerSimuladoSection = document.getElementById("drawerSimuladoSection");
+  var drawerSimularBtn = document.getElementById("drawerSimularBtn");
+  var drawerSimularMsg = document.getElementById("drawerSimularMsg");
+  var drawerOpsForm = document.getElementById("drawerOpsForm");
+  var drawerOpsMsg = document.getElementById("drawerOpsMsg");
+
   function abrirDrawer(codigo) {
     estado.seleccionada = codigo;
     drawer.setAttribute("aria-hidden", "false");
@@ -247,7 +263,124 @@
     drawerUmbral.textContent = m.umbral_vibracion;
     drawerTemperatura.textContent = m.ultima_lectura && m.ultima_lectura.temperatura != null ? m.ultima_lectura.temperatura + " °C" : "—";
     drawerTimestamp.textContent = m.ultima_lectura ? m.ultima_lectura.timestamp.slice(0, 16).replace("T", " ") : "—";
+    drawerModoSelect.value = m.modo_monitoreo || "simulado";
+    actualizarSeccionesPorModo(m.modo_monitoreo);
+    drawerModoMsg.hidden = true;
+    drawerManualMsg.hidden = true;
+    drawerSimularMsg.hidden = true;
+    drawerOpsMsg.hidden = true;
   }
+
+  function actualizarSeccionesPorModo(modo) {
+    drawerManualSection.hidden = modo !== "manual";
+    drawerSimuladoSection.hidden = modo !== "simulado";
+  }
+
+  // vista previa instantánea al elegir modo, sin esperar el clic en "Guardar"
+  drawerModoSelect.addEventListener("change", function () {
+    actualizarSeccionesPorModo(drawerModoSelect.value);
+  });
+
+  function mostrarMsg(el, texto, ok) {
+    el.hidden = false;
+    el.textContent = texto;
+    el.className = "feedback-msg " + (ok ? "is-ok" : "is-error");
+  }
+
+  drawerModoGuardar.addEventListener("click", function () {
+    if (!estado.seleccionada) return;
+    var codigo = estado.seleccionada;
+    fetch(urlPara(MODO_TPL, codigo), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify({ modo_monitoreo: drawerModoSelect.value }),
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          mostrarMsg(drawerModoMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo actualizar el modo.", false);
+          return;
+        }
+        mostrarMsg(drawerModoMsg, "Modo actualizado a " + res.data.modo_monitoreo + ".", true);
+        actualizarSeccionesPorModo(res.data.modo_monitoreo);
+        refrescar();
+      }).catch(function () { mostrarMsg(drawerModoMsg, "No fue posible conectar con el servidor.", false); });
+  });
+
+  drawerManualForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    if (!estado.seleccionada) return;
+    var payload = {
+      maquina: estado.seleccionada,
+      vibracion: parseFloat(document.getElementById("mVibracion").value),
+      temperatura: document.getElementById("mTemperatura").value ? parseFloat(document.getElementById("mTemperatura").value) : null,
+      golpe: document.getElementById("mGolpe").checked,
+    };
+    fetch(LECTURA_MANUAL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify(payload),
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          mostrarMsg(drawerManualMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo registrar la lectura.", false);
+          return;
+        }
+        mostrarMsg(drawerManualMsg, res.data.reporte_automatico
+          ? "Lectura registrada. Se generó un reporte de falla automático (#" + res.data.reporte_automatico + ")."
+          : "Lectura registrada correctamente.", true);
+        drawerManualForm.reset();
+        refrescar();
+        cargarDatosDrawer(estado.seleccionada, true);
+      }).catch(function () { mostrarMsg(drawerManualMsg, "No fue posible conectar con el servidor.", false); });
+  });
+
+  drawerSimularBtn.addEventListener("click", function () {
+    if (!estado.seleccionada) return;
+    drawerSimularBtn.disabled = true;
+    fetch(urlPara(SIMULAR_TPL, estado.seleccionada), {
+      method: "POST",
+      headers: { "X-CSRFToken": getCookie("csrftoken") },
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        drawerSimularBtn.disabled = false;
+        if (!res.ok) {
+          mostrarMsg(drawerSimularMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo generar la lectura.", false);
+          return;
+        }
+        mostrarMsg(drawerSimularMsg, res.data.reporte_automatico
+          ? "Lectura simulada generada. Se creó un reporte de falla automático (#" + res.data.reporte_automatico + ")."
+          : "Lectura simulada generada (vibración " + res.data.vibracion + ").", true);
+        refrescar();
+        cargarDatosDrawer(estado.seleccionada, true);
+      }).catch(function () {
+        drawerSimularBtn.disabled = false;
+        mostrarMsg(drawerSimularMsg, "No fue posible conectar con el servidor.", false);
+      });
+  });
+
+  drawerOpsForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    if (!estado.seleccionada) return;
+    var payload = {
+      fechaInicio: document.getElementById("opsFechaInicio").value,
+      fechaFin: document.getElementById("opsFechaFin").value,
+      horasOperacion: parseInt(document.getElementById("opsHoras").value, 10),
+    };
+    fetch(urlPara(REGISTRO_OPS_TPL, estado.seleccionada), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify(payload),
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          mostrarMsg(drawerOpsMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo registrar el periodo.", false);
+          return;
+        }
+        mostrarMsg(drawerOpsMsg, "Periodo registrado (" + res.data.horasOperacion + " h). MTBF recalculado.", true);
+        drawerOpsForm.reset();
+        cargarDatosDrawer(estado.seleccionada, true);
+      }).catch(function () { mostrarMsg(drawerOpsMsg, "No fue posible conectar con el servidor.", false); });
+  });
 
   function cargarDatosDrawer(codigo, silencioso) {
     Promise.all([

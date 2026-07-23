@@ -93,3 +93,68 @@ class CrearMaquinaAPIView(View):
         except ValueError:
             cuerpo = {"detail": "Respuesta inválida del API."}
         return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
+
+
+class ModoMonitoreoAPIView(View):
+    def patch(self, request, codigo):
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except ValueError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+        try:
+            respuesta = SESSION.patch(f"{API_URL}/maquinas/{codigo}/modo/", json=payload, timeout=5)
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        try:
+            cuerpo = respuesta.json()
+        except ValueError:
+            cuerpo = {"detail": "Respuesta inválida del API."}
+        return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
+
+
+class LecturaManualAPIView(View):
+    def post(self, request):
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except ValueError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+        payload["origen"] = "manual"
+        try:
+            respuesta = SESSION.post(f"{API_URL}/lecturas/", json=payload, timeout=5)
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        try:
+            cuerpo = respuesta.json()
+        except ValueError:
+            cuerpo = {"detail": "Respuesta inválida del API."}
+        return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
+
+
+class SimularLecturaAPIView(View):
+    def post(self, request, codigo):
+        try:
+            respuesta = SESSION.post(f"{API_URL}/maquinas/{codigo}/simular/", timeout=5)
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        try:
+            cuerpo = respuesta.json()
+        except ValueError:
+            cuerpo = {"detail": "Respuesta inválida del API."}
+        return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
+
+
+class RegistroOpsAPIView(View):
+    def post(self, request, codigo):
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except ValueError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+        try:
+            respuesta = SESSION.post(f"{API_URL}/maquinas/{codigo}/registro-ops/", json=payload, timeout=5)
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        try:
+            cuerpo = respuesta.json()
+        except ValueError:
+            cuerpo = {"detail": "Respuesta inválida del API."}
+        return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
