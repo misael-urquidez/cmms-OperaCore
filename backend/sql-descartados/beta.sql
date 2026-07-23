@@ -103,7 +103,7 @@ CREATE TABLE ROL (
 
 -- Tabla: ESPECIALIDAD
 CREATE TABLE ESPECIALIDAD (
-    codigo          VARCHAR(5)   PRIMARY KEY,
+    numeroRegistro  INT AUTO_INCREMENT PRIMARY KEY,
     nombre          VARCHAR(50)  NOT NULL UNIQUE,
     descripcion     VARCHAR(255) NULL
 ) ENGINE=InnoDB;
@@ -232,9 +232,9 @@ CREATE TABLE TRABAJADOR (
     `contraseña`    VARCHAR(255) NOT NULL,
     actividad       BOOLEAN NOT NULL DEFAULT TRUE,
     rol             VARCHAR(5)   NULL,
-    especialidad    VARCHAR(5)   NULL,
+    especialidad    INT   NULL,
     CONSTRAINT fk_trabajador_rol FOREIGN KEY (rol) REFERENCES ROL(codigo),
-    CONSTRAINT fk_trabajador_especialidad FOREIGN KEY (especialidad) REFERENCES ESPECIALIDAD(codigo)
+    CONSTRAINT fk_trabajador_especialidad FOREIGN KEY (especialidad) REFERENCES ESPECIALIDAD(numeroRegistro)
 ) ENGINE=InnoDB;
 
 -- Tabla: HERRAMIENTA

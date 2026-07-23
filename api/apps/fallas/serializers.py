@@ -192,3 +192,33 @@ class ReporteFallaUpdateSerializer(serializers.ModelSerializer):
             "asunto", "descripcion", "causaRaiz", "tiempoParo", "fechaResolucion",
             "maquina", "trabajador", "tipo_severidad", "imagen", "estado_reporte",
         ]
+
+
+# ------------ TIPO_REPORTE (llave compuesta: tipo_falla, reporte_falla) --
+class ListTipoReporteSerializer(serializers.ModelSerializer):
+    tipo_falla_nombre = serializers.CharField(
+        source="tipo_falla.nombre", read_only=True, default=None
+    )
+
+    class Meta:
+        model = models.TipoReporte
+        fields = ["tipo_falla", "reporte_falla", "tipo_falla_nombre"]
+        # No tiene id — pk compuesta
+
+
+class DetailTipoReporteSerializer(serializers.ModelSerializer):
+    tipo_falla_nombre = serializers.CharField(
+        source="tipo_falla.nombre", read_only=True, default=None
+    )
+
+    class Meta:
+        model = models.TipoReporte
+        fields = ["tipo_falla", "reporte_falla", "tipo_falla_nombre"]
+        # No tiene id — pk compuesta
+
+
+class CreateTipoReporteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoReporte
+        fields = ["tipo_falla", "reporte_falla"]
+        # No tiene id — pk compuesta

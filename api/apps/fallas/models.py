@@ -183,7 +183,7 @@ class ReporteFalla(models.Model):
 
 class TipoReporte(models.Model):
     tipo_falla = models.ForeignKey(
-        TipoFalla, on_delete=models.DO_NOTHING, db_column="tipo_falla"
+        TipoFalla, on_delete=models.DO_NOTHING, db_column="tipo_falla", primary_key=True
     )
     reporte_falla = models.ForeignKey(
         ReporteFalla, 

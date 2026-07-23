@@ -643,9 +643,8 @@ GESTION_REGISTRY = {
         "create_path": "especialidades/create/",
         "detail_path": "especialidades/{pk}/",
         "delete_path": "especialidades/{pk}/",
-        "pk_field": "codigo",
+        "pk_field": "numeroRegistro",
         "campos": [
-            {"name": "codigo", "label": "Código", "tipo": "text", "requerido": True, "columna": True},
             {"name": "nombre", "label": "Nombre", "tipo": "text", "requerido": True, "columna": True},
             {"name": "descripcion", "label": "Descripción", "tipo": "textarea", "requerido": False, "columna": False},
         ],

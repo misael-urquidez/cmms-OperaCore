@@ -78,13 +78,13 @@ INSERT INTO ROL (codigo, nombre, descripcion) VALUES
 ('ADMIN', 'Administrador', 'Administrador del sistema con acceso total'),
 ('ENCLN', 'Encargado de línea', 'Encargado de línea de producción, validación de órdenes');
 
-INSERT INTO ESPECIALIDAD (codigo, nombre, descripcion) VALUES
-('SMT', 'Surface Mount Technology', 'Especialidad en tecnología de montaje superficial');
+INSERT INTO ESPECIALIDAD (nombre, descripcion) VALUES
+('Surface Mount Technology', 'Especialidad en tecnología de montaje superficial');
 
-INSERT INTO ESPECIALIDAD (codigo, nombre, descripcion) VALUES
-('BGA', 'Ball Grid Array', 'Especialidad en componentes BGA'),
-('AOI', 'Automated Optical Inspection', 'Especialidad en inspección óptica'),
-('MEC', 'Mecánica', 'Especialidad en sistemas mecánicos');
+INSERT INTO ESPECIALIDAD (nombre, descripcion) VALUES
+('Ball Grid Array', 'Especialidad en componentes BGA'),
+('Automated Optical Inspection', 'Especialidad en inspección óptica'),
+('Mecánica', 'Especialidad en sistemas mecánicos');
 
 INSERT INTO TIPO_FALLA (nombre, descripcion) VALUES
 ('Mecánica', 'Fallo en componentes mecánicos');
@@ -188,12 +188,12 @@ INSERT INTO REFACCION (nombre, codigoSku, puntoReorden, codigoInventario, numero
 ('Motor servo YSM40', 'SKU-MSY40', 2, 'INV-MSY40', 'ORD-2026-005', 890.00, 14, 4, 1, 'PROV002', 5, 'ALTAC');
 
 INSERT INTO TRABAJADOR (numeroNomina, nombre, apellidoPat, apellidoMat, telefono, correo, usuario, `contraseña`, actividad, rol, especialidad) VALUES
-('NOM-001', 'Juan', 'Pérez', 'García', '5559876543', 'juan.perez@ems.mx', 'jperez', 'password123', TRUE, 'TECNI', 'SMT');
+('NOM-001', 'Juan', 'Pérez', 'García', '5559876543', 'juan.perez@ems.mx', 'jperez', 'password123', TRUE, 'TECNI', 1);
 
 INSERT INTO TRABAJADOR (numeroNomina, nombre, apellidoPat, apellidoMat, telefono, correo, usuario, `contraseña`, actividad, rol, especialidad) VALUES
-('NOM-002', 'María', 'López', 'Hernández', '5559876544', 'maria.lopez@ems.mx', 'mlopez', 'password123', TRUE, 'ENCLN', 'SMT'),
-('NOM-003', 'Carlos', 'Ruiz', 'Martínez', '5559876545', 'carlos.ruiz@ems.mx', 'cruiz', 'password123', TRUE, 'TECNI', 'MEC'),
-('NOM-004', 'Ana', 'García', 'Torres', '5559876546', 'ana.garcia@ems.mx', 'agarcia', 'password123', TRUE, 'ADMIN', 'AOI');
+('NOM-002', 'María', 'López', 'Hernández', '5559876544', 'maria.lopez@ems.mx', 'mlopez', 'password123', TRUE, 'ENCLN', 1),
+('NOM-003', 'Carlos', 'Ruiz', 'Martínez', '5559876545', 'carlos.ruiz@ems.mx', 'cruiz', 'password123', TRUE, 'TECNI', 4),
+('NOM-004', 'Ana', 'García', 'Torres', '5559876546', 'ana.garcia@ems.mx', 'agarcia', 'password123', TRUE, 'ADMIN', 3);
 
 INSERT INTO HERRAMIENTA (nombre, descripcion, imagen, tipo_herramienta) VALUES
 ('Juego de llaves Allen', 'Juego de llaves Allen del #1 al #10', '/img/herramientas/llaves_allen.jpg', 1);
