@@ -1,0 +1,66 @@
+:root {
+    --bg-main: #0f1115;
+    --bg-card: #161920;
+    --bg-info: #1f242e;
+    --border-color: #2a313e;
+    --accent: #00adb5;
+    --accent-hover: #00f5ff;
+    --text-main: #e3e8f0;
+    --text-muted: #94a3b8;
+    --status-bg: #1e293b;
+    --status-text: #38bdf8;
+    --transition: all 0.25s ease-in-out;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    line-height: 1.5;
+}
+
+header {
+    background-color: var(--bg-card);
+    padding: 24px 40px;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+header h1 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+header p {
+    margin: 6px 0 0 0;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.btn {
+    display: block;
+    padding: 12px;
+    background-color: transparent;
+    color: var(--accent);
+    text-decoration: none;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    transition: var(--transition);
+    box-sizing: border-box;
+}
+
+.btn:hover {
+    background-color: var(--accent);
+    color: var(--bg-main);
+    box-shadow: 0 4px 12px rgba(0, 173, 181, 0.2);
+}

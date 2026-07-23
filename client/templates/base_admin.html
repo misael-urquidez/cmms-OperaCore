@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% include 'favicon.html' %}
     <title>{% block title %}Panel Admin · OperaCore{% endblock %}</title>
+    <script type="importmap">
+        {
+            "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
     <link rel="icon" href="{% static 'img/pre_logo.png' %}">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
@@ -45,6 +54,18 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 <span>Gestión</span>
             </a>
+        <div class="sidebar__group {% if seccion == 'maquinaria' %}is-open{% endif %}">
+                <button type="button" class="sidebar__link sidebar__group-toggle" aria-expanded="{% if seccion == 'maquinaria' %}true{% else %}false{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    <span>Maquinaria</span>
+                    <svg class="sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="sidebar__submenu">
+                    <a href="{% url 'maquinaria:index' %}" class="{% if seccion == 'maquinaria' and subseccion == 'lista' %}is-active{% endif %}">Ver lista</a>
+                    <a href="{% url 'maquinaria:crear_maquina' %}" class="{% if seccion == 'maquinaria' and subseccion == 'crear' %}is-active{% endif %}">Registrar nueva</a>
+                </div>
+            </div>
+
             <div class="sidebar__group {% if seccion == 'fallas' %}is-open{% endif %}">
     <button type="button" class="sidebar__link sidebar__group-toggle" aria-expanded="{% if seccion == 'fallas' %}true{% else %}false{% endif %}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
