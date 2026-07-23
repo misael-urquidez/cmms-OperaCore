@@ -90,7 +90,7 @@ else:
             "ENGINE": "django.db.backends.mysql",
             "NAME": config("DB_NAME", default="operacore"),
             "USER": config("DB_USER", default="root"),
-            "PASSWORD": config("DB_PASSWORD", default=""),
+            "PASSWORD": config("DB_PASSWORD", default="12345678"),
             "HOST": config("DB_HOST", default="127.0.0.1"),
             "PORT": config("DB_PORT", default="3306"),
             "OPTIONS": {"charset": "utf8mb4"},
