@@ -1,0 +1,187 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% block title %}Monitoreo · OperaCore{% endblock %}
+{% block breadcrumb %}Estado de planta{% endblock %}
+{% block page_title %}Monitoreo{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'monitoreo/css/monitoreo.css' %}">{% endblock %}
+{% block content %}
+<section class="monitoring"
+         data-datos-url="{% url 'monitoreo:datos' %}"
+         data-indicadores-url-base="{% url 'monitoreo:indicadores' codigo='__CODIGO__' %}"
+         data-historial-url-base="{% url 'monitoreo:historial' codigo='__CODIGO__' %}"
+         data-estado-url-base="{% url 'monitoreo:estado' codigo='__CODIGO__' %}"
+         data-catalogos-url="{% url 'monitoreo:catalogos' %}"
+         data-crear-url="{% url 'monitoreo:crear-maquina' %}"
+         data-modo-url-base="{% url 'monitoreo:modo' codigo='__CODIGO__' %}"
+         data-lectura-manual-url="{% url 'monitoreo:lectura-manual' %}"
+         data-simular-url-base="{% url 'monitoreo:simular' codigo='__CODIGO__' %}"
+         data-registro-ops-url-base="{% url 'monitoreo:registro-ops' codigo='__CODIGO__' %}">
+
+  {{ maquinas|json_script:"maquinas-data" }}
+
+  <div class="monitoring__head">
+    <div>
+      <p class="monitoring__kicker">Estado de planta</p>
+      <h1>Mapa de máquinas</h1>
+      <p class="monitoring__sub">Arrastra una máquina para acomodar el layout. Toca una máquina para ver sus indicadores.</p>
+    </div>
+    <div class="monitoring__actions">
+      <p class="monitoring__refresh" id="refreshStatus">Actualizado —</p>
+      <button type="button" class="btn-plant-new" id="btnNuevaMaquina">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Nueva máquina
+      </button>
+    </div>
+  </div>
+
+  {% if error %}<p class="monitoring__error" id="monitorError">{{ error }}</p>{% endif %}
+
+  <div class="plant-legend">
+    <span><i class="dot dot--OPERA"></i> Operativa</span>
+    <span><i class="dot dot--MANTE"></i> En mantenimiento</span>
+    <span><i class="dot dot--FALLO"></i> En falla</span>
+    <span><i class="dot dot--ALERT"></i> Revisión preventiva sugerida</span>
+    <span><i class="dot dot--sin"></i> Sin línea / sin dato</span>
+  </div>
+
+  <div class="plant-wrap">
+    <div class="plant-canvas" id="plantCanvas">
+      <svg class="plant-canvas__links" id="plantLinks"></svg>
+      <div class="plant-canvas__empty" id="plantEmpty" hidden>Aún no hay máquinas. Usa "Nueva máquina" para dar de alta la primera.</div>
+    </div>
+  </div>
+</section>
+
+{# ---------------- Panel lateral (drawer) de una máquina ---------------- #}
+<div class="machine-drawer" id="machineDrawer" aria-hidden="true">
+  <div class="machine-drawer__backdrop" id="drawerBackdrop"></div>
+  <aside class="machine-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+    <div class="machine-drawer__head">
+      <div>
+        <p class="machine-drawer__kicker" id="drawerLinea">—</p>
+        <h2 id="drawerTitle">—</h2>
+        <span class="machine-drawer__badge" id="drawerEstado">—</span>
+      </div>
+      <button type="button" class="machine-drawer__close" id="drawerClose" aria-label="Cerrar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="machine-drawer__alert" id="drawerAlert" hidden>Vibración por encima de lo normal en varias lecturas: se sugiere revisión preventiva.</div>
+
+    <div class="machine-drawer__metrics">
+      <div class="metric-card">
+        <span class="metric-card__label" title="Tiempo medio entre fallas: horas de operación entre una falla y otra.">MTBF</span>
+        <strong class="metric-card__value" id="drawerMtbf">—</strong>
+        <span class="metric-card__unit">horas</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-card__label" title="Tiempo medio de reparación: minutos que tarda en promedio resolver una falla.">MTTR</span>
+        <strong class="metric-card__value" id="drawerMttr">—</strong>
+        <span class="metric-card__unit">min</span>
+      </div>
+      <div class="metric-card metric-card--wide">
+        <span class="metric-card__label" title="Porcentaje del tiempo que la máquina está disponible para operar: MTBF / (MTBF + MTTR).">Disponibilidad</span>
+        <div class="metric-card__bar"><div class="metric-card__bar-fill" id="drawerDispoFill"></div></div>
+        <strong class="metric-card__value" id="drawerDispo">—</strong>
+      </div>
+    </div>
+
+    <div class="machine-drawer__section">
+      <h3>Modo de monitoreo</h3>
+      <div class="modo-monitoreo">
+        <select id="drawerModoSelect">
+          <option value="manual">Manual</option>
+          <option value="simulado">Simulado</option>
+          <option value="iot" disabled>IoT (próximamente)</option>
+        </select>
+        <button type="button" class="btn-plant-secondary" id="drawerModoGuardar">Guardar</button>
+      </div>
+      <p class="feedback-msg" id="drawerModoMsg" hidden></p>
+    </div>
+
+    <div class="machine-drawer__section" id="drawerManualSection" hidden>
+      <h3>Captura manual</h3>
+      <form id="drawerManualForm" class="manual-form">
+        <label>Vibración<input type="number" step="0.01" min="0" id="mVibracion" required></label>
+        <label>Temperatura (°C)<input type="number" step="0.1" id="mTemperatura"></label>
+        <label class="manual-form__check"><input type="checkbox" id="mGolpe"> Se detectó un golpe/impacto</label>
+        <button type="submit" class="btn-plant-new">Registrar lectura</button>
+      </form>
+      <p class="feedback-msg" id="drawerManualMsg" hidden></p>
+    </div>
+
+    <div class="machine-drawer__section" id="drawerSimuladoSection" hidden>
+      <h3>Simulación</h3>
+      <button type="button" class="btn-plant-secondary" id="drawerSimularBtn">Generar lectura simulada ahora</button>
+      <p class="feedback-msg" id="drawerSimularMsg" hidden></p>
+    </div>
+
+    <div class="machine-drawer__section">
+      <h3>Horas de operación <span class="section-hint">(alimenta el MTBF)</span></h3>
+      <form id="drawerOpsForm" class="manual-form">
+        <label>Fecha inicio<input type="date" id="opsFechaInicio" required></label>
+        <label>Fecha fin<input type="date" id="opsFechaFin" required></label>
+        <label>Horas operadas<input type="number" step="1" min="0" id="opsHoras" required></label>
+        <button type="submit" class="btn-plant-secondary">Registrar horas</button>
+      </form>
+      <p class="feedback-msg" id="drawerOpsMsg" hidden></p>
+    </div>
+
+    <div class="machine-drawer__section">
+      <h3>Última lectura</h3>
+      <dl class="machine-drawer__dl">
+        <div><dt>Vibración</dt><dd id="drawerVibracion">—</dd></div>
+        <div><dt>Umbral</dt><dd id="drawerUmbral">—</dd></div>
+        <div><dt>Temperatura</dt><dd id="drawerTemperatura">—</dd></div>
+        <div><dt>Hora</dt><dd id="drawerTimestamp">—</dd></div>
+      </dl>
+    </div>
+
+    <div class="machine-drawer__section">
+      <h3>Tendencia de vibración</h3>
+      <svg class="trend-chart" id="trendChart" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
+      <p class="trend-chart__empty" id="trendEmpty" hidden>Sin lecturas suficientes todavía.</p>
+    </div>
+
+    <div class="machine-drawer__foot">
+      <a href="{% url 'fallas:reporte' %}" class="btn-plant-secondary" id="drawerReportarFalla">Reportar falla en esta máquina</a>
+    </div>
+  </aside>
+</div>
+
+{# ---------------- Modal "Nueva máquina" ---------------- #}
+<div class="new-machine-modal" id="newMachineModal" aria-hidden="true">
+  <div class="new-machine-modal__backdrop" id="newMachineBackdrop"></div>
+  <div class="new-machine-modal__panel" role="dialog" aria-modal="true" aria-labelledby="newMachineTitle">
+    <div class="new-machine-modal__head">
+      <h2 id="newMachineTitle">Nueva máquina</h2>
+      <button type="button" class="machine-drawer__close" id="newMachineClose" aria-label="Cerrar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="newMachineForm" class="new-machine-form">
+      <p class="new-machine-form__error" id="newMachineError" hidden></p>
+      <div class="new-machine-form__grid">
+        <label>Código<input type="text" name="codigo" id="fCodigo" maxlength="10" required placeholder="MAQ007"></label>
+        <label>Nombre<input type="text" name="nombre" id="fNombre" maxlength="100" required placeholder="Pick &amp; Place 2"></label>
+        <label>Línea<select name="linea" id="fLinea"><option value="">Sin línea</option></select></label>
+        <label>Tipo de máquina<select name="tipo_maquina" id="fTipo"><option value="">Sin especificar</option></select></label>
+        <label>Marca<select name="marca" id="fMarca"><option value="">Sin especificar</option></select></label>
+        <label>Modelo<select name="modelo" id="fModelo"><option value="">Sin especificar</option></select></label>
+        <label>Estado inicial<select name="estado_maquina" id="fEstado"></select></label>
+        <label>Modo de monitoreo<select name="modo_monitoreo" id="fModo"></select></label>
+        <label>Umbral de vibración<input type="number" name="umbral_vibracion" id="fUmbral" step="0.1" min="0" value="4.0"></label>
+        <label>N° de serie<input type="text" name="numeroSerie" id="fSerie" maxlength="30" placeholder="Opcional"></label>
+      </div>
+      <label class="new-machine-form__full">Descripción<textarea name="descripcion" id="fDescripcion" maxlength="255" rows="2" placeholder="Opcional"></textarea></label>
+      <div class="new-machine-form__actions">
+        <button type="button" class="btn-plant-secondary" id="newMachineCancel">Cancelar</button>
+        <button type="submit" class="btn-plant-new" id="newMachineSubmit">Crear máquina</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/monitoreo.js' %}"></script>{% endblock %}

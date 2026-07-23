@@ -1,0 +1,66 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% block title %}Reportes de Falla · OperaCore{% endblock %}
+{% block breadcrumb %}Fallas{% endblock %}
+{% block page_title %}Reportes de falla{% endblock %}
+
+{% block content %}
+
+  <section class="panel">
+    <div class="panel__head">
+      <h2 class="panel__title">Reportes registrados</h2>
+      <div class="panel__actions">
+        <a class="btn-primary-sm" href="{% url 'fallas:reporte' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Nuevo reporte
+        </a>
+      </div>
+    </div>
+
+    {% if reportes %}
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Asunto</th>
+              <th>Fecha</th>
+              <th>Severidad</th>
+              <th>Máquina</th>
+              <th>Trabajador</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in reportes %}
+              <tr>
+                <td>{{ r.numeroRegistro }}</td>
+                <td>{{ r.asunto }}</td>
+                <td>{{ r.fechaCreacion }}</td>
+                <td><span class="badge">{{ r.tipo_severidad_nombre|default:"-" }}</span></td>
+                <td>{{ r.maquina_nombre|default:"-" }}</td>
+                <td>{{ r.trabajador_nombre|default:"-" }}</td>
+                <td><button type="button" onclick="abrir_modal_detalle({{ r.numeroRegistro }})">Ver detalles</button></td>
+                <td><a href="{% url 'fallas:actualizar_reporte' pk=r.numeroRegistro %}">Actualizar</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="panel__empty">No hay reportes de falla registrados todavía.</p>
+    {% endif %}
+  </section>
+
+  <div class="fallas-modal" id="detalle-falla" role="dialog">
+  </div>
+
+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">
+<link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}">
+{% endblock %}
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="{% static 'fallas/js/modal.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,818 @@
+/* ==========================================================================
+   Pantalla de acceso — port fiel de la maqueta original (pantalla completa,
+   secuencia boot: negro -> ondas -> logo CMMS -> hint -> caja de login).
+   El registro vive en la misma caja, con el mismo lenguaje visual.
+   ========================================================================== */
+
+/* Dos paletas de fondo, elegibles desde el selector de tema (#theme-panel).
+   "blue" = la maqueta original; "smt" = la variante verde/carriles. */
+.auth-body[data-bg="blue"] {
+  --bg-base: #000;
+  --bg-g1: #1a3a8c;
+  --bg-g2: #0d1e4a;
+  --bg-g3: #050b1e;
+  --accent: #6fa8ff;
+}
+.auth-body[data-bg="smt"] {
+  --bg-base: #03090d;
+  --bg-g1: #164653;
+  --bg-g2: #0b2732;
+  --bg-g3: #03090d;
+  --accent: #4fd8bf;
+}
+
+.auth-body {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--bg-base, #000);
+  color: #fff;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Fondo radial que aparece desde negro */
+#bg-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(ellipse at 50% 20%, var(--bg-g1) 0%, var(--bg-g2) 40%, var(--bg-g3) 100%);
+  opacity: 0;
+  transition: opacity 2.2s ease, background 0.6s ease;
+}
+/* Grid técnico: solo tiene sentido con el lenguaje "carriles SMT". */
+#bg-fade::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(127, 194, 185, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127, 194, 185, 0.055) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, #000 0%, transparent 74%);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.auth-body[data-lines="smt"] #bg-fade::before { opacity: 1; }
+.auth-body.awake #bg-fade { opacity: 1; }
+
+/* Ondas + particulas */
+#auth-waves {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 2s ease;
+}
+.auth-body.awake #auth-waves { opacity: 1; }
+
+.stage {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  padding: 2rem 1rem;
+}
+
+/* Dos columnas solo cuando ambas pueden conservar aire: acceso + mapa SMT. */
+.auth-layout {
+  width: min(100%, 1080px);
+  margin: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+  align-items: center;
+  gap: clamp(3rem, 8vw, 7rem);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+.auth-layout.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.auth-access { min-width: 0; }
+.auth-intro { max-width: 500px; margin-bottom: 34px; }
+.auth-intro h1 {
+  max-width: 11ch;
+  margin: 0;
+  font-size: clamp(2.5rem, 4.7vw, 4.5rem);
+  font-weight: 300;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+}
+.auth-intro > p:last-child {
+  max-width: 39ch;
+  margin: 18px 0 0;
+  color: rgba(224, 239, 242, 0.62);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+.auth-flow-signature {
+  display: none;
+  margin: 0 0 12px;
+  color: rgba(153, 218, 204, 0.72);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.flow-panel {
+  min-height: 500px;
+  padding: 40px;
+  border: 1px solid rgba(139, 208, 196, 0.16);
+  border-radius: 20px;
+  background: rgba(6, 26, 32, 0.42);
+  box-shadow: inset 0 1px 0 rgba(219, 255, 248, 0.07);
+  backdrop-filter: blur(14px);
+}
+.flow-panel__eyebrow,
+.flow-group h3 {
+  margin: 0;
+  color: rgba(153, 218, 204, 0.65);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.flow-panel h2 {
+  margin: 14px 0 0;
+  font-size: 1.65rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+.flow-panel__description {
+  max-width: 31ch;
+  margin: 12px 0 34px;
+  color: rgba(224, 239, 242, 0.54);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+.flow-group + .flow-group { margin-top: 30px; }
+.flow-list {
+  display: grid;
+  gap: 13px;
+  margin: 17px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.flow-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(241, 249, 248, 0.82);
+  font-size: 0.94rem;
+}
+.flow-marker {
+  position: relative;
+  width: 13px;
+  height: 8px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(146, 221, 204, 0.58);
+  border-radius: 2px;
+}
+.flow-marker::before,
+.flow-marker::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  width: 2px;
+  height: 2px;
+  background: rgba(175, 235, 221, 0.7);
+}
+.flow-marker::before { left: -5px; }
+.flow-marker::after { right: -5px; }
+
+/* ==========================================================================
+   Selector de tema (tuerca en la esquina): líneas de fondo + color de fondo
+   ========================================================================== */
+
+#theme-fab {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 30;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(150, 190, 255, 0.18);
+  border-radius: 10px;
+  color: rgba(230, 240, 255, 0.72);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+#theme-fab:hover { color: #fff; border-color: rgba(180, 220, 255, 0.4); }
+#theme-fab svg { transition: transform 0.4s ease; }
+#theme-fab[aria-expanded="true"] svg { transform: rotate(45deg); }
+
+#theme-panel {
+  position: fixed;
+  top: 64px;
+  right: 18px;
+  z-index: 30;
+  width: 204px;
+  padding: 16px;
+  background: rgba(8, 14, 26, 0.88);
+  border: 1px solid rgba(150, 190, 255, 0.16);
+  border-radius: 12px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+#theme-panel.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+.theme-panel__group + .theme-panel__group { margin-top: 4px; }
+
+.theme-panel__label {
+  margin: 0 0 8px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.theme-panel__options {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.theme-panel__group:last-child .theme-panel__options { margin-bottom: 10px; }
+.theme-panel__options button {
+  flex: 1;
+  padding: 7px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(150, 190, 255, 0.14);
+  border-radius: 7px;
+  color: rgba(230, 240, 255, 0.65);
+  font-size: 0.66rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.theme-panel__options button:hover { color: #fff; border-color: rgba(180, 220, 255, 0.35); }
+.theme-panel__options button.is-active {
+  background: rgba(150, 200, 255, 0.16);
+  border-color: var(--accent, rgba(180, 220, 255, 0.55));
+  color: #fff;
+}
+
+.theme-panel__swatch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: rgba(230, 240, 255, 0.55);
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+.theme-panel__swatch input[type="color"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 34px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(150, 190, 255, 0.3);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+.theme-panel__swatch input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.theme-panel__swatch input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+
+.theme-panel__reset {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: rgba(230, 240, 255, 0.4);
+  font-size: 0.62rem;
+  text-decoration: underline;
+  text-align: left;
+  cursor: pointer;
+}
+.theme-panel__reset:hover { color: #fff; }
+
+@media (max-width: 420px) {
+  #theme-fab { top: 12px; right: 12px; width: 34px; height: 34px; }
+  #theme-panel { top: 52px; right: 12px; width: 184px; }
+}
+
+/* ==========================================================================
+   Barra superior — solo existe/se ve en el tema "Plano".
+   ========================================================================== */
+.auth-topbar {
+  display: none;
+  align-items: center;
+  padding: 18px clamp(20px, 5vw, 56px);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+.auth-topbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #0f172a;
+}
+.auth-topbar__brand img { display: block; border-radius: 4px; }
+
+/* ==========================================================================
+   Tema "Plano" — alternativa clara y estática, sin canvas ni secuencia de
+   arranque. Reutiliza la misma estructura (auth-layout, login-box,
+   flow-panel); solo se repintan los colores y se desactiva la atmósfera.
+   ========================================================================== */
+.auth-body[data-style="plano"] {
+  background: #f5f6fb;
+  color: #0f172a;
+}
+.auth-body[data-style="plano"] #bg-fade,
+.auth-body[data-style="plano"] #auth-waves,
+.auth-body[data-style="plano"] #boot-logo,
+.auth-body[data-style="plano"] #skip-hint {
+  display: none !important;
+}
+.auth-body[data-style="plano"] .auth-topbar { display: flex; }
+
+.auth-body[data-style="plano"] [data-panel-group="lines"] { display: none; }
+
+.auth-body[data-style="plano"] .stage { min-height: auto; padding: clamp(28px, 6vw, 64px); }
+.auth-body[data-style="plano"] .auth-layout {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: none !important;
+}
+
+.auth-body[data-style="plano"] .auth-flow-signature {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent, #3b6fe0);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.auth-body[data-style="plano"] .auth-flow-signature::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--accent, #3b6fe0);
+}
+.auth-body[data-style="plano"] .auth-intro h1 {
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.auth-body[data-style="plano"] .auth-intro > p:last-child {
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.auth-body[data-style="plano"] #login-box {
+  display: block !important;
+  opacity: 1 !important;
+  transform: none !important;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  backdrop-filter: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+.auth-body[data-style="plano"] #login-box h2 {
+  color: #0f172a;
+  opacity: 1;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+.auth-body[data-style="plano"] .auth-mobile-brand { color: rgba(15, 23, 42, 0.75); }
+
+.auth-body[data-style="plano"] .inp-wrap input,
+.auth-body[data-style="plano"] .inp-wrap select {
+  background: #fff;
+  border-color: rgba(15, 23, 42, 0.15);
+  color: #0f172a;
+}
+.auth-body[data-style="plano"] .inp-wrap input::placeholder { color: rgba(15, 23, 42, 0.35); }
+.auth-body[data-style="plano"] .inp-wrap input:focus,
+.auth-body[data-style="plano"] .inp-wrap select:focus {
+  border-color: var(--accent, #3b6fe0);
+  box-shadow: 0 0 0 3px rgba(59, 111, 224, 0.14);
+  background: #fff;
+}
+
+.auth-body[data-style="plano"] .btn-login {
+  background: var(--accent, #3b6fe0);
+  border-color: var(--accent, #3b6fe0);
+  color: #fff;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+.auth-body[data-style="plano"] .btn-login:hover {
+  filter: brightness(1.08);
+  box-shadow: none;
+}
+.auth-body[data-style="plano"] .auth-switch { color: rgba(15, 23, 42, 0.55); }
+.auth-body[data-style="plano"] .auth-switch a { color: var(--accent, #3b6fe0); }
+
+.auth-body[data-style="plano"] .flow-panel {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: none;
+}
+.auth-body[data-style="plano"] .flow-list li {
+  transition: color 0.15s ease, transform 0.15s ease;
+  cursor: default;
+}
+.auth-body[data-style="plano"] .flow-list li:hover {
+  color: #fff;
+  transform: translateX(2px);
+}
+.auth-body[data-style="plano"] .flow-panel__eyebrow,
+.auth-body[data-style="plano"] .flow-group h3 { color: var(--accent, #6fa8ff); }
+
+/* Contenedor con más presencia (sombra marcada) en Plano */
+.auth-body[data-style="plano"] #login-box {
+  box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.06);
+  transition: box-shadow 0.2s ease;
+}
+.auth-body[data-style="plano"] #login-box:hover {
+  box-shadow: 0 32px 60px -14px rgba(15, 23, 42, 0.22), 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+/* Hover en los textos interactivos del formulario */
+.auth-body[data-style="plano"] #login-box h2 { transition: color 0.15s ease; }
+.auth-body[data-style="plano"] .auth-switch { transition: color 0.15s ease; }
+.auth-body[data-style="plano"] .auth-switch a {
+  transition: color 0.15s ease;
+  text-decoration: none;
+}
+.auth-body[data-style="plano"] .auth-switch a:hover {
+  color: #0f172a;
+  text-decoration: underline;
+}
+.auth-body[data-style="plano"] .auth-topbar__brand {
+  transition: opacity 0.15s ease;
+}
+.auth-body[data-style="plano"] .auth-topbar__brand:hover { opacity: 0.7; }
+
+/* La tuerca necesita más contraste sobre fondo claro: la volvemos oscura. */
+.auth-body[data-style="plano"] #theme-fab {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
+}
+.auth-body[data-style="plano"] #theme-fab:hover {
+  background: #1e293b;
+  border-color: #1e293b;
+  color: #fff;
+}
+
+/* Logo grande de arranque (fijo y centrado en el viewport) */
+#boot-logo {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  font-size: clamp(2.4rem, 9vw, 3.8rem);
+  font-weight: 200;
+  letter-spacing: clamp(8px, 3vw, 20px);
+  text-transform: uppercase;
+  text-shadow: 0 0 30px rgba(130, 180, 255, 0.6), 0 0 80px rgba(100, 160, 255, 0.3);
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+.auth-body.logo-in #boot-logo { opacity: 1; }
+.auth-body.logo-out #boot-logo { opacity: 0; }
+
+/* Hint */
+#skip-hint {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+.auth-body.hint-in #skip-hint { opacity: 1; pointer-events: auto; }
+.auth-body.hint-out #skip-hint { opacity: 0; pointer-events: none; }
+
+/* ==========================================================================
+   Caja de login / registro
+   ========================================================================== */
+
+#login-box {
+  margin: auto;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(150, 190, 255, 0.15);
+  padding: 44px 40px;
+  border-radius: 16px;
+  width: 340px;
+  max-width: calc(100vw - 2rem);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  display: none;
+  opacity: 0;
+  transform: scale(0.88) translateY(16px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+#login-box.visible { opacity: 1; transform: scale(1) translateY(0); }
+
+.auth-access #login-box { margin: 0; }
+
+.auth-mobile-brand { display: none; }
+
+#login-box h2 {
+  font-weight: 300;
+  font-size: 1rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+  opacity: 0.7;
+}
+
+/* Mensajes de Django */
+.auth-messages {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 22px;
+}
+.auth-messages__item {
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(150, 200, 255, 0.2);
+}
+.auth-messages__item--error {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+}
+.auth-messages__item--success {
+  background: rgba(134, 239, 172, 0.12);
+  border-color: rgba(134, 239, 172, 0.35);
+  color: #bbf7d0;
+}
+
+/* Formularios (login/registro conviven, se alterna con el enlace) */
+.auth-form { display: none; }
+.auth-form--active {
+  display: block;
+  animation: auth-fade-in 0.35s ease;
+}
+@keyframes auth-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.inp-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.inp-wrap { margin-bottom: 18px; position: relative; }
+
+.inp-wrap input,
+.inp-wrap select {
+  width: 100%;
+  padding: 13px 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(150, 200, 255, 0.12);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.88rem;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.3s;
+}
+.inp-wrap select { appearance: none; color: rgba(255, 255, 255, 0.55); }
+.inp-wrap input::placeholder { color: rgba(255, 255, 255, 0.35); }
+
+.inp-wrap input:focus,
+.inp-wrap select:focus {
+  border-color: rgba(150, 200, 255, 0.45);
+  box-shadow: 0 0 16px rgba(120, 170, 255, 0.15);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* Campo con error de validacion */
+.inp-wrap input.is-invalid,
+.inp-wrap select.is-invalid {
+  border-color: rgba(248, 113, 113, 0.6);
+  box-shadow: 0 0 14px rgba(248, 113, 113, 0.12);
+}
+
+.inp-error {
+  display: block;
+  color: #fca5a5;
+  font-size: 0.72rem;
+  margin-top: 6px;
+  min-height: 0.9rem;
+}
+
+.btn-login {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #fff;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 3px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 8px;
+  font-family: inherit;
+}
+.btn-login:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(180, 220, 255, 0.5);
+  box-shadow: 0 0 20px rgba(150, 200, 255, 0.2);
+}
+
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Enlace para alternar login <-> registro */
+.auth-switch {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+.auth-switch a {
+  color: rgba(180, 210, 255, 0.85);
+  text-decoration: none;
+  font-weight: 600;
+}
+.auth-switch a:hover { text-decoration: underline; }
+
+/* A 899px o menos el panel se retira antes de apretar las dos columnas. */
+@media (max-width: 899px) {
+  .auth-layout {
+    display: block;
+    width: min(100%, 340px);
+  }
+  .auth-access { width: 100%; }
+  .auth-intro {
+    margin: 0 0 26px;
+    text-align: center;
+  }
+  .auth-intro h1 {
+    max-width: 10ch;
+    margin: 0 auto;
+    font-size: clamp(2rem, 9vw, 3.1rem);
+  }
+  .auth-intro > p:last-child {
+    max-width: 34ch;
+    margin-right: auto;
+    margin-left: auto;
+    font-size: 0.86rem;
+  }
+  .auth-flow-signature { display: block; }
+  .flow-panel { display: none; }
+  .auth-access #login-box { margin: 0 auto; }
+}
+
+/* --- Pantallas angostas: firma de marca y controles cómodos para pulgar. --- */
+@media (max-width: 420px) {
+  .stage { padding: 1rem; }
+
+  #login-box {
+    width: 100%;
+    padding: 32px 24px 28px;
+    border-color: rgba(150, 190, 255, 0.22);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .auth-mobile-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: -2px 0 24px;
+    color: rgba(235, 244, 255, 0.88);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .auth-mobile-brand img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 9px rgba(130, 180, 255, 0.35));
+  }
+
+  #login-box h2 {
+    margin-bottom: 24px;
+    font-size: 1.06rem;
+    font-weight: 500;
+    letter-spacing: 2.4px;
+    opacity: 0.92;
+  }
+
+  .inp-row { grid-template-columns: 1fr; gap: 0; }
+  .inp-wrap { margin-bottom: 16px; }
+
+  .inp-wrap input,
+  .inp-wrap select {
+    min-height: 48px;
+    padding: 13px 16px;
+    border-color: rgba(150, 200, 255, 0.18);
+    background: rgba(0, 0, 0, 0.3);
+    font-size: 0.94rem;
+  }
+  .inp-wrap input:focus-visible,
+  .inp-wrap select:focus-visible {
+    border-color: rgba(150, 200, 255, 0.58);
+    box-shadow: 0 0 0 3px rgba(120, 170, 255, 0.16), 0 0 16px rgba(120, 170, 255, 0.15);
+  }
+
+  .btn-login {
+    min-height: 48px;
+    margin-top: 10px;
+    padding: 13px 16px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.06));
+    border-color: rgba(180, 220, 255, 0.3);
+    font-size: 0.8rem;
+  }
+  .btn-login:focus-visible {
+    outline: 2px solid rgba(190, 225, 255, 0.9);
+    outline-offset: 3px;
+  }
+
+  .auth-switch { margin-top: 18px; }
+}
+
+/* --- Pantallas bajas: compacta el espaciado para que el registro
+       quepa mejor sin depender tanto del scroll --- */
+@media (max-height: 720px) {
+  .stage { padding: 1.25rem 1rem; }
+  #login-box { padding: 30px 32px; }
+  #login-box h2 { margin-bottom: 20px; }
+  .inp-wrap { margin-bottom: 13px; }
+  .auth-switch { margin-top: 14px; }
+}
+
+@media (max-width: 420px) and (max-height: 720px) {
+  #login-box { padding: 26px 20px 24px; }
+  .auth-mobile-brand { margin-bottom: 18px; }
+  #login-box h2 { margin-bottom: 20px; }
+  .inp-wrap { margin-bottom: 13px; }
+  .auth-switch { margin-top: 14px; }
+}
+
+/* En pantallas muy bajas (o telefono en horizontal) evita el
+   translate del hint pegado al boton y quita centrado vertical rigido. */
+@media (max-height: 560px) {
+  #skip-hint { display: none; }
+}
+
+/* Respeta a quien prefiere menos movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  #bg-fade, #bg-fade::before, #auth-waves, #boot-logo, #skip-hint, #login-box,
+  #theme-fab, #theme-panel {
+    transition-duration: 0.01ms !important;
+  }
+}

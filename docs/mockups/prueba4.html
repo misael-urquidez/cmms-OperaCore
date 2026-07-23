@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Menú · CMMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#161618;
+    --bg-item-hover:rgba(255,255,255,.04);
+    --bg-active:rgba(0,199,232,.08);
+    --text:#D8D8DA;
+    --text-dim:#828287;
+    --cyan:#00C7E8;
+    --cyan-glow:rgba(0,199,232,.3);
+    --panel-w:320px;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+
+  body{
+    font-family:'Inter', sans-serif;
+    background:
+      radial-gradient(circle at 30% 20%, #201d1a 0%, #0c0a09 55%, #050404 100%);
+    color:var(--text);
+    overflow:hidden;
+    position:relative;
+  }
+
+  .hint{
+    position:fixed; left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+    color:#6b665e;
+    font-weight:600;
+    letter-spacing:.08em;
+    font-size:13px;
+    text-transform:uppercase;
+    transition:opacity .3s ease;
+    user-select:none;
+  }
+  .hint span{ display:block; font-size:11px; color:#4a463f; margin-top:6px; letter-spacing:.14em; text-transform:none; font-weight:400; }
+  body.open .hint{ opacity:.12; }
+
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(4,4,5,.55);
+    opacity:0; pointer-events:none;
+    transition:opacity .3s ease;
+    z-index:40;
+  }
+  body.open .overlay{ opacity:1; pointer-events:auto; }
+
+  /* ---------- toggle ---------- */
+  .toggle{
+    position:fixed; top:28px; left:28px;
+    width:50px; height:50px;
+    border-radius:50%;
+    background:#1F1F22;
+    border:1px solid rgba(255,255,255,.1);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    z-index:60;
+    box-shadow:0 6px 18px rgba(0,0,0,.5);
+    transition:transform .5s cubic-bezier(.16,1,.3,1), left .5s cubic-bezier(.16,1,.3,1), border-color .2s ease, box-shadow .2s ease;
+  }
+  .toggle:hover{ border-color:var(--cyan); box-shadow:0 0 0 4px var(--cyan-glow); }
+  body.open .toggle{ left:calc(var(--panel-w) - 25px); }
+  @media (max-width:480px){
+    body.open .toggle{ left:calc(92vw - 25px); }
+  }
+
+  .toggle .bars{ position:relative; width:20px; height:14px; }
+  .toggle .bars span{
+    position:absolute; left:0; width:100%; height:2px;
+    background:var(--text); border-radius:2px;
+    transition:transform .3s ease, opacity .2s ease, top .3s ease;
+  }
+  .toggle .bars span:nth-child(1){ top:0; }
+  .toggle .bars span:nth-child(2){ top:6px; }
+  .toggle .bars span:nth-child(3){ top:12px; }
+  body.open .toggle .bars span:nth-child(1){ top:6px; transform:rotate(45deg); }
+  body.open .toggle .bars span:nth-child(2){ opacity:0; }
+  body.open .toggle .bars span:nth-child(3){ top:6px; transform:rotate(-45deg); }
+
+  /* ---------- panel ---------- */
+  .panel{
+    position:fixed; top:0; left:0;
+    width:var(--panel-w);
+    max-width:92vw;
+    height:100vh;
+    background:var(--bg);
+    border-right:1px solid rgba(255,255,255,.06);
+    transform:translateX(-105%);
+    transition:transform .5s cubic-bezier(.16,1,.3,1);
+    z-index:50;
+    padding:80px 0 40px;
+    overflow-y:auto;
+  }
+  body.open .panel{ transform:translateX(0); }
+
+  .nav-item{
+    position:relative;
+    display:block;
+    padding:15px 26px;
+    font-size:15px;
+    font-weight:500;
+    color:var(--text);
+    cursor:pointer;
+    border-radius:8px;
+    margin:2px 10px;
+    transition:color .18s ease, background .18s ease, box-shadow .18s ease;
+  }
+  .nav-item:hover{ background:var(--bg-item-hover); }
+
+  .nav-item::after{
+    content:"";
+    position:absolute;
+    right:-11px; top:8px; bottom:8px;
+    width:3px;
+    border-radius:2px;
+    background:var(--cyan);
+    opacity:0;
+    transform:scaleY(.4);
+    transform-origin:center;
+    transition:opacity .2s ease, transform .25s cubic-bezier(.2,.8,.3,1);
+  }
+
+  .nav-item.active{
+    color:var(--cyan);
+    background:var(--bg-active);
+    box-shadow:0 0 0 1px rgba(0,199,232,.25);
+  }
+  .nav-item.active::after{
+    opacity:1;
+    transform:scaleY(1);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="hint">Sistema CMMS<span>Toca el botón para abrir el menú</span></div>
+  <div class="overlay" data-close></div>
+
+  <button class="toggle" id="toggleBtn" aria-label="Abrir menú" aria-expanded="false">
+    <div class="bars"><span></span><span></span><span></span></div>
+  </button>
+
+  <nav class="panel" role="dialog" aria-label="Menú">
+    <a class="nav-item">Bloqueo de pantalla</a>
+    <a class="nav-item">Permisos de usuario</a>
+    <a class="nav-item">Red</a>
+    <a class="nav-item active">Almacenamiento</a>
+    <a class="nav-item">Perfil de usuario</a>
+    <a class="nav-item">Equipo</a>
+    <a class="nav-item">Integraciones</a>
+  </nav>
+
+<script>
+  const body = document.body;
+  const btn = document.getElementById('toggleBtn');
+  const items = document.querySelectorAll('.nav-item');
+
+  function setOpen(v){
+    body.classList.toggle('open', v);
+    btn.setAttribute('aria-expanded', v);
+    btn.setAttribute('aria-label', v ? 'Cerrar menú' : 'Abrir menú');
+  }
+
+  btn.addEventListener('click', () => setOpen(!body.classList.contains('open')));
+  document.querySelectorAll('[data-close]').forEach(el =>
+    el.addEventListener('click', () => setOpen(false))
+  );
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape') setOpen(false);
+  });
+
+  items.forEach(item => {
+    item.addEventListener('click', () => {
+      items.forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

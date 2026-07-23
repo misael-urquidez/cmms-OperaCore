@@ -1,0 +1,364 @@
+/* ==========================================================================
+   Menú de usuario (navbar) + modal de configuración de cuenta.
+   Reutiliza los tokens de color definidos en base.css (:root).
+   ========================================================================== */
+
+.user-menu {
+    position: relative;
+}
+
+.user-menu__trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    padding: 0.3rem 0.75rem 0.3rem 0.3rem;
+    color: var(--color-text);
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.user-menu__trigger:hover,
+.user-menu__trigger[aria-expanded="true"] {
+    border-color: var(--color-primary);
+    background: rgba(56, 189, 248, 0.08);
+}
+
+.user-menu__avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary), #0ea5e9);
+    color: #08131f;
+    font-weight: 700;
+    font-size: 0.8rem;
+    background-size: cover;
+    background-position: center;
+    text-transform: uppercase;
+}
+.user-menu__avatar--lg {
+    width: 56px;
+    height: 56px;
+    font-size: 1.3rem;
+}
+
+.user-menu__name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-menu__chevron {
+    width: 14px;
+    height: 14px;
+    color: var(--color-muted);
+    transition: transform 0.18s ease;
+}
+.user-menu__trigger[aria-expanded="true"] .user-menu__chevron {
+    transform: rotate(180deg);
+}
+
+.user-menu__dropdown {
+    position: absolute;
+    top: calc(100% + 0.6rem);
+    right: 0;
+    z-index: 40;
+    width: 260px;
+    background: var(--color-surface);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+    padding: 0.5rem;
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.user-menu__dropdown.is-open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.user-menu__header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.6rem 0.9rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 0.4rem;
+}
+.user-menu__fullname {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.user-menu__username {
+    margin: 0.1rem 0 0;
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+    padding: 0.6rem 0.6rem;
+    background: none;
+    border: none;
+    border-radius: 0.5rem;
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.user-menu__item svg { width: 17px; height: 17px; flex: 0 0 auto; color: var(--color-muted); }
+.user-menu__item:hover { background: rgba(255, 255, 255, 0.06); }
+.user-menu__item:hover svg { color: var(--color-primary); }
+
+.user-menu__item--danger:hover { background: rgba(248, 113, 113, 0.1); color: #fca5a5; }
+.user-menu__item--danger:hover svg { color: #f87171; }
+
+.user-menu__divider {
+    height: 1px;
+    margin: 0.4rem 0.2rem;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Modal de configuración                                                  */
+/* ---------------------------------------------------------------------- */
+
+.config-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+.config-modal.is-open { opacity: 1; pointer-events: auto; }
+
+.config-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 6, 16, 0.65);
+    backdrop-filter: blur(2px);
+}
+
+.config-modal__panel {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    background: var(--color-surface);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    transform: scale(0.96) translateY(8px);
+    transition: transform 0.18s ease;
+}
+.config-modal.is-open .config-modal__panel { transform: scale(1) translateY(0); }
+
+.config-modal__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.1rem;
+}
+.config-modal__head h2 { margin: 0 0 0.15rem; font-size: 1.1rem; }
+.config-modal__head p { margin: 0; font-size: 0.8rem; color: var(--color-muted); }
+
+.config-modal__close {
+    background: none;
+    border: none;
+    color: var(--color-muted);
+    cursor: pointer;
+    padding: 0.2rem;
+    line-height: 0;
+    border-radius: 0.4rem;
+}
+.config-modal__close:hover { color: var(--color-text); background: rgba(255, 255, 255, 0.06); }
+
+.config-avatar-picker {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.35rem;
+}
+.config-avatar-picker__preview {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary), #0ea5e9);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #08131f;
+    font-weight: 700;
+    font-size: 1.4rem;
+    text-transform: uppercase;
+    flex: 0 0 auto;
+}
+.config-avatar-picker__actions { display: flex; flex-direction: column; gap: 0.4rem; }
+.config-avatar-picker__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: fit-content;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+}
+.config-avatar-picker__btn:hover { background: rgba(56, 189, 248, 0.18); }
+.config-avatar-picker__remove {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    background: none;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
+    width: fit-content;
+    padding: 0;
+}
+.config-avatar-picker__remove:hover { color: #fca5a5; }
+.config-avatar-picker__hint { margin: 0; font-size: 0.7rem; color: var(--color-muted); }
+
+.config-field { margin-bottom: 0.9rem; }
+.config-field label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.config-field input {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.5rem;
+    color: var(--color-text);
+    font-size: 0.88rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+.config-field input:focus { border-color: var(--color-primary); }
+.config-field input:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.config-modal__note {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin: 0.9rem 0 1.2rem;
+    padding: 0.65rem 0.75rem;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 0.6rem;
+    font-size: 0.74rem;
+    color: var(--color-muted);
+    line-height: 1.45;
+}
+.config-modal__note svg { width: 16px; height: 16px; flex: 0 0 auto; color: var(--color-primary); margin-top: 0.1rem; }
+
+.config-modal__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+}
+.config-modal__btn {
+    padding: 0.55rem 1.1rem;
+    border-radius: 0.5rem;
+    font-size: 0.83rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+.config-modal__btn--ghost {
+    background: none;
+    border-color: rgba(255, 255, 255, 0.14);
+    color: var(--color-muted);
+}
+.config-modal__btn--ghost:hover { color: var(--color-text); border-color: rgba(255, 255, 255, 0.3); }
+.config-modal__btn--primary {
+    background: var(--color-primary);
+    color: #08131f;
+}
+.config-modal__btn--primary:hover { filter: brightness(1.06); }
+
+.config-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    z-index: 200;
+    background: var(--color-surface);
+    border: 1px solid rgba(134, 239, 172, 0.35);
+    color: #bbf7d0;
+    padding: 0.6rem 1rem;
+    border-radius: 0.6rem;
+    font-size: 0.82rem;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.config-toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 480px) {
+    .user-menu__name { display: none; }
+    .user-menu__dropdown { width: 240px; right: -0.5rem; }
+}
+
+/* Badge de rol dentro del dropdown del usuario */
+.user-menu__rol {
+    margin: 0.15rem 0.9rem 0.45rem;
+    display: inline-block;
+    padding: 0.18rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}

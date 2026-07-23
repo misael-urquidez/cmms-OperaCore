@@ -78,17 +78,71 @@ El objetivo es **reducir los paros de línea no planificados**, mejorar la **dis
 
 ---
 
+
+
 ## 🏗️ Tecnologías
 
 <div align="center">
 
 | Capa | Tecnología |
 |:---:|:---:|
-| 🎨 **Frontend** | HTML5 + CSS |
-| ⚙️ **Backend** | Python + Django |
+| 🎨 **Frontend** | HTML5 + CSS + Django templates |
+| ⚙️ **Backend / API** | Python + Django + Django REST Framework |
 | 🗄️ **Base de datos** | MySQL |
 
 </div>
+
+---
+
+## 🧩 Arquitectura del proyecto
+
+Igual que en clase: **dos proyectos Django separados que se comunican por HTTP**,
+no uno solo con todo mezclado.
+
+```
+Usuario → client (Django + templates) → requests.get/post → api (Django REST Framework) → MySQL
+```
+
+- **`api/`** — el "demo" de las clases. Expone datos con Django REST Framework.
+  Cada módulo (`usuarios`, `maquinaria`, `mantenimiento`, `fallas`, `inventario`,
+  `indicadores`) vive en `api/apps/<modulo>/` con sus `models.py`,
+  `serializers.py`, `views.py` (APIView / generics) y `urls.py`. No sirve HTML.
+- **`client/`** — el "client" de las clases. Es un Django normal con templates,
+  pero **no toca la base de datos directo**: usa la librería `requests` para
+  llamarle al `api/` (`client/apps/<modulo>/views.py`) y renderiza el HTML con
+  esa respuesta.
+- **`backend/`** — tus scripts SQL sueltos (triggers, cargas), no se ejecutan
+  con `migrate`, son de apoyo manual contra MySQL.
+- **`docs/mockups/`** — tus HTML de prueba, fuera de `templates/` a propósito
+  para que Django no los cargue como si fueran vistas reales.
+
+### Cómo correr ambos proyectos
+
+Necesitas **dos terminales** (uno por proyecto), cada uno con su propio venv:
+
+```bash
+# Terminal 1 — api
+cd api
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env        # pon DB_ENGINE=sqlite3 si no quieres MySQL todavía
+python manage.py migrate
+python manage.py runserver 8000
+
+# Terminal 2 — client
+cd client
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env        # API_BASE_URL debe apuntar al puerto del api (8000)
+python manage.py migrate
+python manage.py runserver 8001
+```
+
+Abre `http://localhost:8001/` — cada módulo del client ya está jalando su
+endpoint `ping/` del api para confirmar la conexión. De ahí sigues el patrón
+de tu maestro: agregas campos a los modelos en `api/`, creas sus serializers
+y vistas DRF, y del lado `client/` agregas las vistas que consuman esos
+endpoints con `requests`.
 
 ---
 

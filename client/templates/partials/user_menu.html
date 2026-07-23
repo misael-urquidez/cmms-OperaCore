@@ -1,0 +1,47 @@
+{# Menu del usuario logueado (avatar + dropdown). Usado en base.html y base_admin.html; el JS esta en static/js/navbar.js #}
+{% if request.session.usuario %}
+<div class="user-menu" id="userMenu"
+     data-username="{{ request.session.usuario.usuario }}"
+     data-nombre="{{ request.session.usuario.nombre|default:request.session.usuario.usuario }}">
+    <button type="button" class="user-menu__trigger" id="userMenuTrigger" aria-haspopup="true" aria-expanded="false">
+        <span class="user-menu__avatar" data-avatar-node></span>
+        <span class="user-menu__name" data-display-nombre>{{ request.session.usuario.nombre|default:request.session.usuario.usuario }}</span>
+        <svg class="user-menu__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"/>
+        </svg>
+    </button>
+
+    <div class="user-menu__dropdown" id="userMenuDropdown" role="menu">
+        <div class="user-menu__header">
+            <span class="user-menu__avatar user-menu__avatar--lg" data-avatar-node></span>
+            <div>
+                <p class="user-menu__fullname" data-display-nombre>{{ request.session.usuario.nombre|default:request.session.usuario.usuario }}</p>
+                <p class="user-menu__username" data-display-usuario>@{{ request.session.usuario.usuario }}</p>
+            </div>
+        </div>
+
+        {% if request.session.usuario.rol_nombre %}
+        <div class="user-menu__rol">{{ request.session.usuario.rol_nombre }}</div>
+        {% endif %}
+
+        <button type="button" class="user-menu__item" id="openConfigBtn" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 13a7.97 7.97 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a8 8 0 0 0-1.7-1L14.9 3h-4l-.4 2.5a8 8 0 0 0-1.7 1l-2.5-1-2 3.4L6.4 11a7.97 7.97 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1a8 8 0 0 0 1.7 1l.4 2.5h4l.4-2.5a8 8 0 0 0 1.7-1l2.5 1 2-3.4-2.1-1.6Z"></path>
+            </svg>
+            Configuración
+        </button>
+
+        <div class="user-menu__divider"></div>
+
+        <a class="user-menu__item user-menu__item--danger" role="menuitem" href="{% url 'usuarios:logout' %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <path d="M16 17l5-5-5-5"></path>
+                <path d="M21 12H9"></path>
+            </svg>
+            Cerrar sesión
+        </a>
+    </div>
+</div>
+{% endif %}

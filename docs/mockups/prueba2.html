@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel · CMMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700;800&family=Rubik:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#EDE3CE;
+    --cream-2:#E3D6BC;
+    --ink:#161310;
+    --red:#CC1F3B;
+    --red-dark:#8C1329;
+    --red-darker:#5E0C1B;
+    --yellow:#FFC629;
+    --gray:#9C978B;
+    --white:#FDFBF6;
+    --panel-w:420px;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html,body{ height:100%; }
+
+  body{
+    font-family:'Rubik', sans-serif;
+    background:
+      radial-gradient(circle at 30% 20%, #201d1a 0%, #0c0a09 55%, #050404 100%);
+    color:var(--white);
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* faint ambient speed-lines on the blank canvas */
+  .bg-lines{
+    position:fixed; inset:0;
+    pointer-events:none;
+    opacity:.05;
+    background:repeating-linear-gradient(
+      -18deg,
+      transparent 0 38px,
+      var(--white) 38px 40px
+    );
+    mask-image: radial-gradient(circle at 70% 40%, black, transparent 70%);
+  }
+
+  .hint{
+    position:fixed;
+    left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+    color:#6b665e;
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:600;
+    letter-spacing:.14em;
+    font-size:14px;
+    text-transform:uppercase;
+    transition:opacity .4s ease;
+    user-select:none;
+  }
+  .hint span{ display:block; font-size:11px; color:#4a463f; margin-top:6px; letter-spacing:.2em; }
+  body.open .hint{ opacity:.15; }
+
+  /* ---------- overlay ---------- */
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(5,4,4,.55);
+    backdrop-filter:blur(2px);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .5s ease;
+    z-index:40;
+  }
+  body.open .overlay{ opacity:1; pointer-events:auto; }
+
+  /* ---------- toggle handle (the "ring") ---------- */
+  .toggle{
+    position:fixed;
+    top:28px;
+    left:28px;
+    width:58px; height:58px;
+    border-radius:50%;
+    background:var(--yellow);
+    border:4px solid var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    z-index:60;
+    box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 3px rgba(255,255,255,.35);
+    transition:transform .6s cubic-bezier(.16,1,.3,1), left .6s cubic-bezier(.16,1,.3,1), background .3s ease;
+  }
+  .toggle:hover{ transform:scale(1.06); }
+  .toggle:active{ transform:scale(.94); }
+  body.open .toggle{
+    left: calc(var(--panel-w) - 29px);
+    background:var(--white);
+    transform:rotate(180deg);
+  }
+  @media (max-width:520px){
+    body.open .toggle{ left: calc(92vw - 29px); }
+  }
+
+  .toggle .bars{
+    position:relative;
+    width:22px; height:16px;
+  }
+  .toggle .bars span{
+    position:absolute; left:0;
+    width:100%; height:3px;
+    background:var(--ink);
+    border-radius:2px;
+    transition:transform .35s ease, opacity .25s ease, top .35s ease;
+  }
+  .toggle .bars span:nth-child(1){ top:0; }
+  .toggle .bars span:nth-child(2){ top:6.5px; }
+  .toggle .bars span:nth-child(3){ top:13px; }
+  body.open .toggle .bars span:nth-child(1){ top:6.5px; transform:rotate(45deg); }
+  body.open .toggle .bars span:nth-child(2){ opacity:0; }
+  body.open .toggle .bars span:nth-child(3){ top:6.5px; transform:rotate(-45deg); }
+
+  /* ---------- panel ---------- */
+  .panel{
+    position:fixed;
+    top:0; left:0;
+    width:var(--panel-w);
+    max-width:92vw;
+    height:100vh;
+    background:var(--cream);
+    transform:translateX(-105%);
+    transition:transform .65s cubic-bezier(.16,1,.3,1);
+    z-index:50;
+    display:flex;
+    flex-direction:column;
+    box-shadow:18px 0 60px rgba(0,0,0,.5);
+    overflow:hidden;
+  }
+  body.open .panel{ transform:translateX(0); }
+
+  /* speed stripe sweep behind title */
+  .stripe{
+    position:absolute;
+    top:-40px; left:-60%;
+    width:220%; height:90px;
+    background:var(--red);
+    transform:skewY(-6deg) scaleX(0);
+    transform-origin:left center;
+    transition:transform .55s cubic-bezier(.2,.9,.3,1) .12s;
+    z-index:0;
+  }
+  body.open .stripe{ transform:skewY(-6deg) scaleX(1); }
+
+  .header{
+    position:relative;
+    padding:34px 30px 22px;
+    background:var(--cream);
+    overflow:hidden;
+  }
+  .eyebrow{
+    position:relative;
+    z-index:1;
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:700;
+    letter-spacing:.3em;
+    font-size:12px;
+    color:var(--red-dark);
+    text-transform:uppercase;
+    opacity:0; transform:translateX(24px);
+    transition:opacity .4s ease, transform .4s ease;
+  }
+  .title{
+    position:relative;
+    z-index:1;
+    font-family:'Anton', sans-serif;
+    font-size:56px;
+    line-height:.92;
+    color:var(--ink);
+    letter-spacing:.01em;
+    margin-top:4px;
+    opacity:0; transform:translateX(24px);
+    transition:opacity .45s ease, transform .45s ease;
+  }
+  body.open .eyebrow{ opacity:1; transform:none; transition-delay:.28s; }
+  body.open .title{ opacity:1; transform:none; transition-delay:.34s; }
+
+  /* status bar (yellow) */
+  .status-bar{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--yellow);
+    padding:9px 30px;
+    border-top:3px solid var(--ink);
+    border-bottom:3px solid var(--ink);
+    opacity:0; transform:translateX(24px);
+    transition:opacity .4s ease, transform .4s ease;
+  }
+  body.open .status-bar{ opacity:1; transform:none; transition-delay:.4s; }
+  .status-bar .label{
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:800;
+    letter-spacing:.12em;
+    font-size:15px;
+    color:var(--ink);
+  }
+  .status-bar .ring-count{
+    display:flex; align-items:center; gap:6px;
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:800;
+    font-size:20px;
+    color:var(--ink);
+  }
+  .ring-icon{
+    width:16px; height:16px;
+    border-radius:50%;
+    border:3px solid var(--ink);
+    background:transparent;
+    animation:spin 2.4s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotateY(360deg); } }
+
+  /* stats block (dark) */
+  .stats{
+    background:var(--ink);
+    padding:12px 30px;
+    display:flex; flex-direction:column; gap:5px;
+    opacity:0; transform:translateX(24px);
+    transition:opacity .4s ease, transform .4s ease;
+  }
+  body.open .stats{ opacity:1; transform:none; transition-delay:.46s; }
+  .stats .row{
+    display:flex; justify-content:space-between;
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:600; letter-spacing:.08em;
+    font-size:14px; color:var(--gray);
+    text-transform:uppercase;
+  }
+  .stats .row b{ color:var(--white); font-weight:700; font-variant-numeric:tabular-nums; }
+
+  /* quick access icon row (the "lives" row) */
+  .quick{
+    display:flex; gap:10px;
+    padding:16px 30px;
+    background:var(--cream-2);
+    opacity:0; transform:translateX(24px);
+    transition:opacity .4s ease, transform .4s ease;
+  }
+  body.open .quick{ opacity:1; transform:none; transition-delay:.5s; }
+  .quick button{
+    width:34px; height:34px;
+    border-radius:50%;
+    background:var(--white);
+    border:2px solid var(--ink);
+    color:var(--red-dark);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    transition:transform .2s ease, background .2s ease;
+  }
+  .quick button:hover{ transform:translateY(-3px); background:var(--yellow); }
+  .quick svg{ width:16px; height:16px; }
+
+  /* nav / red section */
+  .nav{
+    flex:1;
+    background:linear-gradient(180deg, var(--red) 0%, var(--red-dark) 100%);
+    display:flex; flex-direction:column;
+    justify-content:center;
+    gap:2px;
+    padding:8px 0;
+    position:relative;
+  }
+  .nav-item{
+    position:relative;
+    display:flex; align-items:center;
+    gap:14px;
+    padding:14px 30px;
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:700;
+    font-size:23px;
+    letter-spacing:.02em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.62);
+    text-decoration:none;
+    cursor:pointer;
+    opacity:0; transform:translateX(30px);
+    transition:opacity .45s cubic-bezier(.16,1,.3,1), transform .45s cubic-bezier(.16,1,.3,1),
+               color .2s ease, background .2s ease, padding-left .2s ease;
+  }
+  body.open .nav-item:nth-child(1){ opacity:1; transform:none; transition-delay:.5s; }
+  body.open .nav-item:nth-child(2){ opacity:1; transform:none; transition-delay:.56s; }
+  body.open .nav-item:nth-child(3){ opacity:1; transform:none; transition-delay:.62s; }
+  body.open .nav-item:nth-child(4){ opacity:1; transform:none; transition-delay:.68s; }
+  body.open .nav-item:nth-child(5){ opacity:1; transform:none; transition-delay:.74s; }
+
+  .nav-item .chev{
+    width:9px; height:9px;
+    border-right:3px solid currentColor;
+    border-bottom:3px solid currentColor;
+    transform:rotate(-45deg);
+    opacity:0;
+    transition:opacity .2s ease;
+    flex:none;
+  }
+  .nav-item.active{
+    color:var(--white);
+    background:rgba(0,0,0,.16);
+  }
+  .nav-item.active .chev{ opacity:1; }
+  .nav-item:hover{
+    color:var(--white);
+    padding-left:38px;
+    padding-right:22px;
+    background:rgba(0,0,0,.12);
+  }
+  .nav-item:hover .chev{ opacity:1; }
+
+  /* footer close hint, echoes the "OK" corner button */
+  .footer{
+    padding:14px 30px 22px;
+    background:var(--red-dark);
+    display:flex; justify-content:flex-end;
+    opacity:0; transform:translateX(24px);
+    transition:opacity .4s ease, transform .4s ease;
+  }
+  body.open .footer{ opacity:1; transform:none; transition-delay:.8s; }
+  .esc-btn{
+    display:flex; align-items:center; gap:8px;
+    background:rgba(0,0,0,.25);
+    border:1px solid rgba(255,255,255,.25);
+    border-radius:999px;
+    padding:6px 14px 6px 8px;
+    font-family:'Rubik', sans-serif;
+    font-size:12px;
+    color:rgba(255,255,255,.85);
+    cursor:pointer;
+  }
+  .esc-btn .key{
+    background:var(--white);
+    color:var(--ink);
+    font-weight:700;
+    font-size:11px;
+    border-radius:5px;
+    padding:2px 7px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="bg-lines"></div>
+
+  <div class="hint">Sistema CMMS<span>Toca el botón para abrir el panel</span></div>
+
+  <div class="overlay" data-close></div>
+
+  <button class="toggle" id="toggleBtn" aria-label="Abrir menú" aria-expanded="false">
+    <div class="bars"><span></span><span></span><span></span></div>
+  </button>
+
+  <aside class="panel" role="dialog" aria-label="Menú">
+    <div class="header">
+      <div class="stripe"></div>
+      <div class="eyebrow">Sistema CMMS</div>
+      <h1 class="title">PANEL</h1>
+    </div>
+
+    <div class="status-bar">
+      <span class="label">Órdenes abiertas</span>
+      <span class="ring-count"><span class="ring-icon"></span><span id="ringVal">0</span></span>
+    </div>
+
+    <div class="stats">
+      <div class="row"><span>Turno activo</span><b id="timer">00:00.00</b></div>
+      <div class="row"><span>Técnico</span><b>Sin asignar</b></div>
+    </div>
+
+    <div class="quick">
+      <button title="Panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></button>
+      <button title="Buscar orden o activo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+      <button title="Activos críticos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.6-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6C19 16.4 12 21 12 21z"/></svg></button>
+      <button title="Ayuda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.7-2.5 2-2.5 3.5"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></svg></button>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item active"><span class="chev"></span>Órdenes de trabajo</a>
+      <a class="nav-item"><span class="chev"></span>Activos</a>
+      <a class="nav-item"><span class="chev"></span>Inventario</a>
+      <a class="nav-item"><span class="chev"></span>Preventivo</a>
+      <a class="nav-item"><span class="chev"></span>Cerrar sesión</a>
+    </nav>
+
+    <div class="footer">
+      <button class="esc-btn" data-close><span class="key">ESC</span> Cerrar</button>
+    </div>
+  </aside>
+
+<script>
+  const body = document.body;
+  const btn = document.getElementById('toggleBtn');
+  const ringVal = document.getElementById('ringVal');
+  const timerEl = document.getElementById('timer');
+
+  function setOpen(v){
+    body.classList.toggle('open', v);
+    btn.setAttribute('aria-expanded', v);
+    btn.setAttribute('aria-label', v ? 'Cerrar menú' : 'Abrir menú');
+    if(v){ animateRings(0, 3); }
+  }
+
+  btn.addEventListener('click', () => setOpen(!body.classList.contains('open')));
+  document.querySelectorAll('[data-close]').forEach(el =>
+    el.addEventListener('click', () => setOpen(false))
+  );
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape') setOpen(false);
+  });
+
+  function animateRings(from, to){
+    let cur = from;
+    const step = () => {
+      cur++;
+      ringVal.textContent = cur;
+      if(cur < to) requestAnimationFrame(() => setTimeout(step, 90));
+    };
+    step();
+  }
+
+  // live session timer, mm:ss.cs — a nod to the original TIME readout
+  const start = Date.now();
+  function tick(){
+    const el = Date.now() - start;
+    const m = String(Math.floor(el / 60000)).padStart(2,'0');
+    const s = String(Math.floor((el % 60000)/1000)).padStart(2,'0');
+    const cs = String(Math.floor((el % 1000)/10)).padStart(2,'0');
+    timerEl.textContent = `${m}:${s}.${cs}`;
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+</script>
+</body>
+</html>

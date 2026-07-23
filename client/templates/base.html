@@ -1,0 +1,75 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include 'favicon.html' %}
+    <title>{% block title %}OperaCore CMMS{% endblock %}</title>
+    <link rel="icon" href="{% static 'img/pre_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
+    <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="navbar">
+        <a class="navbar__brand" href="{% url 'home' %}">
+            <img src="{% static 'img/pre_logo.png' %}" alt="OperaCore" height="32">
+            OperaCore
+        </a>
+        <nav class="navbar__links">
+            <a href="{% url 'maquinaria:index' %}">Maquinaria</a>
+            <a href="{% url 'mantenimiento:index' %}">Mantenimiento</a>
+            <a href="{% url 'fallas:index' %}">Fallas</a>
+            <a href="{% url 'inventario:index' %}">Inventario</a>
+            <a href="{% url 'indicadores:index' %}">Indicadores</a>
+            <a href="{% url 'monitoreo:index' %}">Monitoreo</a>
+            <a href="{% url 'usuarios:index' %}">Usuarios</a>
+        </nav>
+        <div class="navbar__auth">
+            {% if request.session.usuario %}
+                {% include 'partials/user_menu.html' %}
+            {% else %}
+                <a href="{% url 'usuarios:index' %}">Iniciar sesión</a>
+            {% endif %}
+        </div>
+    </header>
+
+    {% include 'partials/config_modal.html' %}
+
+    <main class="content">
+        {% if messages %}
+            <div class="toast-container" id="toastContainer">
+                {% for message in messages %}
+                    <div class="toast toast--{{ message.tags }}" role="alert">
+                        <span class="toast__msg">{{ message }}</span>
+                        <button type="button" class="toast__close" aria-label="Cerrar">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>OperaCore CMMS &middot; UTT · Proyecto Integrador</p>
+    </footer>
+
+    <script src="{% static 'js/navbar.js' %}"></script>
+    
+    <script>
+    (function(){
+        var c = document.getElementById('toastContainer');
+        if(!c) return;
+        c.querySelectorAll('.toast').forEach(function(t){
+            t.querySelector('.toast__close').addEventListener('click', function(){ t.remove(); });
+            setTimeout(function(){ t.classList.add('toast--hide'); t.addEventListener('transitionend', function(){ t.remove(); }); }, 4000);
+        });
+    })();
+    </script>
+    <script src="{% static 'js/theme.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

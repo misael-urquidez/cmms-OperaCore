@@ -1,0 +1,24 @@
+(debes crear un venv cada quien y meterle sus requeriments)
+
+comando para crear su entorno:
+python -m venv venv
+python3 -m venv venv
+
+comando para prender entorno virtual en windows:
+venv\Scripts\activate
+
+
+comando para descargar los requeriments:
+pip install -r requirements.txt
+
+hacer los migrate:
+python manage.py migrate
+
+
+--en dado caso la api de elipse este caida pueden ir a esta pagina
+https://console.groq.com/
+
+-crean su cuenta le dan a apikeys crear api-key
+
+y pueden crear su propia api-key para luego ponerla en el archivo .env en
+GROQ_API_KEY=

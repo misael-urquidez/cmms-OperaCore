@@ -1,0 +1,192 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso · CMMS</title>
+  {% include 'favicon.html' %}
+  <link rel="icon" href="{% static 'img/pre_logo.png' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'usuarios/css/auth.css' %}">
+</head>
+<body class="auth-body" data-tab="{{ tab }}" data-bg="blue" data-lines="classic" data-style="atmosferico" data-boot="on">
+
+  <div id="bg-fade"></div>
+  <canvas id="auth-waves"></canvas>
+
+  <button id="theme-fab" type="button" aria-haspopup="true" aria-expanded="false"
+          aria-controls="theme-panel" aria-label="Preferencias de fondo">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 13a7.97 7.97 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a8 8 0 0 0-1.7-1L14.9 3h-4l-.4 2.5a8 8 0 0 0-1.7 1l-2.5-1-2 3.4L6.4 11a7.97 7.97 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1a8 8 0 0 0 1.7 1l.4 2.5h4l.4-2.5a8 8 0 0 0 1.7-1l2.5 1 2-3.4-2.1-1.6Z"></path>
+    </svg>
+  </button>
+
+<header class="auth-topbar">
+  <div class="auth-topbar__brand">
+    <img src="{% static 'img/pre_logo.png' %}" alt="" width="22" height="22">
+    <span>OperaCore</span>
+  </div>
+</header>
+
+  <div id="theme-panel" aria-hidden="true">
+    <div class="theme-panel__group" data-panel-group="style">
+      <p class="theme-panel__label">Estilo</p>
+      <div class="theme-panel__options" data-group="style">
+        <button type="button" data-value="atmosferico">Atmosférico</button>
+        <button type="button" data-value="plano">Plano</button>
+      </div>
+    </div>
+
+        <div class="theme-panel__group" data-panel-group="boot">
+      <p class="theme-panel__label">Animación de inicio</p>
+      <div class="theme-panel__options" data-group="boot">
+        <button type="button" data-value="on">Activada</button>
+        <button type="button" data-value="off">Desactivada</button>
+      </div>
+    </div>
+
+    <div class="theme-panel__group" data-panel-group="lines">
+      <p class="theme-panel__label">Líneas de fondo</p>
+      <div class="theme-panel__options" data-group="lines">
+        <button type="button" data-value="classic">Clásicas</button>
+        <button type="button" data-value="smt">Carriles SMT</button>
+      </div>
+    </div>
+
+    <div class="theme-panel__group" data-panel-group="bg">
+      <p class="theme-panel__label">Color</p>
+      <div class="theme-panel__options" data-group="bg">
+        <button type="button" data-value="blue">Azul</button>
+        <button type="button" data-value="smt">Verde SMT</button>
+      </div>
+      <label class="theme-panel__swatch">
+        <span>Personalizado</span>
+        <input type="color" id="theme-color-input" value="#1a3a8c">
+      </label>
+      <button type="button" id="theme-color-reset" class="theme-panel__reset">Quitar personalizado</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div id="boot-logo">CMMS</div>
+
+    <div class="auth-layout">
+      <section class="auth-access" aria-labelledby="auth-headline">
+        <div class="auth-intro">
+          <p class="auth-flow-signature">Sistema CMMS · Operaciones SMT</p>
+          <h1 id="auth-headline">Mantén la línea en movimiento.</h1>
+          <p>Disponibilidad de maquinaria y trazabilidad de mantenimiento en un solo sistema.</p>
+        </div>
+
+        <div id="login-box">
+          <div class="auth-mobile-brand" aria-label="OperaCore CMMS">
+            <img src="{% static 'img/pre_logo.png' %}" alt="" width="32" height="32">
+            <span>OperaCore</span>
+          </div>
+          {% if messages %}
+          <ul class="auth-messages">
+            {% for message in messages %}
+              <li class="auth-messages__item auth-messages__item--{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+
+          <!-- ── Iniciar sesión ── -->
+          <form class="auth-form {% if tab != 'registro' %}auth-form--active{% endif %}"
+                id="form-login" method="post" action="{% url 'usuarios:login' %}">
+            {% csrf_token %}
+            <h2>Inicio de Sesión</h2>
+            <div class="inp-wrap">
+              <input type="text" name="identificador" placeholder="Usuario o correo" required {% if tab != 'registro' %}autofocus{% endif %}>
+            </div>
+            <div class="inp-wrap">
+              <input type="password" name="password" placeholder="Contraseña" required>
+            </div>
+            <button type="submit" class="btn-login">Entrar</button>
+            <p class="auth-switch">¿No tienes cuenta? <a href="#" data-tab="registro">Crear una</a></p>
+          </form>
+
+          <!-- ── Crear cuenta ── -->
+          <form class="auth-form {% if tab == 'registro' %}auth-form--active{% endif %}"
+                id="form-registro" method="post" action="{% url 'usuarios:registro' %}" novalidate>
+            {% csrf_token %}
+            <h2>Crear Cuenta</h2>
+            <div class="inp-row">
+              <div class="inp-wrap"><input type="text" name="nombre" placeholder="Nombre" maxlength="50" autocomplete="given-name" required></div>
+              <div class="inp-wrap"><input type="text" name="apellidoPat" placeholder="Apellido paterno" maxlength="50" autocomplete="family-name" required></div>
+            </div>
+            <div class="inp-wrap">
+              <input type="text" name="apellidoMat" placeholder="Apellido materno (opcional)" maxlength="50" autocomplete="additional-name">
+            </div>
+            <div class="inp-wrap">
+              <input type="tel" name="telefono" placeholder="Teléfono (10 dígitos)" maxlength="15" inputmode="numeric" autocomplete="tel" required>
+            </div>
+            <div class="inp-wrap">
+              <input type="email" name="correo" placeholder="Correo" maxlength="100" inputmode="email" autocomplete="email" required>
+            </div>
+            <div class="inp-wrap">
+              <input type="text" name="usuario" placeholder="Usuario" maxlength="30" autocomplete="username" required>
+            </div>
+            <div class="inp-row">
+              <div class="inp-wrap">
+                <select name="rol">
+                  <option value="">Rol...</option>
+                  {% for rol in roles %}
+                    <option value="{{ rol.codigo }}">{{ rol.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="inp-wrap">
+                <select name="especialidad">
+                  <option value="">Especialidad...</option>
+                  {% for esp in especialidades %}
+                    <option value="{{ esp.codigo }}">{{ esp.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="inp-wrap">
+              <input type="password" name="password" id="reg-password" placeholder="Contraseña (mín. 8)" autocomplete="new-password" required>
+            </div>
+            <div class="inp-wrap">
+              <input type="password" name="password2" id="reg-password2" placeholder="Confirmar contraseña" autocomplete="new-password" required>
+            </div>
+            <button type="submit" class="btn-login">Crear cuenta</button>
+            <p class="auth-switch">¿Ya tienes cuenta? <a href="#" data-tab="login">Inicia sesión</a></p>
+          </form>
+        </div>
+      </section>
+
+      <aside class="flow-panel" aria-labelledby="flow-panel-title">
+        <p class="flow-panel__eyebrow">OperaCore · Mapa operativo</p>
+        <h2 id="flow-panel-title">Flujo de planta</h2>
+        <p class="flow-panel__description">Cobertura del sistema para la operación y el mantenimiento de líneas SMT.</p>
+
+        <section class="flow-group" aria-labelledby="flow-operacion">
+          <h3 id="flow-operacion">Operación</h3>
+          <ul class="flow-list">
+            <li><span class="flow-marker" aria-hidden="true"></span>Maquinaria</li>
+            <li><span class="flow-marker" aria-hidden="true"></span>Mantenimiento</li>
+            <li><span class="flow-marker" aria-hidden="true"></span>Fallas</li>
+          </ul>
+        </section>
+
+        <section class="flow-group" aria-labelledby="flow-soporte">
+          <h3 id="flow-soporte">Soporte</h3>
+          <ul class="flow-list">
+            <li><span class="flow-marker" aria-hidden="true"></span>Inventario</li>
+            <li><span class="flow-marker" aria-hidden="true"></span>Indicadores</li>
+            <li><span class="flow-marker" aria-hidden="true"></span>Usuarios</li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+
+    <div id="skip-hint">Presiona cualquier tecla para continuar</div>
+  </div>
+
+  <script src="{% static 'usuarios/js/auth.js' %}"></script>
+</body>
+</html>

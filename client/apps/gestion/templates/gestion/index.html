@@ -1,0 +1,25 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Gestión · OperaCore{% endblock %}
+{% block breadcrumb %}Administración{% endblock %}
+{% block page_title %}Gestión{% endblock %}
+
+{% block content %}
+<div class="gestion-grid">
+  {% for modulo, tablas in modulos.items %}
+    <section class="gestion-grupo">
+      <h2 class="gestion-grupo__titulo">{{ modulo }}</h2>
+      <div class="gestion-grupo__cards">
+        {% for tabla in tablas %}
+          <a class="gestion-card" href="{% url 'gestion:list' tabla.slug %}">
+            <span class="gestion-card__titulo">{{ tabla.label }}</span>
+            <span class="gestion-card__cta">Ver / administrar →</span>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+  {% empty %}
+    <p>Aún no hay tablas registradas en Gestión.</p>
+  {% endfor %}
+</div>
+{% endblock %}
