@@ -4,75 +4,68 @@ import os
 from django.conf import settings
 from rest_framework import serializers
 
+from .models import (
+    TipoSeveridad,
+    TipoFalla,
+    EstadoReporte,
+    ReporteFalla,
+    TipoReporte,
+)
 from apps.usuarios.models import Trabajador
-from . import models
+from apps.maquinaria.models import Maquina
 
-
+#---------------- TIPO SEVERIDAD --------------------------------
 class TipoSeveridadSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.TipoSeveridad
+        model = TipoSeveridad
         fields = ["codigo", "nombre"]
 
 
 class TipoSeveridadCreateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.TipoSeveridad
+        model = TipoSeveridad
         fields = ["codigo", "nombre", "descripcion"]
 
 
+class TipoSeveridadDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoSeveridad
+        fields = "__all__"
+
+
+#---------------- TIPO FALLA --------------------------------
 class TipoFallaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.TipoFalla
+        model = TipoFalla
         fields = ["numeroRegistro", "nombre"]
 
 
 class TipoFallaCreateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.TipoFalla
+        model = TipoFalla
         fields = ["nombre", "descripcion"]
-
-
-class TipoSeveridadDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.TipoSeveridad
-        fields = "__all__"
 
 
 class TipoFallaDetailSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.TipoFalla
+        model = TipoFalla
         fields = "__all__"
 
+
+#---------------- ESTADO REPORTE--------------------------------
+class EstadoReporteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EstadoReporte
+        fields = ["codigo", "nombre"]
 
 class EstadoReporteDetailSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.EstadoReporte
+        model = EstadoReporte
         fields = "__all__"
 
 
-class MaquinaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Maquina
-        fields = ["codigo", "nombre"]
-
-
-class EstadoReporteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.EstadoReporte
-        fields = ["codigo", "nombre"]
-
-
-class TrabajadorLightSerializer(serializers.ModelSerializer):
-    """Serializer ligero para el select de trabajadores en el reporte de falla."""
-
-    class Meta:
-        model = Trabajador
-        fields = ["numeroNomina", "nombre", "apellidoPat"]
-
-
+#---------------- REPORTE FALLA --------------------------------
 class ReporteFallaListSerializer(serializers.ModelSerializer):
-
-
     maquina_nombre = serializers.CharField(source="maquina.nombre", read_only=True, default=None)
     trabajador_nombre = serializers.SerializerMethodField()
     tipo_severidad_nombre = serializers.CharField(
@@ -80,7 +73,7 @@ class ReporteFallaListSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = models.ReporteFalla
+        model = ReporteFalla
         fields = [
             "numeroRegistro", "asunto", "fechaCreacion", "horaCreacion",
             "tiempoParo", "causaRaiz", "descripcion",
@@ -96,8 +89,6 @@ class ReporteFallaListSerializer(serializers.ModelSerializer):
 
 
 class ReporteFallaDetailSerializer(serializers.ModelSerializer):
-
-
     maquina_nombre = serializers.CharField(source="maquina.nombre", read_only=True, default=None)
     trabajador_nombre = serializers.SerializerMethodField()
     estado_reporte_nombre = serializers.CharField(
@@ -109,7 +100,7 @@ class ReporteFallaDetailSerializer(serializers.ModelSerializer):
     fallas_asociadas = serializers.SerializerMethodField()
 
     class Meta:
-        model = models.ReporteFalla
+        model = ReporteFalla
         fields = "__all__"
 
     def get_trabajador_nombre(self, obj):
@@ -119,16 +110,16 @@ class ReporteFallaDetailSerializer(serializers.ModelSerializer):
 
     def get_fallas_asociadas(self, obj):
         registros = (
-            models.TipoReporte.objects
+            TipoReporte.objects
             .filter(reporte_falla=obj)
             .values_list("tipo_falla_id", flat=True)
         )
         fallas = []
         for tf_id in registros:
             try:
-                tf = models.TipoFalla.objects.get(pk=tf_id)
+                tf = TipoFalla.objects.get(pk=tf_id)
                 fallas.append({"id": tf.numeroRegistro, "nombre": tf.nombre})
-            except models.TipoFalla.DoesNotExist:
+            except TipoFalla.DoesNotExist:
                 continue
         return fallas
 
@@ -138,9 +129,8 @@ class ReporteFallaCreateSerializer(serializers.ModelSerializer):
     tipo_falla_ids = serializers.ListField(
         child=serializers.IntegerField(), required=False, write_only=True
     )
-
     class Meta:
-        model = models.ReporteFalla
+        model = ReporteFalla
         fields = [
             "asunto", "descripcion", "causaRaiz", "tiempoParo", "fechaResolucion",
             "maquina", "trabajador", "tipo_severidad", "imagen",
@@ -165,7 +155,7 @@ class ReporteFallaCreateSerializer(serializers.ModelSerializer):
         reporte = super().create(validated_data)
 
         for tf_id in tipo_falla_ids:
-            models.TipoReporte.objects.create(
+            TipoReporte.objects.create(
                 tipo_falla_id=tf_id,
                 reporte_falla=reporte,
             )
@@ -187,7 +177,7 @@ class ReporteFallaUpdateSerializer(serializers.ModelSerializer):
     imagen = serializers.FileField(required=False, allow_null=True)
 
     class Meta:
-        model = models.ReporteFalla
+        model = ReporteFalla
         fields = [
             "asunto", "descripcion", "causaRaiz", "tiempoParo", "fechaResolucion",
             "maquina", "trabajador", "tipo_severidad", "imagen", "estado_reporte",
@@ -201,7 +191,7 @@ class ListTipoReporteSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = models.TipoReporte
+        model = TipoReporte
         fields = ["tipo_falla", "reporte_falla", "tipo_falla_nombre"]
         # No tiene id — pk compuesta
 
@@ -212,13 +202,28 @@ class DetailTipoReporteSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = models.TipoReporte
+        model = TipoReporte
         fields = ["tipo_falla", "reporte_falla", "tipo_falla_nombre"]
         # No tiene id — pk compuesta
 
 
 class CreateTipoReporteSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.TipoReporte
+        model = TipoReporte
         fields = ["tipo_falla", "reporte_falla"]
         # No tiene id — pk compuesta
+
+
+#---------------- EXTRAS --------------------------------
+class MaquinaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Maquina
+        fields = ["codigo", "nombre"]
+
+
+class TrabajadorLightSerializer(serializers.ModelSerializer):
+    """Serializer ligero para el select de trabajadores en el reporte de falla."""
+
+    class Meta:
+        model = Trabajador
+        fields = ["numeroNomina", "nombre", "apellidoPat"]

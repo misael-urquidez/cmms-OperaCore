@@ -21,7 +21,7 @@ class ListarPlantaAPIView(generics.ListAPIView):
     queryset = models.Planta.objects.all()
     serializer_class = ListPlantaSerializer
 
-class DetailPlantaAPIView(generics.RetrieveAPIView):
+class DetailPlantaAPIView(generics.RetrieveDestroyAPIView):
     queryset = models.Planta.objects.all()
     serializer_class = DetailPlantaSerializer
     lookup_field = 'codigo'
@@ -30,7 +30,7 @@ class CrearPlantaAPIView(generics.CreateAPIView):
     queryset = models.Planta.objects.all()
     serializer_class = CreatePlantaSerializer
 
-class UpdatePlantaAPIView(generics.UpdateAPIView):
+class UpdatePlantaAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Planta.objects.all()
     serializer_class = UpdatePlantaSerializer
     lookup_field = 'codigo'
@@ -43,7 +43,7 @@ class ListarAreaAPIView(generics.ListAPIView):
     queryset = models.Area.objects.all()
     serializer_class = ListAreaSerializer
 
-class DetailAreaAPIView(generics.RetrieveAPIView):
+class DetailAreaAPIView(generics.RetrieveDestroyAPIView):
     queryset = models.Area.objects.all()
     serializer_class = DetailAreaSerializer
     lookup_field = 'codigo'
@@ -65,7 +65,7 @@ class ListarEdoMaquinaAPIView(generics.ListAPIView):
     queryset = models.EdoMaquina.objects.all()
     serializer_class = ListEdoMaquinaSerializer
 
-class DetailEdoMaquinaAPIView(generics.RetrieveAPIView):
+class DetailEdoMaquinaAPIView(generics.RetrieveDestroyAPIView):
     queryset = models.EdoMaquina.objects.all()
     serializer_class = DetailEdoMaquinaSerializer
     lookup_field = 'codigo'
@@ -87,7 +87,7 @@ class ListarLineaAPIView(generics.ListAPIView):
     queryset = models.Linea.objects.all()
     serializer_class = ListLineaSerializer
 
-class DetailLineaAPIView(generics.RetrieveAPIView):
+class DetailLineaAPIView(generics.RetrieveDestroyAPIView):
     queryset = models.Linea.objects.all()
     serializer_class = DetailLineaSerializer
     lookup_field = 'codigo'
@@ -109,7 +109,7 @@ class ListarMarcaAPIView(generics.ListAPIView):
     queryset = models.Marca.objects.all()
     serializer_class = ListMarcaSerializer
 
-class DetailMarcaAPIView(generics.RetrieveAPIView):
+class DetailMarcaAPIView(generics.RetrieveDestroyAPIView):
     queryset = models.Marca.objects.all()
     serializer_class = DetailMarcaSerializer
     lookup_field = 'clave'
@@ -131,7 +131,7 @@ class ListarModeloAPIView(generics.ListAPIView):
     queryset = models.Modelo.objects.all()
     serializer_class = ListModeloSerializer
 
-class DetailModeloAPIView(generics.RetrieveAPIView):
+class DetailModeloAPIView(generics.RetrieveDestroyAPIView):
     queryset = models.Modelo.objects.all()
     serializer_class = DetailModeloSerializer
     lookup_field = 'codigo'
@@ -153,7 +153,7 @@ class ListarTipoMaquinaAPIView(generics.ListAPIView):
     queryset = models.TipoMaquina.objects.all()
     serializer_class = ListTipoMaquinaSerializer
 
-class DetailTipoMaquinaAPIView(generics.RetrieveAPIView):
+class DetailTipoMaquinaAPIView(generics.RetrieveDestroyAPIView):
     queryset = models.TipoMaquina.objects.all()
     serializer_class = DetailTipoMaquinaSerializer
 
@@ -174,7 +174,7 @@ class ListarMaquinaAPIView(generics.ListAPIView):
     queryset = Maquina.objects.all()
     serializer_class = ListMaquinaSerializer
 
-class DetailMaquinaAPIView(generics.RetrieveAPIView):
+class DetailMaquinaAPIView(generics.RetrieveDestroyAPIView):
     """Retorna el detalle completo en JSON de una máquina por su código."""
     queryset = Maquina.objects.all()
     serializer_class = DetailMaquinaSerializer

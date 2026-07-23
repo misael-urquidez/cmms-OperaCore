@@ -34,8 +34,11 @@ class Indicador(models.Model):
     mttr = models.FloatField(null=True, blank=True)
     mtbf = models.FloatField(null=True, blank=True)
     porcentajeDispo = models.IntegerField(null=True, blank=True)
-    maquina = models.ForeignKey(Maquina, on_delete=models.DO_NOTHING, db_column="maquina", null=True, blank=True)
-
+    maquina = models.ForeignKey(
+        'maquinaria.Maquina', 
+        on_delete=models.CASCADE, 
+        related_name='indicadores_monitoreo' # <-- AQUÍ
+    )
     class Meta:
         managed = False
         db_table = "INDICADOR"
@@ -64,7 +67,11 @@ class OrdenMantenimiento(models.Model):
     descripcion = models.CharField(max_length=500)
     fechaCreacion = models.DateField()
     horaCreacion = models.TimeField()
-    maquina = models.ForeignKey(Maquina, on_delete=models.DO_NOTHING, db_column="maquina", null=True, blank=True)
+    maquina = models.ForeignKey(
+        'maquinaria.Maquina', 
+        on_delete=models.CASCADE, 
+        related_name='ordenes_monitoreo' # <-- AQUÍ (distinto al de mantenimiento)
+    )
     trabajador = models.ForeignKey("usuarios.Trabajador", on_delete=models.DO_NOTHING, db_column="trabajador", null=True, blank=True)
     reporte_falla = models.ForeignKey(ReporteFalla, on_delete=models.DO_NOTHING, db_column="reporte_falla", null=True, blank=True)
     tipo_mantenimiento = models.ForeignKey(TipoMantenimiento, on_delete=models.DO_NOTHING, db_column="tipo_mantenimiento", null=True, blank=True)

@@ -6,8 +6,10 @@ from rest_framework.exceptions import NotFound
 from rest_framework.views import APIView
 
 from apps.fallas.models import (
-    EstadoMaquina, EstadoReporte, Linea, Maquina, Marca, Modelo,
-    ReporteFalla, TipoFalla, TipoMaquina, TipoSeveridad,
+    EstadoReporte, ReporteFalla, TipoFalla, TipoSeveridad,
+)
+from apps.maquinaria.models import (
+    EdoMaquina, Linea, Maquina, Marca, Modelo, TipoMaquina, 
 )
 from apps.usuarios.models import Trabajador
 
@@ -84,7 +86,7 @@ class CatalogosMaquinaAPIView(APIView):
             "marcas": list(Marca.objects.order_by("nombre").values("clave", "nombre")),
             "modelos": list(Modelo.objects.order_by("nombre").values("codigo", "nombre", "marca")),
             "tipos_maquina": list(TipoMaquina.objects.order_by("nombre").values("numeroRegistro", "nombre")),
-            "estados_maquina": list(EstadoMaquina.objects.order_by("nombre").values("codigo", "nombre")),
+            "estados_maquina": list(EdoMaquina.objects.order_by("nombre").values("codigo", "nombre")),
             "modos_monitoreo": [{"valor": valor, "etiqueta": etiqueta} for valor, etiqueta in LecturaSensor.ORIGENES],
         })
 

@@ -65,6 +65,8 @@ GESTION_REGISTRY = {
         "detail_path": "v1/planta/{pk}/",
         "update_path": "v1/planta/update/{pk}/",
         "update_method": "PUT",
+        "delete_path": "v1/planta/{pk}/",  
+        "delete_method": "DELETE",
         "pk_field": "codigo",
         "campos": [
             {"name": "codigo", "label": "Código", "tipo": "text", "requerido": True, "columna": True},
@@ -87,6 +89,8 @@ GESTION_REGISTRY = {
         "detail_path": "v1/area/{pk}/",
         "update_path": "v1/area/update/{pk}/",
         "update_method": "PUT",
+        "delete_path": "v1/area/{pk}/",
+        "delete_method": "DELETE",
         "pk_field": "codigo",
         "campos": [
             {"name": "codigo", "label": "Código", "tipo": "text", "requerido": True, "columna": True},
@@ -108,6 +112,8 @@ GESTION_REGISTRY = {
         "detail_path": "v1/edo_maquina/{pk}/",
         "update_path": "v1/edo_maquina/update/{pk}/",
         "update_method": "PUT",
+        "delete_path": "v1/edo_maquina/{pk}/",  
+        "delete_method": "DELETE",
         "pk_field": "codigo",
         "campos": [
             {"name": "codigo", "label": "Código", "tipo": "text", "requerido": True, "columna": True},
@@ -126,6 +132,8 @@ GESTION_REGISTRY = {
         "detail_path": "v1/linea/{pk}/",
         "update_path": "v1/linea/update/{pk}/",
         "update_method": "PUT",
+        "delete_path": "v1/linea/{pk}/",  
+        "delete_method": "DELETE",
         "pk_field": "codigo",
         "campos": [
             {"name": "codigo", "label": "Código", "tipo": "text", "requerido": True, "columna": True},
@@ -148,6 +156,8 @@ GESTION_REGISTRY = {
         "detail_path": "v1/marca/{pk}/",
         "update_path": "v1/marca/update/{pk}/",
         "update_method": "PUT",
+        "delete_path": "v1/marca/{pk}/",  
+        "delete_method": "DELETE",
         "pk_field": "clave",
         "campos": [
             {"name": "clave", "label": "Clave", "tipo": "text", "requerido": True, "columna": True},
@@ -166,6 +176,8 @@ GESTION_REGISTRY = {
         "detail_path": "v1/modelo/{pk}/",
         "update_path": "v1/modelo/update/{pk}/",
         "update_method": "PUT",
+        "delete_path": "v1/modelo/{pk}/",  
+        "delete_method": "DELETE",
         "pk_field": "codigo",
         "campos": [
             {"name": "codigo", "label": "Código", "tipo": "text", "requerido": True, "columna": True},
@@ -186,6 +198,8 @@ GESTION_REGISTRY = {
         "detail_path": "v1/tipo_maquina/{pk}/",
         "update_path": "v1/tipo_maquina/update/{pk}/",
         "update_method": "PUT",
+        "delete_path": "v1/tipo_maquina/{pk}/",  
+        "delete_method": "DELETE",
         "pk_field": "numeroregistro",
         "campos": [
             # El Create...Serializer de TipoMaquina NO acepta pk manual,
@@ -205,6 +219,8 @@ GESTION_REGISTRY = {
         "detail_path": "v1/maquina/{pk}/",
         "update_path": "v1/maquina/update/{pk}/",
         "update_method": "PUT",
+        "delete_path": "v1/maquina/{pk}/",  
+        "delete_method": "DELETE",
         "pk_field": "codigo",
         "campos": [
             {"name": "codigo", "label": "Código", "tipo": "text", "requerido": True, "columna": True},
@@ -809,7 +825,7 @@ GESTION_REGISTRY = {
     },
     "movimiento": {
         "slug": "movimiento",
-        "label": "Movimientos de almacén / refacciones",
+        "label": "Movimientos de pieza / refacciones",
         "modulo": "Mantenimiento",
         "api_app": "mantenimiento",
         "list_path": "v1/movimiento/list/",
@@ -827,7 +843,7 @@ GESTION_REGISTRY = {
             {"name": "tipomovimiento", "label": "Tipo de Movimiento", "tipo": "select", "requerido": True, "columna": True, "fk": "tipo-movimiento", "fk_value": "codigo", "fk_label": "descripcion"},
             {"name": "orden_mantenimiento", "label": "Orden de Mantenimiento (Folio)", "tipo": "select", "requerido": False, "columna": True, "fk": "orden-mantenimiento", "fk_value": "folio", "fk_label": "folio"},
             {"name": "refaccion", "label": "Refacción", "tipo": "select", "requerido": False, "columna": False, "fk": "refaccion", "fk_value": "numeroregistro", "fk_label": "nombre"},
-            {"name": "pieza", "label": "Pieza", "tipo": "select", "requerido": False, "columna": False, "fk": "pieza", "fk_value": "codigo", "fk_label": "nombre"},
+            {"name": "pieza", "label": "Pieza", "tipo": "select", "requerido": False, "columna": False, "fk": "pieza", "fk_value": "numeroserie", "fk_label": "nombre"},
         ],
     },
     "orden-mantenimiento": {
@@ -858,7 +874,7 @@ GESTION_REGISTRY = {
             {"name": "imagen", "label": "Imagen / Evidencia", "tipo": "text", "requerido": False, "columna": False},
             {"name": "maquina", "label": "Máquina", "tipo": "select", "requerido": True, "columna": True, "fk": "maquina", "fk_value": "codigo", "fk_label": "nombre"},
             {"name": "trabajador", "label": "Trabajador Asignado", "tipo": "select", "requerido": False, "columna": False, "fk": "trabajador", "fk_value": "numeroNomina", "fk_label": "nombre"},
-            {"name": "reporte_falla", "label": "Reporte de Falla", "tipo": "select", "requerido": False, "columna": False, "fk": "reporte-falla", "fk_value": "numeroregistro", "fk_label": "descripcion"},
+            {"name": "reporte_falla", "label": "Reporte de Falla (N° Registro)", "tipo": "int", "requerido": False, "columna": False},
             {"name": "tipo_mantenimiento", "label": "Tipo de Mantenimiento", "tipo": "select", "requerido": True, "columna": True, "fk": "tipo-mantenimiento", "fk_value": "codigo", "fk_label": "nombre"},
             {"name": "estado_orden", "label": "Estado de la Orden", "tipo": "select", "requerido": True, "columna": True, "fk": "estado-orden", "fk_value": "codigo", "fk_label": "nombre"},
         ],

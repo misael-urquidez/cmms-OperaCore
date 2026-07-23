@@ -1,7 +1,7 @@
 from django.db import models
 
 from apps.fallas.models import ReporteFalla
-from apps.inventario.models import Herramienta, Refaccion
+from apps.inventario.models import Herramienta, Refaccion, Pieza
 from apps.maquinaria.models import Maquina
 from apps.usuarios.models import Trabajador
 
@@ -58,7 +58,7 @@ class OrdenMantenimiento(models.Model):
     porcentaje = models.FloatField(blank=True, null=True)
     imagen = models.CharField(max_length=255, blank=True, null=True)
     maquina = models.ForeignKey(
-        Maquina, models.DO_NOTHING, db_column='maquina', blank=True, null=True
+        Maquina, on_delete=models.DO_NOTHING, db_column="maquina"
     )
     trabajador = models.ForeignKey(
         Trabajador, 
@@ -66,7 +66,7 @@ class OrdenMantenimiento(models.Model):
         db_column='trabajador', 
         blank=True, 
         null=True,
-        related_name='mantenimiento_ordenes'  # <-- AGREGAR ESTO
+        related_name='mantenimiento_ordenes'  
     )
     reporte_falla = models.ForeignKey(
         ReporteFalla, 
@@ -74,7 +74,7 @@ class OrdenMantenimiento(models.Model):
         db_column='reporte_falla', 
         blank=True, 
         null=True,
-        related_name='mantenimiento_ordenes'  # <-- AGREGAR ESTO
+        related_name='mantenimiento_ordenes'  
     )
     tipo_mantenimiento = models.ForeignKey(
         TipoMantenimiento, models.DO_NOTHING, db_column='tipo_mantenimiento', blank=True, null=True
@@ -95,7 +95,7 @@ class Movimiento(models.Model):
     tipomovimiento = models.CharField(db_column='tipoMovimiento', max_length=20)  # Field name made lowercase.
     orden_mantenimiento = models.ForeignKey(OrdenMantenimiento, models.DO_NOTHING, db_column='orden_mantenimiento', blank=True, null=True)
     refaccion = models.ForeignKey(Refaccion, models.DO_NOTHING, db_column='refaccion', blank=True, null=True)
-    pieza = models.ForeignKey(Refaccion, models.DO_NOTHING, db_column='PIEZA', related_name='movimiento_pieza_set', blank=True, null=True)  # Field name made lowercase.
+    pieza = models.ForeignKey(Pieza, models.DO_NOTHING, db_column='pieza', blank=True, null=True)
 
     class Meta:
         managed = False

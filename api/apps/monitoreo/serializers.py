@@ -1,8 +1,9 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from apps.fallas.models import EstadoMaquina, Linea, Maquina, Marca, Modelo, TipoMaquina
-
+from apps.maquinaria.models import (
+    EdoMaquina, Linea, Maquina, Marca, Modelo, TipoMaquina, 
+)
 from . import services
 from .models import LecturaSensor
 
@@ -42,7 +43,7 @@ class CrearMaquinaSerializer(serializers.Serializer):
     marca = serializers.PrimaryKeyRelatedField(queryset=Marca.objects.all(), required=False, allow_null=True)
     modelo = serializers.PrimaryKeyRelatedField(queryset=Modelo.objects.all(), required=False, allow_null=True)
     tipo_maquina = serializers.PrimaryKeyRelatedField(queryset=TipoMaquina.objects.all(), required=False, allow_null=True)
-    estado_maquina = serializers.PrimaryKeyRelatedField(queryset=EstadoMaquina.objects.all(), required=False, allow_null=True)
+    estado_maquina = serializers.PrimaryKeyRelatedField(queryset=EdoMaquina.objects.all(), required=False, allow_null=True)
     modo_monitoreo = serializers.ChoiceField(choices=LecturaSensor.ORIGENES, default=LecturaSensor.ORIGEN_SIMULADO)
     umbral_vibracion = serializers.FloatField(default=4.0, min_value=0)
 

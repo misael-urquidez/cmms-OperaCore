@@ -201,26 +201,6 @@ class CreateOrdenMantenimientoSerializer(serializers.ModelSerializer):
             "estado_orden",
         ]
 
-class UpdateOrdenMantenimientoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.OrdenMantenimiento
-        fields = [
-            "descripcion",
-            "diagnostico",
-            "notas",
-            "fechaprogramada",
-            "fechacierre",
-            "horacierre",
-            "horasintervenidas",
-            "porcentaje",
-            "imagen",
-            "maquina",
-            "trabajador",
-            "reporte_falla",
-            "tipo_mantenimiento",
-            "estado_orden",
-        ]
-
 
 # ------------ MOVIMIENTO -----------------------------------------------
 class ListMovimientoSerializer(serializers.ModelSerializer):
