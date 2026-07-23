@@ -151,7 +151,7 @@ class ReporteFalla(models.Model):
     tiempoParo = models.IntegerField(null=True, blank=True)
     causaRaiz = models.CharField(max_length=500)
     descripcion = models.CharField(max_length=500, null=True, blank=True)
-    imagen = models.CharField(max_length=255, null=True, blank=True)
+    imagen = models.ImageField(upload_to='fallas_images/')
     maquina = models.ForeignKey(
         Maquina, on_delete=models.DO_NOTHING, db_column="maquina"
     )
@@ -160,16 +160,17 @@ class ReporteFalla(models.Model):
         on_delete=models.DO_NOTHING,
         db_column="trabajador",
     )
-    tipo_falla = models.ForeignKey(
-        TipoFalla, on_delete=models.DO_NOTHING, db_column="tipo_falla"
-    )
     tipo_severidad = models.ForeignKey(
         TipoSeveridad,
         on_delete=models.DO_NOTHING,
         db_column="tipo_severidad",
     )
     estado_reporte = models.ForeignKey(
-        EstadoReporte, on_delete=models.DO_NOTHING, db_column="estado_reporte"
+        EstadoReporte,
+        on_delete=models.DO_NOTHING,
+        db_column="estado_reporte",
+        null=True,
+        blank=True,
     )
 
     class Meta:
@@ -181,13 +182,9 @@ class ReporteFalla(models.Model):
 
 
 class TipoReporte(models.Model):
-    # inspectdb selecciona el primer campo como clave primaria para cumplir con las reglas de Django:
-    tipo_falla = models.OneToOneField(
-        TipoFalla, 
-        models.DO_NOTHING, 
-        db_column='tipo_falla', 
-        primary_key=True
-    )  # The composite primary key (tipo_falla, reporte_falla) found, that is not supported. The first column is selected.
+    tipo_falla = models.ForeignKey(
+        TipoFalla, on_delete=models.DO_NOTHING, db_column="tipo_falla"
+    )
     reporte_falla = models.ForeignKey(
         ReporteFalla, 
         models.DO_NOTHING, 
@@ -196,5 +193,5 @@ class TipoReporte(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'tipo_reporte'
+        db_table = 'TIPO_REPORTE'
         unique_together = (('tipo_falla', 'reporte_falla'),)

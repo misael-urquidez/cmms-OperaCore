@@ -1,3 +1,6 @@
+document.querySelector('details').removeAttribute('open');
+
+
 (function (){
 
     function actualizarPreview(inputElement, previewContainer, infoElement = null, clearButton = null){

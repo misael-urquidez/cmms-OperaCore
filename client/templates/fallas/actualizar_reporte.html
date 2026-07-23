@@ -1,0 +1,137 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% block title %}Actualizar Reporte #{{ reporte.numeroRegistro }} · OperaCore{% endblock %}
+{% block breadcrumb %}Fallas{% endblock %}
+{% block page_title %}Actualizar reporte de falla{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">{% endblock %}
+{% block content %}
+  <h1>Actualizar Reporte #{{ reporte.numeroRegistro }}</h1>
+
+  <form method="post" action="{% url 'fallas:actualizar_reporte' pk=reporte.numeroRegistro %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="contenedor">
+      <div class="left-side">
+        <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
+
+        <label for="asunto">Asunto <span id="asunto-error"></span></label>
+        <input type="text" name="asunto" id="asunto" data-error-id="asunto-error" required maxlength="500"
+               value="{{ reporte.asunto }}" />
+
+        <label for="descripcion">Descripcion <span id="descripcion-error"></span></label>
+        <textarea name="descripcion" id="descripcion" maxlength="500" data-error-id="descripcion-error">{{ reporte.descripcion }}</textarea>
+
+        <label for="causaRaiz">Causa raiz <span id="causaRaiz-error"></span></label>
+        <input type="text" name="causaRaiz" id="causaRaiz" required maxlength="500" data-error-id="causaRaiz-error"
+               value="{{ reporte.causaRaiz }}" />
+
+        <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas) <span id="horas-error"></span></label>
+        <input type="number" name="tiempoParo" id="tiempoParo" min="0" data-error-id="horas-error"
+               value="{{ reporte.tiempoParo }}" />
+
+        <label for="fechaSolucion">Fecha de solucion</label>
+        <input type="date" name="fechaSolucion" id="fechaSolucion"
+               value="{{ reporte.fechaResolucion|cut:' ' }}" />
+
+        <label for="maquina">Maquina</label>
+        <select name="maquina" id="maquina" required>
+          <option value="">Seleccione...</option>
+          {% for m in maquinas %}
+            <option value="{{ m.codigo }}" {% if reporte.maquina == m.codigo %}selected{% endif %}>{{ m.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="tipo_severidad">Severidad</label>
+        <select name="tipo_severidad" id="tipo_severidad" required>
+          <option value="">Seleccione...</option>
+          {% for s in severidades %}
+            <option value="{{ s.codigo }}" {% if reporte.tipo_severidad == s.codigo %}selected{% endif %}>{{ s.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="tipo_falla">Selecione una o mas fallas encontradas</label>
+        <select name="tipo_falla" id="tipo_falla" required>
+          <option value="">Seleccione...</option>
+          {% for tf in tipos_falla %}
+            <option value="{{ tf.numeroRegistro }}">{{ tf.nombre }}</option>
+          {% endfor %}
+        </select>
+        <div class="contenedor-tipo-fallas" id="nuevas-fallas"></div>
+        <div class="botones">
+            <button type="button" onclick="quitarSelect('tipo-falla')">- Quitar</button>
+            <button type="button" onclick="anadirFalla()">+ Añadir</button>
+        </div>
+
+        <label for="estado_reporte">Estado del reporte</label>
+        <select name="estado_reporte" id="estado_reporte" required>
+          <option value="">Seleccione...</option>
+          {% for e in estados %}
+            <option value="{{ e.codigo }}" {% if reporte.estado_reporte == e.codigo %}selected{% endif %}>{{ e.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="trabajador">Selecciona el trabajador</label>
+        <select name="trabajador" id="trabajador" required>
+          <option value="">Seleccione...</option>
+          {% for t in trabajadores %}
+            <option value="{{ t.numeroNomina }}" {% if reporte.trabajador == t.numeroNomina %}selected{% endif %}>{{ t.nombre }} {{ t.apellidoPat }}</option>
+          {% endfor %}
+        </select>
+
+      </div>
+
+      <div class="right-side">
+        <div class="card drag-drop">
+          <h3>Evidencia</h3>
+          <div class="file-wrapper">
+            {% if reporte.imagen %}
+              <div class="preview-box" id="previewDrag">
+                <img src="{{ MEDIA_URL }}{{ reporte.imagen }}" alt="Evidencia actual" style="max-width:100%; border-radius:6px;">
+              </div>
+            {% else %}
+              <div class="preview-box" id="previewDrag">
+                <span class="placeholder">Sin evidencia</span>
+              </div>
+            {% endif %}
+            <label for="fileDrag" class="drop-zone" id="dropZoneLabel">
+              <div class="icon">📤</div>
+              <p>Haz clic para cambiar la imagen</p>
+              <span>O arrastra una nueva imagen</span>
+            </label>
+            <input type="file" id="fileDrag" name="imagen" accept="image/*">
+          </div>
+        </div>
+
+        <div class="contenedor-botones">
+          <button type="submit" id="boton-registrar">Guardar cambios</button>
+          <a class="btn-cancel" href="{% url 'fallas:lista' %}">Cancelar</a>
+        </div>
+      </div>
+    </div>
+  </form>
+
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'fallas/js/preview-imagenes.js' %}"></script>
+<script src="{% static 'fallas/js/añadir-elementos.js' %}"></script>
+<script src="{% static 'fallas/js/validaciones-actualizar.js' %}"></script>
+<script>
+(function(){
+  var fallas = {{ reporte.fallas_asociadas|safe }};
+  if (!fallas || fallas.length === 0) return;
+  var base = document.getElementById('tipo_falla');
+  if (fallas.length >= 1) {
+    base.value = fallas[0].id;
+    base.dispatchEvent(new Event('change'));
+  }
+  for (var i = 1; i < fallas.length; i++) {
+    anadirFalla();
+    var dynamic = document.querySelectorAll('#nuevas-fallas select');
+    var last = dynamic[dynamic.length - 1];
+    if (last) {
+      last.value = fallas[i].id;
+      last.dispatchEvent(new Event('change'));
+    }
+  }
+})();
+</script>
+{% endblock %}

@@ -7,10 +7,10 @@ from . import models
 class ReporteFallaAdmin(admin.ModelAdmin):
     list_display = (
         "numeroRegistro", "asunto", "fechaCreacion", "horaCreacion",
-        "maquina", "trabajador", "tipo_falla", "tipo_severidad",
+        "maquina", "trabajador", "tipo_severidad",
         "estado_reporte",
     )
-    list_filter = ("tipo_severidad", "tipo_falla", "fechaCreacion")
+    list_filter = ("tipo_severidad", "fechaCreacion")
     search_fields = ("asunto", "causaRaiz", "descripcion")
 
 

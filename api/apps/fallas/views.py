@@ -1,7 +1,11 @@
+import os
+
+from django.conf import settings
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.usuarios.models import Trabajador
 from . import models, serializers
 
 
@@ -85,16 +89,17 @@ class ReporteFallaListAPIView(generics.ListAPIView):
 
     queryset = (
         models.ReporteFalla.objects
-        .select_related("maquina", "trabajador", "tipo_falla", "tipo_severidad")
+        .select_related("maquina", "trabajador", "tipo_severidad")
         .order_by("-fechaCreacion", "-horaCreacion")
     )
     serializer_class = serializers.ReporteFallaListSerializer
 
+#cambio
 
 class ReporteFallaDetailAPIView(generics.RetrieveAPIView):
 
     queryset = models.ReporteFalla.objects.select_related(
-        "maquina", "trabajador", "tipo_falla", "tipo_severidad"
+        "maquina", "trabajador", "tipo_severidad"
     )
     serializer_class = serializers.ReporteFallaDetailSerializer
 
@@ -109,10 +114,52 @@ class ReporteFallaCreateAPIView(generics.CreateAPIView):
         reporte = serializer.save()
         data = serializers.ReporteFallaDetailSerializer(reporte).data
         return Response(data, status=status.HTTP_201_CREATED)
+
+
+class ReporteFallaUpdateAPIView(generics.UpdateAPIView):
+
+    queryset = models.ReporteFalla.objects.all()
+    serializer_class = serializers.ReporteFallaUpdateSerializer
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        reporte = models.ReporteFalla.objects.get(pk=kwargs["pk"])
+
+        tipo_falla_ids = request.data.getlist("tipo_falla_ids")
+        if tipo_falla_ids:
+            models.TipoReporte.objects.filter(reporte_falla=reporte).delete()
+            for tf_id in tipo_falla_ids:
+                models.TipoReporte.objects.create(
+                    tipo_falla_id=int(tf_id),
+                    reporte_falla=reporte,
+                )
+
+        imagen_file = request.FILES.get("imagen")
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "fallas")
+            os.makedirs(carpeta, exist_ok=True)
+            with open(os.path.join(carpeta, imagen_file.name), "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            reporte.imagen = f"fallas/{imagen_file.name}"
+            reporte.save(update_fields=["imagen"])
+
+        return Response(
+            serializers.ReporteFallaDetailSerializer(reporte).data,
+            status=status.HTTP_200_OK,
+        )
     
+class TrabajadorListAPIView(generics.ListAPIView):
+    """Listado ligero de trabajadores (solo nomina + nombre) para el
+    select del formulario de reporte de falla."""
+
+    queryset = Trabajador.objects.filter(actividad=True).order_by("nombre")
+    serializer_class = serializers.TrabajadorLightSerializer
+
+
 class CatalogosReporteAPIView(APIView):
-    """Junta los 4 catalogos que usa el formulario de 'Reportar Falla' en
-    una sola respuesta, para que el client no tenga que hacer 4 llamadas
+    """Junta los catalogos que usa el formulario de 'Reportar Falla' en
+    una sola respuesta, para que el client no tenga que hacer N llamadas
     HTTP separadas y secuenciales cada vez que carga la pagina."""
 
     def get(self, request):
@@ -129,36 +176,9 @@ class CatalogosReporteAPIView(APIView):
             "estados": serializers.EstadoReporteSerializer(
                 models.EstadoReporte.objects.all(), many=True
             ).data,
+            "trabajadores": serializers.TrabajadorLightSerializer(
+                Trabajador.objects.filter(actividad=True).order_by("nombre"),
+                many=True,
+            ).data,
         }
-        return Response(data, status=status.HTTP_200_OK)
-
-
-# ------------ TIPO_REPORTE (llave compuesta: tipo_falla, reporte_falla) --
-# PK real en BD: (tipo_falla, reporte_falla). Detail resuelve su propio
-# get_object a mano, igual que las tablas puente de inventario/mantenimiento.
-class TipoReporteListAPIView(generics.ListAPIView):
-    queryset = models.TipoReporte.objects.all()
-    serializer_class = serializers.ListTipoReporteSerializer
-
-
-class TipoReporteCreateAPIView(generics.CreateAPIView):
-    serializer_class = serializers.CreateTipoReporteSerializer
-
-
-class TipoReporteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = models.TipoReporte.objects.all()
-    serializer_class = serializers.DetailTipoReporteSerializer
-
-    def get_serializer_class(self):
-        if self.request.method in ("PUT", "PATCH"):
-            return serializers.UpdateTipoReporteSerializer
-        return serializers.DetailTipoReporteSerializer
-
-    def get_object(self):
-        obj = generics.get_object_or_404(
-            self.get_queryset(),
-            tipo_falla=self.kwargs["tipo_falla"],
-            reporte_falla=self.kwargs["reporte_falla"],
-        )
-        self.check_object_permissions(self.request, obj)
-        return obj
+        return Response(data, status=status.HTTP_200_OK) 

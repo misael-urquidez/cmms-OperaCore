@@ -289,14 +289,14 @@ INSERT INTO REFACC_MAQUI (maquina, refaccion) VALUES
 ('MAQ004', 2),
 ('MAQ005', 4);
 
-INSERT INTO REPORTE_FALLA (numeroRegistro, asunto, fechaResolucion, fechaCreacion, horaCreacion, tiempoParo, causaRaiz, descripcion, imagen, maquina, trabajador, tipo_falla, tipo_severidad, estado_reporte) VALUES
-(1, 'Ruido anormal en cabezal de pickup', '2026-01-20', '2026-01-20', '08:30:00', 2, 'Desgaste de rodamiento del eje principal', 'Se detectó ruido metálico al operar el cabezal a alta velocidad', '/img/reportes/ruido_cabezal.jpg', 'MAQ001', 'NOM-001', 1, 'MEDIA', 'CERRA');
+INSERT INTO REPORTE_FALLA (numeroRegistro, asunto, fechaResolucion, fechaCreacion, horaCreacion, tiempoParo, causaRaiz, descripcion, imagen, maquina, trabajador, tipo_severidad, estado_reporte) VALUES
+(1, 'Ruido anormal en cabezal de pickup', '2026-01-20', '2026-01-20', '08:30:00', 2, 'Desgaste de rodamiento del eje principal', 'Se detectó ruido metálico al operar el cabezal a alta velocidad', '/img/reportes/ruido_cabezal.jpg', 'MAQ001', 'NOM-001', 'MEDIA', 'CERRA');
 
-INSERT INTO REPORTE_FALLA (numeroRegistro, asunto, fechaResolucion, fechaCreacion, horaCreacion, tiempoParo, causaRaiz, descripcion, imagen, maquina, trabajador, tipo_falla, tipo_severidad, estado_reporte) VALUES
-(2, 'Temperatura inestable en zona 3', '2026-03-17', '2026-03-15', '10:15:00', 16, 'Termoparo dañado en zona 3 del horno', 'La temperatura oscilaba ±15°C impidiendo soldadura correcta', '/img/reportes/temp_inestable.jpg', 'MAQ002', 'NOM-003', 2, 'ALTA', 'CERRA'),
-(3, 'Error de imagen en inspección AOI', '2026-05-14', '2026-05-10', '07:45:00', 72, 'Falla en cámara principal del AOI', 'La cámara no logra enfocar correctamente, genera falsos positivos', '/img/reportes/error_aoi.jpg', 'MAQ003', 'NOM-001', 5, 'ALTA', 'CERRA'),
-(4, 'Fuga de pasta de soldadura', '2026-06-03', '2026-06-01', '09:00:00', 4, 'Boquilla desgastada en dispensador', 'Se observó fuga de pasta por la boquilla principal', '/img/reportes/fuga_pasta.jpg', 'MAQ004', 'NOM-003', 1, 'MEDIA', 'CERRA'),
-(5, 'Pantalla de control congelada', NULL, '2026-07-10', '14:20:00', NULL, 'Fallo en software de control de la estación', 'La pantalla táctil dejó de responder, equipo detenido completamente', '/img/reportes/pantalla_congelada.jpg', 'MAQ006', 'NOM-001', 4, 'CRITI', 'ENATE');
+INSERT INTO REPORTE_FALLA (numeroRegistro, asunto, fechaResolucion, fechaCreacion, horaCreacion, tiempoParo, causaRaiz, descripcion, imagen, maquina, trabajador, tipo_severidad, estado_reporte) VALUES
+(2, 'Temperatura inestable en zona 3', '2026-03-17', '2026-03-15', '10:15:00', 16, 'Termoparo dañado en zona 3 del horno', 'La temperatura oscilaba ±15°C impidiendo soldadura correcta', '/img/reportes/temp_inestable.jpg', 'MAQ002', 'NOM-003', 'ALTA', 'CERRA'),
+(3, 'Error de imagen en inspección AOI', '2026-05-14', '2026-05-10', '07:45:00', 72, 'Falla en cámara principal del AOI', 'La cámara no logra enfocar correctamente, genera falsos positivos', '/img/reportes/error_aoi.jpg', 'MAQ003', 'NOM-001', 'ALTA', 'CERRA'),
+(4, 'Fuga de pasta de soldadura', '2026-06-03', '2026-06-01', '09:00:00', 4, 'Boquilla desgastada en dispensador', 'Se observó fuga de pasta por la boquilla principal', '/img/reportes/fuga_pasta.jpg', 'MAQ004', 'NOM-003', 'MEDIA', 'CERRA'),
+(5, 'Pantalla de control congelada', NULL, '2026-07-10', '14:20:00', NULL, 'Fallo en software de control de la estación', 'La pantalla táctil dejó de responder, equipo detenido completamente', '/img/reportes/pantalla_congelada.jpg', 'MAQ006', 'NOM-001', 'CRITI', 'ENATE');
 
 
 INSERT INTO TIPO_REPORTE (tipo_falla, reporte_falla) VALUES
