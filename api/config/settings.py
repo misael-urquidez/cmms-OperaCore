@@ -2,11 +2,16 @@
 Django settings for OperaCore API (el "demo" al estilo de tu maestro).
 Este proyecto SOLO expone datos via REST, no sirve HTML.
 """
-
+import os
 from pathlib import Path
 from decouple import Csv, config
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+MEDIA_URL = '/media'
 
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-api")
 GROQ_API_KEY = config("GROQ_API_KEY", default="")
@@ -25,6 +30,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework.authtoken",  # para login por token, como obtain_auth_token
+    "corsheaders",
 ]
 
 LOCAL_APPS = [
@@ -42,6 +48,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -105,6 +112,9 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
@@ -118,5 +128,5 @@ REST_FRAMEWORK = {
     ],
 }
 
-# CORS simple si el client corre en otro puerto/dominio (opcional, actívalo si
-# lo necesitas instalando django-cors-headers y agregándolo a INSTALLED_APPS).
+# CORS: el client (puerto 8001) consume el api (puerto 8000).
+CORS_ALLOW_ALL_ORIGINS = True

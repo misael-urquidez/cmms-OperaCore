@@ -665,6 +665,7 @@ GESTION_REGISTRY = {
         # (Trabajador no se borra fisico, se da de baja con 'actividad')
         "pk_field": "numeroNomina",
         "campos": [
+            {"name": "numeroNomina", "label": "Número de nómina", "tipo": "text", "requerido": True, "columna": True},
             {"name": "nombre", "label": "Nombre", "tipo": "text", "requerido": True, "columna": True},
             {"name": "apellidoPat", "label": "Apellido paterno", "tipo": "text", "requerido": True, "columna": True},
             {"name": "apellidoMat", "label": "Apellido materno", "tipo": "text", "requerido": False, "columna": False},

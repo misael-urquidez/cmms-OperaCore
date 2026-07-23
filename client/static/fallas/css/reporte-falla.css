@@ -31,6 +31,7 @@
 
 .contenedor input[type="text"],
 .contenedor input[type="number"],
+.contenedor input[type="date"],
 .contenedor textarea,
 .contenedor select {
     width: 100%;
@@ -261,4 +262,42 @@
 
 .guias__lista li strong {
     color: var(--color-primary);
+}
+
+/* --- Botones de acciones en tabla de reportes --- */
+
+.data-table button[type="button"] {
+    padding: 0.35rem 0.75rem;
+    background: var(--color-primary);
+    color: var(--color-bg, #08131f);
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+    white-space: nowrap;
+}
+
+.data-table button[type="button"]:hover {
+    opacity: 0.85;
+}
+
+.data-table a {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-text);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.375rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.data-table a:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
 }

@@ -47,18 +47,24 @@ class TrabajadorSerializer(serializers.ModelSerializer):
 
 
 class RegistroTrabajadorSerializer(serializers.ModelSerializer):
-    """Alta de un TRABAJADOR nuevo. numeroNomina se genera solo, la
-    contraseña se guarda hasheada con el hasher de Django."""
+    """Alta de un TRABAJADOR nuevo. numeroNomina se puede proporcionar
+    o se auto-genera. La contraseña se guarda hasheada con el hasher de Django."""
 
+    numeroNomina = serializers.CharField(required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, label="Confirmar contraseña")
 
     class Meta:
         model = models.Trabajador
         fields = [
-            "nombre", "apellidoPat", "apellidoMat", "telefono",
+            "numeroNomina", "nombre", "apellidoPat", "apellidoMat", "telefono",
             "correo", "usuario", "password", "password2", "rol", "especialidad",
         ]
+
+    def validate_numeroNomina(self, value):
+        if value and models.Trabajador.objects.filter(numeroNomina=value).exists():
+            raise serializers.ValidationError("Ese número de nómina ya existe.")
+        return value
 
     def validate_usuario(self, value):
         if models.Trabajador.objects.filter(usuario__iexact=value).exists():
@@ -85,15 +91,41 @@ class RegistroTrabajadorSerializer(serializers.ModelSerializer):
         password = validated_data.pop("password")
         hashed = make_password(password)
 
-        # numeroNomina NO es autoincremental: lo calculamos nosotros (EMPxxxx).
-        # Si dos altas ocurren casi al mismo tiempo (o por un doble envio),
-        # ambas pueden calcular el mismo numero y chocar en la llave primaria.
-        # Reintentamos con el siguiente numero ante ese choque puntual.
-        for _ in range(5):
+        numero_nomina = validated_data.pop("numeroNomina", None)
+
+        if numero_nomina:
             trabajador = models.Trabajador(
-                numeroNomina=models.generar_numero_nomina(),
+                numeroNomina=numero_nomina,
                 contrasena=hashed,
                 **validated_data,
+            )
+            try:
+                with transaction.atomic():
+                    trabajador.save(force_insert=True)
+                return trabajador
+            except IntegrityError as exc:
+                if "PRIMARY" not in str(exc):
+                    raise
+                raise serializers.ValidationError(
+                    {"numeroNomina": "Ese número de nómina ya existe."}
+                )
+        else:
+            for _ in range(5):
+                trabajador = models.Trabajador(
+                    numeroNomina=models.generar_numero_nomina(),
+                    contrasena=hashed,
+                    **validated_data,
+                )
+                try:
+                    with transaction.atomic():
+                        trabajador.save(force_insert=True)
+                    return trabajador
+                except IntegrityError as exc:
+                    if "PRIMARY" not in str(exc):
+                        raise
+
+            raise serializers.ValidationError(
+                {"detail": "No se pudo asignar un número de nómina disponible. Intenta de nuevo."}
             )
             try:
                 with transaction.atomic():

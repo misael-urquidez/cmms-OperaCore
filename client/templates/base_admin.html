@@ -109,6 +109,17 @@
 <script src="{% static 'js/navbar.js' %}"></script>
 <script src="{% static 'js/theme.js' %}"></script>
 <script src="{% static 'js/admin.js' %}"></script>
+<script>
+(function(){
+  var msgs = document.querySelectorAll('.messages__item');
+  msgs.forEach(function(el){
+    setTimeout(function(){
+      el.classList.add('messages__item--hide');
+      el.addEventListener('transitionend', function(){ el.remove(); });
+    }, 3500);
+  });
+})();
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>
