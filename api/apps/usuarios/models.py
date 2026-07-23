@@ -22,7 +22,7 @@ class Rol(models.Model):
 class Especialidad(models.Model):
     """Mapea la tabla ESPECIALIDAD (managed=False)."""
 
-    codigo = models.CharField(max_length=5, primary_key=True)
+    numeroRegistro = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50, unique=True)
     descripcion = models.CharField(max_length=255, null=True, blank=True)
 

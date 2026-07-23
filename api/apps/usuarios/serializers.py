@@ -21,13 +21,13 @@ class RolDetailSerializer(serializers.ModelSerializer):
 class EspecialidadSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Especialidad
-        fields = ["codigo", "nombre"]
+        fields = ["numeroRegistro", "nombre"]
 
 
 class EspecialidadDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Especialidad
-        fields = ["codigo", "nombre", "descripcion"]
+        fields = ["numeroRegistro", "nombre", "descripcion"]
 
 
 class TrabajadorSerializer(serializers.ModelSerializer):

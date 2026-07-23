@@ -74,7 +74,7 @@ class EspecialidadCreateAPIView(generics.CreateAPIView):
 class EspecialidadDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Especialidad.objects.all()
     serializer_class = serializers.EspecialidadDetailSerializer
-    lookup_field = "codigo"
+    lookup_field = "numeroRegistro"
 
 
 class RegistroAPIView(generics.CreateAPIView):
