@@ -38,3 +38,11 @@ def si_no(valor):
     elif valor in (0, "0", False, "false", "False"):
         return "No"
     return valor
+
+
+@register.filter
+def get_file_url(valor):
+    """Si el valor parece una ruta de archivo, devuelve la URL de MEDIA."""
+    if not valor:
+        return ""
+    return f"/media/{valor}"

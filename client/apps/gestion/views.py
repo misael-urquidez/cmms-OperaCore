@@ -171,6 +171,9 @@ class GestionIndex(generic.View):
         return render(request, self.template_name, context)
 
 
+MAX_COLUMNAS = 7
+
+
 class GestionListView(generic.View):
     template_name = "gestion/list_generic.html"
 
@@ -180,12 +183,27 @@ class GestionListView(generic.View):
         if not ok:
             messages.warning(request, "No se pudo conectar con la API.")
 
-        columnas = [c for c in config["campos"] if c.get("columna", True)]
+        todas_las = [c for c in config["campos"]
+                     if c.get("tipo") not in ("password", "file")]
+
+        todas_las_con_archivos = [c for c in config["campos"]
+                                  if c.get("tipo") != "password"]
+
+        requeridos = [c for c in todas_las if c.get("requerido")]
+        opcionales = [c for c in todas_las if not c.get("requerido")]
+
+        visibles = requeridos[:MAX_COLUMNAS]
+
+        tiene_imagen = any(c.get("tipo") == "file" for c in config["campos"])
+        necesita_modal = len(todas_las) > MAX_COLUMNAS or tiene_imagen
 
         context = {
             "config": config,
             "registros": registros,
-            "columnas": columnas,
+            "columnas": visibles,
+            "todas_las_columnas": todas_las_con_archivos,
+            "necesita_modal": necesita_modal,
+            "tiene_imagen": tiene_imagen,
             "seccion": "gestion",
             "subseccion": slug,
         }

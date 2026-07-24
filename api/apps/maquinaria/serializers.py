@@ -19,7 +19,7 @@ from apps.fallas.models import ReporteFalla
 class ListPlantaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Planta
-        fields = ["codigo", "nombre"]
+        fields = ["codigo", "nombre", "telefono", "dircalle", "dircodigopostal", "dirnumero"]
 
 class DetailPlantaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,7 +49,7 @@ class UpdatePlantaSerializer(serializers.ModelSerializer):
 class ListAreaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Area
-        fields = ["codigo", "nombre", "planta"]
+        fields = ["codigo", "nombre", "telefono", "planta"]
 
 class DetailAreaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -97,7 +97,7 @@ class UpdateEdoMaquinaSerializer(serializers.ModelSerializer):
 class ListLineaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Linea
-        fields = ["codigo", "nombre"]
+        fields = ["codigo", "nombre", "area"]
 
 class DetailLineaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -198,7 +198,7 @@ class ListMaquinaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Maquina
         fields = [
-            "codigo", "numeroserie", "nombre", "imagen_url",
+            "codigo", "numeroserie", "nombre", "imagen_url", "fechainstalacion",
             "modelo_3d", "marca", "modelo","linea", "estado_maquina", "tipo_maquina"
         ]
 

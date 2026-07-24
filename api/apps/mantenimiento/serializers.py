@@ -85,7 +85,7 @@ class CreateTipoMovimientoSerializer(serializers.ModelSerializer):
 class ListTareaOrdenSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TareaOrden
-        fields = ["tarea", "orden_mantenimiento", "fechainicio", "verificacion"]
+        fields = ["tarea", "orden_mantenimiento", "fechainicio", "horainicio", "verificacion"]
 
 
 class DetailTareaOrdenSerializer(serializers.ModelSerializer):
