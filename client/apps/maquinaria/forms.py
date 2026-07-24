@@ -14,6 +14,7 @@ TIPO_CHOICES = [
     ("Dispensador de pasta", "Dispensador de pasta"),
     ("Transportador", "Transportador"),
     ("Estación de prueba", "Estación de prueba"),
+    ("Soldadura Selectiva", "Soldadura Selectiva"),
 ]
 
 LINEA_CHOICES = [

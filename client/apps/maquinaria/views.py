@@ -4,6 +4,7 @@ from django.core.cache import cache
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import generic
 from .forms import MaquinaForm
+from django.views.generic import TemplateView
 
 API_URL = f"{settings.API_BASE_URL}/maquinaria"
 
@@ -135,3 +136,12 @@ class CrearMaquina(generic.View):
                 pass
 
         return render(request, self.template_name, {"form": form})
+
+class WikiMaquinasView(TemplateView):
+    template_name = "maquinaria/wiki_maquinas.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['seccion'] = 'maquinaria'
+        context['subseccion'] = 'wiki'
+        return context

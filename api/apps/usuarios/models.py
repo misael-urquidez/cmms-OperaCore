@@ -45,6 +45,7 @@ class Trabajador(models.Model):
     telefono = models.CharField(max_length=15, unique=True)
     correo = models.CharField(max_length=100, unique=True)
     usuario = models.CharField(max_length=30, unique=True)
+    foto = models.ImageField(upload_to="trabajadores/", max_length=255, null=True, blank=True)
     # Ojo: en la BD la columna se llama "contraseña" (con ñ). El atributo en
     # Python es "contrasena" para no batallar con el encoding en el codigo.
     contrasena = models.CharField(max_length=255, db_column="contraseña")
