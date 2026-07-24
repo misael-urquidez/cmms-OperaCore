@@ -9,10 +9,6 @@ from decouple import Csv, config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-MEDIA_URL = '/media'
-
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-api")
 GROQ_API_KEY = config("GROQ_API_KEY", default="")
 DEBUG = config("DEBUG", default=True, cast=bool)
@@ -112,7 +108,7 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-MEDIA_URL = "media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

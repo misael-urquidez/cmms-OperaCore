@@ -41,7 +41,7 @@ class TrabajadorSerializer(serializers.ModelSerializer):
         model = Trabajador
         fields = [
             "numeroNomina", "nombre", "apellidoPat", "apellidoMat",
-            "telefono", "correo", "usuario", "actividad",
+            "telefono", "correo", "usuario", "actividad", "foto",
             "rol", "rol_nombre", "especialidad", "especialidad_nombre",
         ]
 
@@ -104,23 +104,48 @@ class RegistroTrabajadorSerializer(serializers.ModelSerializer):
             )
 
 class UpdateTrabajadorSerializer(serializers.ModelSerializer):
-    """Edición de un TRABAJADOR existente. password es opcional."""
+    """Edición de un TRABAJADOR existente. password es opcional.
+
+    La foto se maneja aparte de los demas campos porque hay que tocar el
+    archivo en disco (borrar el anterior si se reemplaza o si se quita):
+    - Mandar 'foto' (archivo) en el multipart -> reemplaza la foto actual.
+    - Mandar 'eliminar_foto' = true (sin 'foto') -> borra la foto actual.
+    - No mandar ninguno de los dos -> la foto actual no se toca.
+    """
 
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    foto = serializers.ImageField(required=False, allow_null=True)
+    eliminar_foto = serializers.BooleanField(write_only=True, required=False, default=False)
 
     class Meta:
         model = Trabajador
         fields = [
             "nombre", "apellidoPat", "apellidoMat", "telefono", "correo",
             "usuario", "actividad", "rol", "especialidad", "password",
+            "foto", "eliminar_foto",
         ]
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
+        eliminar_foto = validated_data.pop("eliminar_foto", False)
+        foto_nueva = validated_data.pop("foto", None)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+
         if password:
             instance.contrasena = make_password(password)
+
+        if foto_nueva is not None:
+            # Llego una foto nueva: se borra el archivo anterior (si habia)
+            # y se guarda el reemplazo.
+            if instance.foto:
+                instance.foto.delete(save=False)
+            instance.foto = foto_nueva
+        elif eliminar_foto and instance.foto:
+            instance.foto.delete(save=False)
+            instance.foto = None
+
         instance.save()
         return instance
 

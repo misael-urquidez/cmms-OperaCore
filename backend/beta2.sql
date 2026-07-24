@@ -4,10 +4,12 @@
 -- (fallas_fix_tipo_reporte.sql queda OBSOLETO: TIPO_REPORTE ya nace
 --  con columna `id` en este script, no hace falta correrlo aparte)
 --
+-- NUEVO en esta version: columna TRABAJADOR.foto (ruta dentro de
+-- api/media/, igual que REPORTE_FALLA.imagen / ORDEN_MANTENIMIENTO.imagen /
+-- HERRAMIENTA.imagen) + usuarios admin/tecnico de todo el equipo.
+--
 -- Uso: mysql -u <usuario> -p < beta_full.sql
--- Esto BORRA la base "operacore" y la recrea desde cero con todo:
--- esquema, catálogos, datos de prueba, módulo de monitoreo, rutas de
--- modelos 3D y tu usuario admin (za / za).
+-- Esto BORRA la base "operacore" y la recrea desde cero con todo.
 -- =====================================================================
 
 SET NAMES utf8mb4;
@@ -77,7 +79,6 @@ CREATE TABLE PLANTA (
     dirNumero       VARCHAR(10)  NOT NULL
 ) ENGINE=InnoDB;
 
--- Tabla: MARCA (PK = "clave")
 CREATE TABLE MARCA (
     clave           VARCHAR(10)  PRIMARY KEY,
     nombre          VARCHAR(50)  NOT NULL UNIQUE,
@@ -201,6 +202,13 @@ CREATE TABLE REFACCION (
     CONSTRAINT fk_refaccion_clasificacion FOREIGN KEY (clasificacion) REFERENCES CLASIFICACION(codigo)
 ) ENGINE=InnoDB;
 
+-- ============================================================
+-- TRABAJADOR: se agrego la columna `foto` (ruta dentro de api/media/,
+-- ej. 'trabajadores/default.png' o 'trabajadores/NOM-XD1.jpg').
+-- Mismo patron que REPORTE_FALLA.imagen / ORDEN_MANTENIMIENTO.imagen /
+-- HERRAMIENTA.imagen: aqui solo se guarda el PATH, el archivo real
+-- vive en el filesystem dentro de api/media/.
+-- ============================================================
 CREATE TABLE TRABAJADOR (
     numeroNomina    VARCHAR(15)  PRIMARY KEY,
     nombre          VARCHAR(50)  NOT NULL,
@@ -213,6 +221,7 @@ CREATE TABLE TRABAJADOR (
     actividad       BOOLEAN NOT NULL DEFAULT TRUE,
     rol             VARCHAR(5)   NULL,
     especialidad    INT   NULL,
+    foto            VARCHAR(255) NULL,
     CONSTRAINT fk_trabajador_rol FOREIGN KEY (rol) REFERENCES ROL(codigo),
     CONSTRAINT fk_trabajador_especialidad FOREIGN KEY (especialidad) REFERENCES ESPECIALIDAD(numeroRegistro)
 ) ENGINE=InnoDB;
@@ -260,10 +269,6 @@ CREATE TABLE ESTADO_HERRAMIENTA (
 -- 4. TABLAS DE NIVEL 3 (dependen de tablas de nivel 2)
 -- =====================================================================
 
--- Tabla: MAQUINA
--- Incluye ya YA INTEGRADAS las columnas de:
---   - modelo.sql       -> modelo_3d
---   - monitoreo_fase1.sql -> modo_monitoreo, umbral_vibracion, requiere_revision_preventiva
 CREATE TABLE MAQUINA (
     codigo          VARCHAR(10)  PRIMARY KEY,
     numeroSerie     VARCHAR(30)  NULL UNIQUE,
@@ -298,7 +303,6 @@ CREATE TABLE INDICADOR (
     CONSTRAINT fk_indicador_maquina FOREIGN KEY (maquina) REFERENCES MAQUINA(codigo)
 ) ENGINE=InnoDB;
 
--- Tabla: LECTURA_SENSOR (de monitoreo_fase1.sql)
 CREATE TABLE LECTURA_SENSOR (
     numeroRegistro INT AUTO_INCREMENT PRIMARY KEY,
     maquina VARCHAR(10) NOT NULL,
@@ -372,7 +376,6 @@ CREATE TABLE REPORTE_FALLA (
     CONSTRAINT fk_estado_reporte  FOREIGN KEY (estado_reporte) REFERENCES EDO_REPORTE(codigo)
 ) ENGINE=InnoDB;
 
--- tipo_falla ya no vive en REPORTE_FALLA: es muchos-a-muchos vía TIPO_REPORTE.
 CREATE TABLE TIPO_REPORTE (
     id              INT AUTO_INCREMENT PRIMARY KEY,
     tipo_falla      INT NOT NULL,
@@ -474,7 +477,7 @@ CREATE INDEX idx_indicador_maquina ON INDICADOR(maquina);
 CREATE INDEX idx_registroops_maquina ON REGISTRO_OPS(maquina);
 
 -- =====================================================================
--- 8. DATOS DE PRUEBA (antes: datos_prueba.sql)
+-- 8. DATOS DE PRUEBA
 -- =====================================================================
 
 INSERT INTO TIPO_PIEZA (nombre, descripcion) VALUES
@@ -631,13 +634,35 @@ INSERT INTO REFACCION (nombre, codigoSku, puntoReorden, codigoInventario, numero
 ('Correa HTD5M-500', 'SKU-CHT5M', 4, 'INV-CHT5M', 'ORD-2026-004', 85.00, 3, 10, 3, 'PROV001', 4, 'BAJAC'),
 ('Motor servo YSM40', 'SKU-MSY40', 2, 'INV-MSY40', 'ORD-2026-005', 890.00, 14, 4, 1, 'PROV002', 5, 'ALTAC');
 
--- TRABAJADOR (incluye ya tu usuario admin al final, antes: avr.sql)
-INSERT INTO TRABAJADOR (numeroNomina, nombre, apellidoPat, apellidoMat, telefono, correo, usuario, `contraseña`, actividad, rol, especialidad) VALUES
-('NOM-001', 'Juan', 'Pérez', 'García', '5559876543', 'juan.perez@ems.mx', 'jperez', 'password123', TRUE, 'TECNI', 1),
-('NOM-002', 'María', 'López', 'Hernández', '5559876544', 'maria.lopez@ems.mx', 'mlopez', 'password123', TRUE, 'ENCLN', 1),
-('NOM-003', 'Carlos', 'Ruiz', 'Martínez', '5559876545', 'carlos.ruiz@ems.mx', 'cruiz', 'password123', TRUE, 'TECNI', 4),
-('NOM-004', 'Ana', 'García', 'Torres', '5559876546', 'ana.garcia@ems.mx', 'agarcia', 'password123', TRUE, 'ADMIN', 3),
-('NOM001', 'Zacarías', 'Pérez', 'López', '6641234567', 'za@example.com', 'za', 'za', TRUE, 'ADMIN', NULL);
+-- ============================================================
+-- TRABAJADOR — TODOS con `foto`. Los de prueba originales y tu equipo
+-- completo, cada quien con su admin y su tecnico.
+-- 'trabajadores/default.png' es el placeholder generico (ver nota abajo).
+-- ============================================================
+INSERT INTO TRABAJADOR (numeroNomina, nombre, apellidoPat, apellidoMat, telefono, correo, usuario, `contraseña`, actividad, rol, especialidad, foto) VALUES
+-- datos de prueba originales
+('NOM-001', 'Juan', 'Pérez', 'García', '5559876543', 'juan.perez@ems.mx', 'jperez', 'password123', TRUE, 'TECNI', 1, 'trabajadores/default.png'),
+('NOM-002', 'María', 'López', 'Hernández', '5559876544', 'maria.lopez@ems.mx', 'mlopez', 'password123', TRUE, 'ENCLN', 1, 'trabajadores/default.png'),
+('NOM-003', 'Carlos', 'Ruiz', 'Martínez', '5559876545', 'carlos.ruiz@ems.mx', 'cruiz', 'password123', TRUE, 'TECNI', 4, 'trabajadores/default.png'),
+('NOM-004', 'Ana', 'García', 'Torres', '5559876546', 'ana.garcia@ems.mx', 'agarcia', 'password123', TRUE, 'ADMIN', 3, 'trabajadores/default.png'),
+
+-- Zacarías (tu)
+('NOM001', 'Zacarías', 'Pérez', 'López', '6641234567', 'za@example.com', 'za', 'za', TRUE, 'ADMIN', NULL, 'trabajadores/cat.jpg'),
+
+-- técnico de pruebas
+('NOM-XD1', 'Tecnico', 'Prueba', NULL, '5550000001', 'xd@ems.mx', 'xd', 'xd', TRUE, 'TECNI', NULL, 'trabajadores/images.jpg'),
+
+-- Luis (admin + tecnico)
+('NOM-LDGR', 'Luis', 'Gallardo', NULL, '5550000002', 'luisdgr@ems.mx', 'luisdgr', 'luis1234', TRUE, 'ADMIN', NULL, 'trabajadores/Luis1.jpg'),
+('NOM-GALL', 'Luis', 'Gallardo', NULL, '5550000003', 'gallardo@ems.mx', 'gallardo', 'gallardo1234', TRUE, 'TECNI', NULL, 'trabajadores/Luis2.jpg'),
+
+-- Saul (admin + tecnico)
+('NOM-SAU1', 'Saul', 'Equipo', NULL, '5550000004', 'saul13@ems.mx', 'Saul13', 'comida321', TRUE, 'ADMIN', NULL, 'trabajadores/default.png'),
+('NOM-SAU2', 'Saul', 'Equipo', NULL, '5550000005', 'saul12@ems.mx', 'Saul12', 'comida123', TRUE, 'TECNI', NULL, 'trabajadores/default.png'),
+
+-- Alex / Zuñiga (admin + tecnico)
+('NOM-ALEX', 'Alex', 'Zuñiga', NULL, '5550000006', 'alexitopone@ems.mx', 'alexitopONE', 'alex2323', TRUE, 'ADMIN', NULL, 'trabajadores/zuni1.jpeg'),
+('NOM-ZUNI', 'Alex', 'Zuñiga', NULL, '5550000007', 'zuniga@ems.mx', 'Zuñiga', 'fer1234', TRUE, 'TECNI', NULL, 'trabajadores/zuni2.jpeg');
 
 INSERT INTO HERRAMIENTA (nombre, descripcion, imagen, tipo_herramienta) VALUES
 ('Juego de llaves Allen', 'Juego de llaves Allen del #1 al #10', '/img/herramientas/llaves_allen.jpg', 1),
@@ -659,7 +684,6 @@ INSERT INTO ESTADO_HERRAMIENTA (herramienta, edo_herramienta, cantidad) VALUES
 (2, 'DISPO', 3),
 (3, 'ENRE', 1);
 
--- MAQUINA (incluye ya integradas las rutas modelo_3d, antes: modelo.sql)
 INSERT INTO MAQUINA (codigo, numeroSerie, nombre, descripcion, imagen_url, modelo_3d, fechaInstalacion, linea, marca, modelo, estado_maquina, tipo_maquina) VALUES
 ('MAQ001', 'SN-YAM-YPK2-001', 'Pick & Place Principal', 'Máquina de alta velocidad para colocación de componentes SMT', 'images/YamahaYS12.png', 'images/YamahaYS12.glb', '2020-01-15', 'LI001', 'YAMHA', 'YPK2', 'OPERA', 1),
 ('MAQ002', 'SN-HEL-HLR6-001', 'Horno Reflow', 'Horno de reflow con 6 zonas de temperatura para soldadura', 'images/Heller1707MK5.png', 'images/Heller1707MK5.glb', '2019-06-20', 'LI001', 'HELR', 'HLR6', 'OPERA', 2),
@@ -667,10 +691,6 @@ INSERT INTO MAQUINA (codigo, numeroSerie, nombre, descripcion, imagen_url, model
 ('MAQ004', 'SN-DMD-TFS6-001', 'Dispensador de Pasta', 'Dispensador de pasta de soldadura de alto volumen', 'images/DEKNeoHorizon03iX.png', 'images/DEKNeoHorizon03iX.glb', '2020-08-05', 'LI001', 'DMDE', 'TFS6', 'OPERA', 4),
 ('MAQ005', 'SN-BRN-CONV-001', 'Transportador Principal', 'Transportador de banda continua entre estaciones', 'images/JOTAutomationJ301-10.png', 'images/JOTAutomationJ301-10.glb', '2018-11-12', 'LI001', 'BRNS', 'CONV1', 'OPERA', 5),
 ('MAQ006', 'SN-KEY-DMM3-001', 'Estación de Prueba', 'Estación de prueba multicanal para verificación de PCBs', 'images/SeicaPilotV8.png', 'images/SeicaPilotV8.glb', '2022-02-28', 'LI002', 'KYWR', 'DMM3', 'FALLO', 6);
-
--- MAQ007 comentada para probar que el sistema la ignora
--- INSERT INTO MAQUINA (codigo, numeroSerie, nombre, descripcion, imagen_url, fechaInstalacion, linea, marca, modelo, estado_maquina, tipo_maquina) VALUES
--- ('MAQ007', 'SN-YAM-YPK2-002', 'Pick & Place Respaldo', 'Unidad de respaldo para alta demanda', '/img/maquinas/pick_place_02.jpg', '2019-09-01', 'LI002', 'YAMHA', 'YPK2', 'DESHA', 1);
 
 INSERT INTO INDICADOR (fechaInicio, fechaFin, mttr, mtbf, porcentajeDispo, maquina) VALUES
 ('2026-01-01', '2026-01-31', 2.5, 104.0, 98, 'MAQ001'),

@@ -2,6 +2,7 @@ import requests
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views import generic
@@ -154,6 +155,70 @@ class LogoutView(generic.View):
         request.session.flush()
         messages.success(request, "Sesión cerrada.")
         return redirect("usuarios:index")
+
+
+class ConfigPerfilView(generic.View):
+    """Guarda los cambios del modal de Configuracion -> Cuenta (nombre,
+    correo, telefono y foto). Llamada por fetch() desde navbar.js, responde
+    JSON. Reemplaza el prototipo anterior que solo guardaba en localStorage:
+    ahora si pega al api/ (PATCH a v1/trabajadores/<numeroNomina>/).
+
+    Para la foto:
+    - si llega un archivo en 'foto' -> se manda tal cual al api/, que
+      reemplaza el archivo anterior.
+    - si llega 'eliminar_foto=1' (y no hay archivo nuevo) -> se le indica
+      al api/ que borre la foto actual.
+    """
+
+    def post(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            return JsonResponse(
+                {"ok": False, "errores": {"detail": "Tu sesión expiró, vuelve a iniciar sesión."}},
+                status=401,
+            )
+
+        numero_nomina = usuario.get("numeroNomina")
+        payload = {
+            "nombre": request.POST.get("nombre", "").strip(),
+            "correo": request.POST.get("correo", "").strip(),
+            "telefono": request.POST.get("telefono", "").strip(),
+        }
+
+        files_payload = {}
+        foto_file = request.FILES.get("foto")
+        if foto_file:
+            files_payload["foto"] = (foto_file.name, foto_file.read(), foto_file.content_type)
+        elif request.POST.get("eliminar_foto") == "1":
+            payload["eliminar_foto"] = "true"
+
+        try:
+            response = SESSION.patch(
+                f"{API_URL}/v1/trabajadores/{numero_nomina}/",
+                data=payload,
+                files=files_payload if files_payload else None,
+                timeout=10,
+            )
+        except requests.exceptions.RequestException:
+            return JsonResponse(
+                {"ok": False, "errores": {"detail": "No se pudo conectar con el servidor. Intenta más tarde."}},
+                status=502,
+            )
+
+        if response.status_code != 200:
+            try:
+                errores = response.json()
+            except ValueError:
+                errores = {"detail": "No se pudieron guardar los cambios."}
+            return JsonResponse({"ok": False, "errores": errores}, status=response.status_code)
+
+        # El api/ regresa solo los campos editables (no numeroNomina, rol_nombre,
+        # etc.), asi que se combinan con lo que ya habia en sesion.
+        usuario.update(response.json())
+        request.session["usuario"] = usuario
+        request.session.modified = True
+
+        return JsonResponse({"ok": True, "usuario": usuario})
 
 
 class AdminDashboardView(generic.View):

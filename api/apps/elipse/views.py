@@ -15,6 +15,8 @@ import json
 import re
 import urllib.request
 import urllib.error
+from html import unescape
+from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 
 from django.conf import settings
 from django.db import connection
@@ -403,6 +405,35 @@ def _intent(q_orig):
         return 'info_sistema'
     if has('resumen', 'panorama', 'como va todo', 'dashboard', 'estado general'):
         return 'resumen'
+# ── Busqueda externa en internet (SOLO si tiene que ver con maquinaria/CMMS,
+    #    nunca por preguntas genericas tipo "puedes buscar en internet?") ────
+    tema_maquinaria = has(
+        'maquina', 'maquinas', 'maq', 'equipo', 'equipos', 'marca', 'modelo',
+        'refaccion', 'refacciones', 'pieza', 'piezas', 'componente', 'sensor',
+        'falla', 'fallas', 'averia', 'reparacion',
+    ) or _extraer_codigo_maquina(q_orig) is not None
+
+    pide_info_tecnica = has(
+        'especificacion', 'especificaciones', 'ficha tecnica', 'hoja de datos',
+        'datasheet', 'manual del fabricante', 'manual de la maquina',
+        'informacion de la marca', 'catalogo del fabricante',
+    )
+    pide_solucion = has(
+        'como solucionar', 'como resolver', 'como reparar', 'como arreglar',
+        'solucion a', 'solucion para', 'como se arregla', 'como se repara',
+        'que hago con', 'que hago si',
+    )
+    pide_busqueda_explicita = has(
+        'busca en internet', 'buscalo en internet', 'buscar en internet',
+        'en internet', 'en google', 'busca en la web',
+    )
+
+    if pide_info_tecnica and tema_maquinaria:
+        return 'buscar_web'
+    if pide_solucion and tema_maquinaria:
+        return 'buscar_web'
+    if pide_busqueda_explicita and tema_maquinaria:
+        return 'buscar_web'
 
     # ── Maquinas ─────────────────────────────────────────────
     codigo_maq = _extraer_codigo_maquina(q_orig)
@@ -938,7 +969,133 @@ def _ai_con_sql(pregunta, modelo_key, historial=None):
         )
     return ''.join(partes) if partes else tabla_html
 
+# ─────────────────────────────────────────────────────────
+# Busqueda en internet (DuckDuckGo, sin API key)
+# ─────────────────────────────────────────────────────────
 
+def _limpiar_html_tags(s):
+    return unescape(re.sub(r'<[^>]+>', '', s)).strip()
+
+
+def _extraer_url_real(href):
+    # DuckDuckGo envuelve los links salientes en una redireccion propia
+    # (//duckduckgo.com/l/?uddg=<url-real-codificada>&...). Aqui la desenvolvemos.
+    if 'duckduckgo.com/l/' in href:
+        qs = parse_qs(urlparse(href).query)
+        if 'uddg' in qs:
+            return unquote(qs['uddg'][0])
+    return href
+
+
+def _buscar_web(query, max_resultados=5):
+    """Scraping simple del HTML de DuckDuckGo (no requiere API key).
+    Es fragil por naturaleza: si DuckDuckGo cambia su HTML esto puede dejar
+    de funcionar. Si eso pasa, la funcion regresa (lista vacia, error) y
+    _resolver_busqueda_web ya maneja ese caso avisando al usuario en vez
+    de tronar."""
+    url = 'https://html.duckduckgo.com/html/?q=' + quote_plus(query)
+    req = urllib.request.Request(url, headers={
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                      'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as res:
+            html_doc = res.read().decode('utf-8', errors='ignore')
+    except Exception as e:
+        return [], str(e)
+
+    patron = re.compile(
+        r'<a rel="nofollow" class="result__a" href="([^"]+)"[^>]*>(.*?)</a>.*?'
+        r'<a class="result__snippet"[^>]*>(.*?)</a>',
+        re.DOTALL,
+    )
+    resultados = []
+    for href, titulo_html, snippet_html in patron.findall(html_doc):
+        titulo = _limpiar_html_tags(titulo_html)
+        snippet = _limpiar_html_tags(snippet_html)
+        link = _extraer_url_real(href)
+        if titulo and link:
+            resultados.append({'titulo': titulo, 'snippet': snippet, 'url': link})
+        if len(resultados) >= max_resultados:
+            break
+    return resultados, None
+
+
+def _resolver_busqueda_web(pregunta, modelo_key, historial=None):
+    modelo_id = MODELOS_IA.get(modelo_key, MODELOS_IA[MODELO_DEFAULT])['id']
+
+    # Si la pregunta trae el codigo interno de una maquina (MAQ003), sacamos
+    # su marca/modelo real de la BD para buscar algo que internet si entienda.
+    query_busqueda = pregunta
+    contexto_maquina = ''
+    codigo_maq = _extraer_codigo_maquina(pregunta)
+    es_troubleshooting = any(p in pregunta.lower() for p in (
+            'solucionar', 'reparar', 'arreglar', 'resolver', 'falla', 'problema', 'averia',
+        ))
+
+    if codigo_maq:
+            _, rows = _q(
+                "SELECT ma.nombre Marca, mo.nombre Modelo"
+                " FROM MAQUINA m"
+                " LEFT JOIN MARCA ma ON ma.clave = m.marca"
+                " LEFT JOIN MODELO mo ON mo.codigo = m.modelo"
+                " WHERE m.codigo = %s", [codigo_maq]
+            )
+            if rows and (rows[0]['Marca'] or rows[0]['Modelo']):
+                marca = rows[0]['Marca'] or ''
+                modelo = rows[0]['Modelo'] or ''
+                if es_troubleshooting:
+                    query_busqueda = ('%s %s fallas comunes solucion reparacion' % (marca, modelo)).strip()
+                else:
+                    query_busqueda = ('%s %s especificaciones ficha tecnica' % (marca, modelo)).strip()
+                contexto_maquina = (
+                    'La maquina %s del sistema es marca "%s", modelo "%s". Usa esto '
+                    'como contexto real de lo que se esta buscando.'
+                    % (codigo_maq, marca or '(sin marca registrada)', modelo or '(sin modelo registrado)')
+                )
+
+    resultados, err = _buscar_web(query_busqueda)
+    if err or not resultados:
+        return (
+            '<p>No pude buscar en internet en este momento'
+            + (' (%s).' % err if err else ', no encontre resultados relevantes.')
+            + ' Puedo seguir ayudandote con lo que ya tenemos registrado en el sistema.</p>'
+        )
+
+    fuentes_texto = '\n'.join(
+        '%d. %s - %s (%s)' % (i + 1, r['titulo'], r['snippet'], r['url'])
+        for i, r in enumerate(resultados)
+    )
+
+    system = (
+        "Eres Elipse, el asistente de OperaCore. El usuario pidio informacion que "
+        "NO esta en la base de datos del sistema, asi que se busco en internet. "
+        + (contexto_maquina + ' ' if contexto_maquina else '') +
+        "Con base UNICAMENTE en estos resultados de busqueda, responde la pregunta "
+        "del usuario en espanol, claro y directo. Resume con tus propias palabras, "
+        "no copies texto literal largo. Si los resultados no traen informacion "
+        "suficiente, dilo honestamente en vez de inventar datos. No repitas los "
+        "links al final, eso ya se muestra aparte."
+    )
+    user_msg = 'Pregunta: "%s"\n\nResultados de busqueda:\n%s' % (pregunta, fuentes_texto)
+
+    respuesta, err2 = _llamar_groq(system, user_msg, modelo_id, historial=historial,
+                                    max_tokens=500, temperature=0.3)
+    if err2 and _es_error_conexion(err2):
+        return _respuesta_sin_internet(pregunta)
+
+    partes = []
+    if respuesta:
+        partes.append(_texto_a_html(respuesta))
+    fuentes_html = ''.join(
+        '<li><a href="%s" target="_blank" rel="noopener">%s</a></li>' % (r['url'], r['titulo'])
+        for r in resultados
+    )
+    partes.append(
+        '<p style="margin-top:10px;font-size:12px;color:var(--color-muted,#94a3b8)">'
+        '🌐 Fuentes de internet:</p><ul style="font-size:12px">%s</ul>' % fuentes_html
+    )
+    return ''.join(partes)
 # ─────────────────────────────────────────────────────────
 # Vista principal
 # ─────────────────────────────────────────────────────────
@@ -955,12 +1112,15 @@ class ElipseChatAPIView(APIView):
             modelo_k = MODELO_DEFAULT
 
         intent = _intent(pregunta)
-        try:
-            html = _resolve(intent, pregunta)
-        except Exception as e:
-            html = '<p class="msg-error">Error consultando la base de datos: %s</p>' % str(e)
+        if intent == 'buscar_web':
+            html = _resolver_busqueda_web(pregunta, modelo_k, historial=historial)
+        else:
+            try:
+                html = _resolve(intent, pregunta)
+            except Exception as e:
+                html = '<p class="msg-error">Error consultando la base de datos: %s</p>' % str(e)
 
-        if html is None:
-            html = _ai_con_sql(pregunta, modelo_k, historial=historial)
+            if html is None:
+                html = _ai_con_sql(pregunta, modelo_k, historial=historial)
 
         return Response({'html': html, 'intent': intent, 'modelo': MODELOS_IA[modelo_k]['label']})
