@@ -9,7 +9,7 @@ from . import models
 class ListEstadoOrdenSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EstadoOrden
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 
 class DetailEstadoOrdenSerializer(serializers.ModelSerializer):
@@ -28,7 +28,7 @@ class CreateEstadoOrdenSerializer(serializers.ModelSerializer):
 class ListTipoMantenimientoSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoMantenimiento
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 
 class DetailTipoMantenimientoSerializer(serializers.ModelSerializer):
@@ -47,7 +47,7 @@ class CreateTipoMantenimientoSerializer(serializers.ModelSerializer):
 class ListTareasSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Tareas
-        fields = ["numeroregistro", "instruccion", "actividad"]
+        fields = "__all__"
 
 
 class DetailTareasSerializer(serializers.ModelSerializer):
@@ -66,7 +66,7 @@ class CreateTareasSerializer(serializers.ModelSerializer):
 class ListTipoMovimientoSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoMovimiento
-        fields = ["codigo", "descripcion"]
+        fields = "__all__"
 
 
 class DetailTipoMovimientoSerializer(serializers.ModelSerializer):
@@ -85,7 +85,7 @@ class CreateTipoMovimientoSerializer(serializers.ModelSerializer):
 class ListTareaOrdenSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TareaOrden
-        fields = ["tarea", "orden_mantenimiento", "fechainicio", "horainicio", "verificacion"]
+        fields = "__all__"
 
 
 class DetailTareaOrdenSerializer(serializers.ModelSerializer):
@@ -113,7 +113,7 @@ class UpdateTareaOrdenSerializer(serializers.ModelSerializer):
 class ListHerraOrdenSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.HerraOrden
-        fields = ["herramienta", "orden_mantenimiento"]
+        fields = "__all__"
 
 
 class DetailHerraOrdenSerializer(serializers.ModelSerializer):
@@ -138,7 +138,7 @@ class UpdateHerraOrdenSerializer(serializers.ModelSerializer):
 class ListTrabaOrdePersonalSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TrabaOrdePersonal
-        fields = ["trabajador", "orden_mantenimiento"]
+        fields = "__all__"
 
 
 class DetailTrabaOrdePersonalSerializer(serializers.ModelSerializer):

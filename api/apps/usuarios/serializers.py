@@ -9,7 +9,7 @@ from .models import *
 class RolSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rol
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 
 class RolDetailSerializer(serializers.ModelSerializer):
@@ -21,7 +21,7 @@ class RolDetailSerializer(serializers.ModelSerializer):
 class EspecialidadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Especialidad
-        fields = ["numeroRegistro", "nombre"]
+        fields = "__all__"
 
 
 class EspecialidadDetailSerializer(serializers.ModelSerializer):

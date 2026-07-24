@@ -19,7 +19,7 @@ from apps.fallas.models import ReporteFalla
 class ListPlantaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Planta
-        fields = ["codigo", "nombre", "telefono", "dircalle", "dircodigopostal", "dirnumero"]
+        fields = "__all__"
 
 class DetailPlantaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,7 +49,7 @@ class UpdatePlantaSerializer(serializers.ModelSerializer):
 class ListAreaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Area
-        fields = ["codigo", "nombre", "telefono", "planta"]
+        fields = "__all__"
 
 class DetailAreaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -73,7 +73,7 @@ class UpdateAreaSerializer(serializers.ModelSerializer):
 class ListEdoMaquinaSerializer(serializers.ModelSerializer):
     class Meta:
         model = EdoMaquina
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 class DetailEdoMaquinaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -97,7 +97,7 @@ class UpdateEdoMaquinaSerializer(serializers.ModelSerializer):
 class ListLineaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Linea
-        fields = ["codigo", "nombre", "area"]
+        fields = "__all__"
 
 class DetailLineaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -121,7 +121,7 @@ class UpdateLineaSerializer(serializers.ModelSerializer):
 class ListMarcaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Marca
-        fields = ["clave", "nombre"]
+        fields = "__all__"
 
 class DetailMarcaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -145,7 +145,7 @@ class UpdateMarcaSerializer(serializers.ModelSerializer):
 class ListModeloSerializer(serializers.ModelSerializer):
     class Meta:
         model = Modelo
-        fields = ["codigo", "nombre", "marca"]
+        fields = "__all__"
 
 class DetailModeloSerializer(serializers.ModelSerializer):
     class Meta:
@@ -169,7 +169,7 @@ class UpdateModeloSerializer(serializers.ModelSerializer):
 class ListTipoMaquinaSerializer(serializers.ModelSerializer):
     class Meta:
         model = TipoMaquina
-        fields = ["numeroregistro", "nombre"]
+        fields = "__all__"
 
 class DetailTipoMaquinaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -197,10 +197,7 @@ class ListMaquinaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Maquina
-        fields = [
-            "codigo", "numeroserie", "nombre", "imagen_url", "fechainstalacion",
-            "modelo_3d", "marca", "modelo","linea", "estado_maquina", "tipo_maquina"
-        ]
+        fields = "__all__"
 
 class DetailMaquinaSerializer(serializers.ModelSerializer):
     class Meta:

@@ -192,7 +192,8 @@ class GestionListView(generic.View):
         requeridos = [c for c in todas_las if c.get("requerido")]
         opcionales = [c for c in todas_las if not c.get("requerido")]
 
-        visibles = requeridos[:MAX_COLUMNAS]
+        restantes = MAX_COLUMNAS - len(requeridos[:MAX_COLUMNAS])
+        visibles = requeridos[:MAX_COLUMNAS] + opcionales[:restantes]
 
         tiene_imagen = any(c.get("tipo") == "file" for c in config["campos"])
         necesita_modal = len(todas_las) > MAX_COLUMNAS or tiene_imagen

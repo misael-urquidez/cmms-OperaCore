@@ -7,7 +7,7 @@ from . import models
 class ListClasificacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Clasificacion
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 class DetailClasificacionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -29,7 +29,7 @@ class UpdateClasificacionSerializer(serializers.ModelSerializer):
 class ListEdoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EdoHerramienta
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 class DetailEdoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -51,7 +51,7 @@ class UpdateEdoHerramientaSerializer(serializers.ModelSerializer):
 class ListEdoPiezaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EdoPieza
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 class DetailEdoPiezaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -73,7 +73,7 @@ class UpdateEdoPiezaSerializer(serializers.ModelSerializer):
 class ListEdoRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EdoRefaccion
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 class DetailEdoRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -95,7 +95,7 @@ class UpdateEdoRefaccionSerializer(serializers.ModelSerializer):
 class ListTipoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoHerramienta
-        fields = ["numeroregistro", "nombre"]
+        fields = "__all__"
 
 class DetailTipoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -117,7 +117,7 @@ class UpdateTipoHerramientaSerializer(serializers.ModelSerializer):
 class ListTipoPiezaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoPieza
-        fields = ["numeroregistro", "nombre"]
+        fields = "__all__"
 
 class DetailTipoPiezaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -139,7 +139,7 @@ class UpdateTipoPiezaSerializer(serializers.ModelSerializer):
 class ListTipoRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoRefaccion
-        fields = ["numeroregistro", "nombre"]
+        fields = "__all__"
 
 class DetailTipoRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -161,7 +161,7 @@ class UpdateTipoRefaccionSerializer(serializers.ModelSerializer):
 class ListProveedorSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Proveedor
-        fields = ["codigo", "rfc", "razonsocial", "nombrecomercial", "telefono", "email", "dircalle", "dircodigopostal", "dirnumero", "contnombre", "contapellpat"]
+        fields = "__all__"
 
 class DetailProveedorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -209,7 +209,7 @@ class UpdateProveedorSerializer(serializers.ModelSerializer):
 class ListHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Herramienta
-        fields = ["numeroregistro", "nombre", "tipo_herramienta"]
+        fields = "__all__"
 
 class DetailHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -259,7 +259,7 @@ class UpdateHerramientaSerializer(serializers.ModelSerializer):
 class ListPiezaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Pieza
-        fields = ["numeroserie", "codigoetiqueta", "nombre", "costoinicial", "tiempovidautil", "fechainstalacion", "edo_pieza", "maquina"]
+        fields = "__all__"
 
 class DetailPiezaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -309,7 +309,7 @@ class UpdatePiezaSerializer(serializers.ModelSerializer):
 class ListRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Refaccion
-        fields = ["numeroregistro", "nombre", "codigosku", "codigoinventario", "numeroorden", "costo", "stock", "stockminimo", "proveedor"]
+        fields = "__all__"
 
 class DetailRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -357,7 +357,7 @@ class UpdateRefaccionSerializer(serializers.ModelSerializer):
 class ListRefaccMaquiSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.RefaccMaqui
-        fields = ["maquina", "refaccion"]
+        fields = "__all__"
 
 class DetailRefaccMaquiSerializer(serializers.ModelSerializer):
     class Meta:
@@ -378,7 +378,7 @@ class UpdateRefaccMaquiSerializer(serializers.ModelSerializer):
 class ListEstadoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EstadoHerramienta
-        fields = ["herramienta", "edo_herramienta", "cantidad"]
+        fields = "__all__"
 
 class DetailEstadoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -399,7 +399,7 @@ class UpdateEstadoHerramientaSerializer(serializers.ModelSerializer):
 class ListEstadoRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EstadoRefaccion
-        fields = ["estado_refaccion", "refaccion", "cantidad"]
+        fields = "__all__"
 
 class DetailEstadoRefaccionSerializer(serializers.ModelSerializer):
     class Meta:

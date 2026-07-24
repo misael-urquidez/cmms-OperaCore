@@ -513,6 +513,7 @@
 .gestion-header a:not(.btn-primary-sm):hover { text-decoration: underline; }
 .gestion-table-wrap { overflow-x: auto; border: 1px solid var(--admin-border); border-radius: .75rem; background: var(--color-surface); }
 .gestion-table-wrap .data-table { min-width: 620px; }
+.gestion-table-wrap .data-table td { word-wrap: break-word; overflow-wrap: break-word; max-width: 220px; }
 .gestion-acciones { display: flex; gap: .75rem; white-space: nowrap; }
 .gestion-acciones a { color: var(--color-primary); text-decoration: none; font-size: .84rem; }
 .gestion-acciones a:hover { text-decoration: underline; }
