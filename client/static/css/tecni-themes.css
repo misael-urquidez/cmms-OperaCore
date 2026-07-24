@@ -1,0 +1,94 @@
+/* ==========================================================================
+   Apariencia del panel de técnico: 3 temas ESTÁTICOS, sin personalización.
+   Separado de themes.css a propósito: el técnico no puede tocar esto y
+   editarlo aquí jamás afecta al admin.
+   ========================================================================== */
+
+body.tecni-body {
+    --color-primary: #34d399;          /* acento verde, distinto al sky del admin */
+    --line: rgba(255, 255, 255, 0.1);
+    --hover-soft: rgba(255, 255, 255, 0.06);
+    --input-bg: rgba(0, 0, 0, 0.25);
+    --sidebar-bg1: #10231c;
+    --sidebar-bg2: #0f172a;
+    --sidebar-text: #94a3b8;
+    --topbar-bg: rgba(30, 41, 59, 0.6);
+}
+
+/* ---------------- TEMA CLARO ---------------- */
+body.tecni-body[data-theme="light"] {
+    --color-bg: #eef2f7;
+    --color-surface: #ffffff;
+    --color-text: #0f172a;
+    --color-muted: #64748b;
+    --color-primary: #059669;
+
+    --line: rgba(15, 23, 42, 0.12);
+    --hover-soft: rgba(15, 23, 42, 0.05);
+    --input-bg: #f8fafc;
+    --sidebar-bg1: #ffffff;
+    --sidebar-bg2: #f1f5f4;
+    --sidebar-text: #475569;
+    --topbar-bg: rgba(255, 255, 255, 0.78);
+}
+
+/* ---------------- TEMA PLANO (profesional) ---------------- */
+body.tecni-body[data-theme="plain"] {
+    --color-bg: #f4f5f7;
+    --color-surface: #ffffff;
+    --color-text: #1f2430;
+    --color-muted: #5f6b7a;
+    --color-primary: #0f766e;          /* teal sobrio, distinto del azul acero del admin */
+
+    --line: rgba(31, 36, 48, 0.14);
+    --hover-soft: rgba(31, 36, 48, 0.05);
+    --input-bg: #fafbfc;
+    --sidebar-bg1: #ffffff;
+    --sidebar-bg2: #ffffff;
+    --sidebar-text: #3f4754;
+    --topbar-bg: #ffffff;
+}
+
+body.tecni-body[data-theme="plain"] .tecni-sidebar__foot-dot { box-shadow: none; }
+body.tecni-body[data-theme="plain"] .tecni-stat-card:hover { transform: none; }
+
+/* Ajustes comunes claro+plano (heredado del patrón de themes.css) */
+body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .tecni-topbar { border-bottom-color: var(--line); }
+body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .tecni-sidebar,
+body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .tecni-stat-card,
+body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .tecni-panel { border-color: var(--line); }
+body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .tecni-quick-action { background: var(--hover-soft); }
+body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .user-menu__trigger { border-color: var(--line); background: rgba(15, 23, 42, 0.03); }
+body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .user-menu__dropdown,
+body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .config-modal__panel { border-color: var(--line); box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16); }
+body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .config-field input { background: var(--input-bg); border-color: var(--line); color: var(--color-text); }
+body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .messages__item { border: 1px solid var(--line); }
+
+/* ---------------- pestañas y control de tema del modal (reducido) ---------------- */
+.config-tabs {
+    display: flex; gap: 0.35rem; margin: 1.1rem 0 1rem; padding: 0.25rem;
+    background: var(--input-bg); border: 1px solid var(--line); border-radius: 0.6rem;
+}
+.config-tabs__btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.45rem;
+    padding: 0.5rem 0.6rem; background: none; border: none; border-radius: 0.45rem;
+    color: var(--color-muted); font: inherit; font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; transition: background 0.15s ease, color 0.15s ease;
+}
+.config-tabs__btn svg { width: 16px; height: 16px; }
+.config-tabs__btn:hover { color: var(--color-text); }
+.config-tabs__btn.is-active { background: var(--color-surface); color: var(--color-primary); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }
+.config-tabpanel { display: none; }
+.config-tabpanel.is-active { display: block; }
+
+.config-appearance { margin: 0.2rem 0 0.3rem; }
+.config-appearance__row { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; margin-bottom: 0.75rem; }
+.config-appearance__label { font-size: 0.82rem; color: var(--color-muted); }
+
+.theme-toggle { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.theme-toggle button {
+    background: none; border: none; color: var(--color-muted);
+    padding: 0.34rem 0.8rem; font: inherit; font-size: 0.78rem; cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.theme-toggle button.is-active { background: var(--color-primary); color: #08131f; font-weight: 700; }

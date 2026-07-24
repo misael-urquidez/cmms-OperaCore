@@ -1,3 +1,7 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import Refaccion, Herramienta, Proveedor
+
+admin.site.register(Refaccion)
+admin.site.register(Herramienta)
+admin.site.register(Proveedor)

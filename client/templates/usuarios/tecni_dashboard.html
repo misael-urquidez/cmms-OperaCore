@@ -1,0 +1,90 @@
+{% extends "base_tecni.html" %}
+{% block title %}Dashboard · Panel Técnico{% endblock %}
+{% block breadcrumb %}Panel de técnico{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+  <section class="hero" style="margin-bottom:1.5rem;">
+    <p class="hero__eyebrow">Hola, {{ request.session.usuario.nombre|default:request.session.usuario.usuario }} 👋</p>
+    <p style="color:var(--color-muted); margin:0;">Esto es lo que tienes pendiente hoy.</p>
+  </section>
+
+  <section class="tecni-stat-grid">
+    <div class="tecni-stat-card">
+      <div class="tecni-stat-card__icon tecni-stat-card__icon--amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+      </div>
+      <div>
+        <p class="tecni-stat-card__label">Fallas abiertas</p>
+        <p class="tecni-stat-card__value">{{ stats.fallas_abiertas|default:"—" }}</p>
+        <p class="tecni-stat-card__hint">reportes sin resolver</p>
+      </div>
+    </div>
+
+    <div class="tecni-stat-card">
+      <div class="tecni-stat-card__icon tecni-stat-card__icon--green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.8-2.8 2.4-2.8Z"/></svg>
+      </div>
+      <div>
+        <p class="tecni-stat-card__label">Mis órdenes activas</p>
+        <p class="tecni-stat-card__value">{{ stats.ordenes_activas|default:"—" }}</p>
+        <p class="tecni-stat-card__hint">mantenimientos en curso</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tecni-panel-grid">
+    <div class="tecni-panel">
+      <div class="tecni-panel__head">
+        <h2 class="tecni-panel__title">Acciones rápidas</h2>
+      </div>
+      <div class="tecni-quick-actions">
+        <a class="tecni-quick-action" href="{% url 'fallas:reporte' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+          Nuevo reporte de falla
+        </a>
+        <a class="tecni-quick-action" href="{% url 'fallas:lista' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5M4 12h4l2-5 4 10 2-5h4"/></svg>
+          Ver mis reportes
+        </a>
+        <a class="tecni-quick-action" href="{% url 'mantenimiento:index' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Ir a mantenimiento
+        </a>
+        <a class="tecni-quick-action" href="{% url 'maquinaria:index' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Ver máquinas
+        </a>
+      </div>
+    </div>
+
+    <div class="tecni-panel">
+      <div class="tecni-panel__head">
+        <h2 class="tecni-panel__title">Últimas fallas reportadas</h2>
+        <a class="tecni-panel__link" href="{% url 'fallas:lista' %}">Ver todas →</a>
+      </div>
+      {% if ultimas_fallas %}
+        <div class="tecni-data-table-wrap">
+          <table class="tecni-data-table">
+            <thead>
+              <tr><th>Asunto</th><th>Fecha</th><th>Severidad</th></tr>
+            </thead>
+            <tbody>
+              {% for r in ultimas_fallas %}
+                <tr>
+                  <td>{{ r.asunto }}</td>
+                  <td>{{ r.fechaCreacion }}</td>
+                  <td><span class="tecni-badge">{{ r.tipo_severidad_nombre|default:"-" }}</span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="tecni-panel__empty">Aún no hay reportes de falla registrados.</p>
+      {% endif %}
+    </div>
+  </section>
+
+{% endblock %}
