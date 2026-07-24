@@ -19,6 +19,7 @@
   var linksSvg = document.getElementById("plantLinks");
   var emptyMsg = document.getElementById("plantEmpty");
   var refreshStatus = document.getElementById("refreshStatus");
+  var filtroLineaSelect = document.getElementById("filtroLinea");
 
   var STORAGE_KEY = "operacore.monitoreo.layout.v1";
   var NODE_W = 150, NODE_H = 96, GAP_X = 190, GAP_Y = 150, PAD = 40;
@@ -27,6 +28,7 @@
     maquinas: [],       // ultimo snapshot del feed
     posiciones: cargarLayout(),
     seleccionada: null,
+     filtroLinea: "",  
   };
 
   // ---------------------------------------------------------------- utils
@@ -74,8 +76,18 @@
     return orden.map(function (clave) { return { linea: clave, maquinas: grupos[clave] }; });
   }
 
-  function render(maquinas) {
-    estado.maquinas = maquinas;
+function render(maquinas) {
+    estado.maquinas = maquinas; // snapshot completo, sin filtrar
+    pintarMapa();
+  }
+
+  function filtrarPorLinea(maquinas) {
+    if (!estado.filtroLinea) return maquinas;
+    return maquinas.filter(function (m) { return String(m.linea_codigo) === estado.filtroLinea; });
+  }
+
+  function pintarMapa() {
+    var maquinas = filtrarPorLinea(estado.maquinas);
     emptyMsg.hidden = maquinas.length > 0;
 
     var grupos = agruparPorLinea(maquinas);
@@ -205,8 +217,26 @@
   if (datosIniciales) {
     try { render(JSON.parse(datosIniciales.textContent) || []); } catch (e) {}
   }
-  refrescar();
+refrescar();
   setInterval(refrescar, 5000);
+
+  // ------------------------------------------------------- filtro por línea
+  function cargarLineasFiltro() {
+    fetch(CATALOGOS_URL).then(function (r) { return r.json(); }).then(function (data) {
+      (data.lineas || []).forEach(function (l) {
+        var opt = document.createElement("option");
+        opt.value = l.codigo;
+        opt.textContent = l.nombre;
+        filtroLineaSelect.appendChild(opt);
+      });
+    }).catch(function () {});
+  }
+  cargarLineasFiltro();
+
+  filtroLineaSelect.addEventListener("change", function () {
+    estado.filtroLinea = filtroLineaSelect.value;
+    pintarMapa();
+  });
 
   // ------------------------------------------------------------- drawer
   var drawer = document.getElementById("machineDrawer");
