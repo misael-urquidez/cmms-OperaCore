@@ -51,6 +51,8 @@ class AuthView(generic.View):
             # Ya hay sesion: mandarlo a su pantalla segun rol.
             if usuario.get("rol") == "ADMIN":
                 return redirect("usuarios:admin_dashboard")
+            if usuario.get("rol") == "TECNI":
+                return redirect("usuarios:tecni_dashboard")
             return redirect("home")
 
         tab = request.GET.get("tab", "login")
@@ -99,10 +101,12 @@ class LoginView(generic.View):
         request.session["usuario"] = trabajador
         messages.success(request, f"Bienvenido, {trabajador.get('nombre') or trabajador.get('usuario')}.")
 
-        # Redirigir segun el rol: ADMIN va a su panel; los demas (TECNI,
-        # ENCLN o sin rol) al home normal mientras desarrollamos sus menus.
+        # Redirigir segun el rol: ADMIN y TECNI a sus paneles; los demas
+        # (ENCLN o sin rol) al home normal mientras desarrollamos sus menus.
         if trabajador.get("rol") == "ADMIN":
             return redirect("usuarios:admin_dashboard")
+        if trabajador.get("rol") == "TECNI":
+            return redirect("usuarios:tecni_dashboard")
         return redirect("home")
 
 
@@ -184,6 +188,44 @@ class AdminDashboardView(generic.View):
             except (requests.RequestException, ValueError):
                 # si la API no responde no tumbamos el dashboard, solo se
                 # queda esa tarjeta/panel en su estado por defecto ("—").
+                reportes = []
+        stats["fallas_abiertas"] = len(reportes)
+        ultimas_fallas = reportes[:5]
+
+        return render(
+            request,
+            self.template_name,
+            {"seccion": "dashboard", "stats": stats, "ultimas_fallas": ultimas_fallas},
+        )
+
+
+class TecniDashboardView(generic.View):
+    """Panel principal del TECNICO. Solo entra quien tiene sesion iniciada Y
+    rol TECNI; cualquier otro caso se regresa con aviso. Comparte el cache de
+    la lista de fallas con AdminDashboardView/fallas para no duplicar llamadas
+    al api/."""
+
+    template_name = "usuarios/tecni_dashboard.html"
+
+    def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
+        if usuario.get("rol") != "TECNI":
+            messages.error(request, "No tienes permisos para entrar al panel de técnico.")
+            return redirect("home")
+
+        stats = {}
+        reportes = cache.get("fallas_reportes_list")
+        if reportes is None:
+            try:
+                reportes = SESSION.get(
+                    url=f"{settings.API_BASE_URL}/fallas/v1/reportes/list/", timeout=3
+                ).json()
+                cache.set("fallas_reportes_list", reportes, REPORTES_TTL)
+            except (requests.RequestException, ValueError):
                 reportes = []
         stats["fallas_abiertas"] = len(reportes)
         ultimas_fallas = reportes[:5]
