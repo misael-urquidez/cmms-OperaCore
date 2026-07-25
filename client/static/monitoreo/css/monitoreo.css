@@ -32,6 +32,7 @@
 .plant-canvas { position:relative; min-height:560px; min-width:100%; width:max-content; }
 .plant-canvas__links { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
 .plant-canvas__empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--color-muted); font-size:.9rem; }
+.plant-canvas__empty[hidden] { display:none; }
 
 /* -------- nodo de máquina -------- */
 .machine-node { position:absolute; width:150px; touch-action:none; cursor:grab; user-select:none; }
@@ -57,8 +58,15 @@
 .machine-node__flag { display:inline-flex; align-items:center; gap:.25rem; margin-top:.4rem; font-size:.68rem; color:#fbbf24; font-weight:700; }
 
 .plant-link { stroke:var(--line); stroke-width:2; fill:none; }
-.plant-link--anim { stroke:var(--color-primary); stroke-width:2; stroke-dasharray:6 6; fill:none; opacity:.55; animation:dash-flow 1.4s linear infinite; }
+.plant-link--anim { stroke-width:2; stroke-dasharray:6 6; fill:none; opacity:.6; animation:dash-flow 1.4s linear infinite; }
 @keyframes dash-flow { to { stroke-dashoffset:-24; } }
+
+.plant-link--linea0 { stroke:#22d3ee; }
+.plant-link--linea1 { stroke:#f472b6; }
+.plant-link--linea2 { stroke:#a3e635; }
+.plant-link--linea3 { stroke:#fb923c; }
+.plant-link--linea4 { stroke:#818cf8; }
+.plant-link--linea5 { stroke:#facc15; }
 
 /* -------- drawer lateral -------- */
 .machine-drawer { position:fixed; inset:0; z-index:60; visibility:hidden; }
