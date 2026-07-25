@@ -40,4 +40,10 @@ urlpatterns = [
     path("v1/traba-orden-personal/list/", views.TrabaOrdePersonalListAPIView.as_view(), name="traba-orden-personal-list"),
     path("v2/traba-orden-personal/create/", views.TrabaOrdePersonalCreateAPIView.as_view(), name="traba-orden-personal-create"),
     path("v1/traba-orden-personal/<str:trabajador>/<str:orden_mantenimiento>/", views.TrabaOrdePersonalDetailAPIView.as_view(), name="traba-orden-personal-detail"),
+    path("v1/ordenes/list/", views.OrdenMantenimientoListAPIView.as_view(), name="ordenes-list"),
+    path("v1/ordenes/<str:folio>/", views.OrdenMantenimientoDetailAPIView.as_view(), name="ordenes-detail"),
+    path("v2/ordenes/create/", views.OrdenMantenimientoCreateAPIView.as_view(), name="ordenes-create"),
+    path("v2/ordenes/<str:folio>/asignar/", views.OrdenMantenimientoAsignarAPIView.as_view(), name="ordenes-asignar"),
+    path("v2/ordenes/<str:folio>/iniciar/", views.OrdenMantenimientoIniciarAPIView.as_view(), name="ordenes-iniciar"),
+    path("v2/ordenes/<str:folio>/cerrar/", views.OrdenMantenimientoCerrarAPIView.as_view(), name="ordenes-cerrar"),
 ]

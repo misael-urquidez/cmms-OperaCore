@@ -150,8 +150,10 @@ function render(maquinas) {
 
   function dibujarConexiones(grupos) {
     var svgNS = "http://www.w3.org/2000/svg";
+    var NUM_COLORES = 6;
     while (linksSvg.firstChild) linksSvg.removeChild(linksSvg.firstChild);
-    grupos.forEach(function (grupo) {
+    grupos.forEach(function (grupo, gi) {
+      var colorClase = "plant-link--linea" + (gi % NUM_COLORES);
       for (var i = 0; i < grupo.maquinas.length - 1; i++) {
         var a = estado.posiciones[grupo.maquinas[i].codigo];
         var b = estado.posiciones[grupo.maquinas[i + 1].codigo];
@@ -161,7 +163,7 @@ function render(maquinas) {
         var midX = (x1 + x2) / 2;
         var path = document.createElementNS(svgNS, "path");
         path.setAttribute("d", "M" + x1 + "," + y1 + " C " + midX + "," + y1 + " " + midX + "," + y2 + " " + x2 + "," + y2);
-        path.setAttribute("class", "plant-link plant-link--anim");
+        path.setAttribute("class", "plant-link plant-link--anim " + colorClase);
         linksSvg.appendChild(path);
       }
     });
@@ -190,7 +192,7 @@ function render(maquinas) {
       node.style.left = x + "px";
       node.style.top = y + "px";
       estado.posiciones[node.dataset.codigo] = { x: x, y: y };
-      dibujarConexiones(agruparPorLinea(estado.maquinas));
+      dibujarConexiones(agruparPorLinea(filtrarPorLinea(estado.maquinas)));
     });
 
     function soltar(ev) {
@@ -289,6 +291,7 @@ refrescar();
     var etiquetas = { OPERA: "Operativa", MANTE: "En mantenimiento", FALLO: "En falla", sin: "Sin estado" };
     drawerEstado.textContent = etiquetas[estadoClase];
     drawerAlert.hidden = !m.requiere_revision_preventiva;
+    document.getElementById("drawerOrdenMsg").hidden = true;
     drawerVibracion.textContent = m.ultima_lectura ? m.ultima_lectura.vibracion : "Sin datos";
     drawerUmbral.textContent = m.umbral_vibracion;
     drawerTemperatura.textContent = m.ultima_lectura && m.ultima_lectura.temperatura != null ? m.ultima_lectura.temperatura + " °C" : "—";
@@ -406,7 +409,7 @@ refrescar();
           mostrarMsg(drawerOpsMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo registrar el periodo.", false);
           return;
         }
-        mostrarMsg(drawerOpsMsg, "Periodo registrado (" + res.data.horasOperacion + " h). MTBF recalculado.", true);
+        mostrarMsg(drawerOpsMsg, "Periodo registrado (" + res.data.horasOperacion + " h). Indicadores actualizados.", true);
         drawerOpsForm.reset();
         cargarDatosDrawer(estado.seleccionada, true);
       }).catch(function () { mostrarMsg(drawerOpsMsg, "No fue posible conectar con el servidor.", false); });
@@ -558,4 +561,16 @@ refrescar();
         errorBox.textContent = "No fue posible conectar con el servidor.";
       });
   });
+  var CREAR_ORDEN_URL = root.dataset.crearOrdenUrl;
+  var btnLevantarOrden = document.getElementById("drawerLevantarOrden");
+  if (btnLevantarOrden && CREAR_ORDEN_URL) {
+    btnLevantarOrden.addEventListener("click", function () {
+      if (!estado.seleccionada) return;
+      var codigo = estado.seleccionada;
+      fetch(CREAR_ORDEN_URL, { method:"POST", headers:{"Content-Type":"application/json", "X-CSRFToken":getCookie("csrftoken")}, body:JSON.stringify({maquina:codigo, tipo_mantenimiento:"PREVE", descripcion:"Revisión preventiva sugerida por tendencia de vibración en " + codigo + "."}) })
+        .then(function(r){ return r.json().then(function(data){ return {ok:r.ok, data:data}; }); })
+        .then(function(res){ var msg=document.getElementById("drawerOrdenMsg"); mostrarMsg(msg, res.ok ? "Orden " + res.data.folio + " creada. Asígnala desde Mantenimiento." : "No se pudo levantar la orden.", res.ok); })
+        .catch(function(){ mostrarMsg(document.getElementById("drawerOrdenMsg"), "No fue posible conectar con el servidor.", false); });
+    });
+  }
 })();
