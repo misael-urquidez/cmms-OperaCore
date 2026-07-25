@@ -10,11 +10,16 @@
   var ESTADO_TPL = root.dataset.estadoUrlBase;
   var CATALOGOS_URL = root.dataset.catalogosUrl;
   var CREAR_URL = root.dataset.crearUrl;
+  var MODO_TPL = root.dataset.modoUrlBase;
+  var LECTURA_MANUAL_URL = root.dataset.lecturaManualUrl;
+  var SIMULAR_TPL = root.dataset.simularUrlBase;
+  var REGISTRO_OPS_TPL = root.dataset.registroOpsUrlBase;
 
   var canvas = document.getElementById("plantCanvas");
   var linksSvg = document.getElementById("plantLinks");
   var emptyMsg = document.getElementById("plantEmpty");
   var refreshStatus = document.getElementById("refreshStatus");
+  var filtroLineaSelect = document.getElementById("filtroLinea");
 
   var STORAGE_KEY = "operacore.monitoreo.layout.v1";
   var NODE_W = 150, NODE_H = 96, GAP_X = 190, GAP_Y = 150, PAD = 40;
@@ -23,6 +28,7 @@
     maquinas: [],       // ultimo snapshot del feed
     posiciones: cargarLayout(),
     seleccionada: null,
+     filtroLinea: "",  
   };
 
   // ---------------------------------------------------------------- utils
@@ -70,8 +76,18 @@
     return orden.map(function (clave) { return { linea: clave, maquinas: grupos[clave] }; });
   }
 
-  function render(maquinas) {
-    estado.maquinas = maquinas;
+function render(maquinas) {
+    estado.maquinas = maquinas; // snapshot completo, sin filtrar
+    pintarMapa();
+  }
+
+  function filtrarPorLinea(maquinas) {
+    if (!estado.filtroLinea) return maquinas;
+    return maquinas.filter(function (m) { return String(m.linea_codigo) === estado.filtroLinea; });
+  }
+
+  function pintarMapa() {
+    var maquinas = filtrarPorLinea(estado.maquinas);
     emptyMsg.hidden = maquinas.length > 0;
 
     var grupos = agruparPorLinea(maquinas);
@@ -134,8 +150,10 @@
 
   function dibujarConexiones(grupos) {
     var svgNS = "http://www.w3.org/2000/svg";
+    var NUM_COLORES = 6;
     while (linksSvg.firstChild) linksSvg.removeChild(linksSvg.firstChild);
-    grupos.forEach(function (grupo) {
+    grupos.forEach(function (grupo, gi) {
+      var colorClase = "plant-link--linea" + (gi % NUM_COLORES);
       for (var i = 0; i < grupo.maquinas.length - 1; i++) {
         var a = estado.posiciones[grupo.maquinas[i].codigo];
         var b = estado.posiciones[grupo.maquinas[i + 1].codigo];
@@ -145,7 +163,7 @@
         var midX = (x1 + x2) / 2;
         var path = document.createElementNS(svgNS, "path");
         path.setAttribute("d", "M" + x1 + "," + y1 + " C " + midX + "," + y1 + " " + midX + "," + y2 + " " + x2 + "," + y2);
-        path.setAttribute("class", "plant-link plant-link--anim");
+        path.setAttribute("class", "plant-link plant-link--anim " + colorClase);
         linksSvg.appendChild(path);
       }
     });
@@ -174,7 +192,7 @@
       node.style.left = x + "px";
       node.style.top = y + "px";
       estado.posiciones[node.dataset.codigo] = { x: x, y: y };
-      dibujarConexiones(agruparPorLinea(estado.maquinas));
+      dibujarConexiones(agruparPorLinea(filtrarPorLinea(estado.maquinas)));
     });
 
     function soltar(ev) {
@@ -201,8 +219,26 @@
   if (datosIniciales) {
     try { render(JSON.parse(datosIniciales.textContent) || []); } catch (e) {}
   }
-  refrescar();
+refrescar();
   setInterval(refrescar, 5000);
+
+  // ------------------------------------------------------- filtro por línea
+  function cargarLineasFiltro() {
+    fetch(CATALOGOS_URL).then(function (r) { return r.json(); }).then(function (data) {
+      (data.lineas || []).forEach(function (l) {
+        var opt = document.createElement("option");
+        opt.value = l.codigo;
+        opt.textContent = l.nombre;
+        filtroLineaSelect.appendChild(opt);
+      });
+    }).catch(function () {});
+  }
+  cargarLineasFiltro();
+
+  filtroLineaSelect.addEventListener("change", function () {
+    estado.filtroLinea = filtroLineaSelect.value;
+    pintarMapa();
+  });
 
   // ------------------------------------------------------------- drawer
   var drawer = document.getElementById("machineDrawer");
@@ -220,6 +256,18 @@
   var drawerTimestamp = document.getElementById("drawerTimestamp");
   var trendChart = document.getElementById("trendChart");
   var trendEmpty = document.getElementById("trendEmpty");
+
+  var drawerModoSelect = document.getElementById("drawerModoSelect");
+  var drawerModoGuardar = document.getElementById("drawerModoGuardar");
+  var drawerModoMsg = document.getElementById("drawerModoMsg");
+  var drawerManualSection = document.getElementById("drawerManualSection");
+  var drawerManualForm = document.getElementById("drawerManualForm");
+  var drawerManualMsg = document.getElementById("drawerManualMsg");
+  var drawerSimuladoSection = document.getElementById("drawerSimuladoSection");
+  var drawerSimularBtn = document.getElementById("drawerSimularBtn");
+  var drawerSimularMsg = document.getElementById("drawerSimularMsg");
+  var drawerOpsForm = document.getElementById("drawerOpsForm");
+  var drawerOpsMsg = document.getElementById("drawerOpsMsg");
 
   function abrirDrawer(codigo) {
     estado.seleccionada = codigo;
@@ -243,11 +291,129 @@
     var etiquetas = { OPERA: "Operativa", MANTE: "En mantenimiento", FALLO: "En falla", sin: "Sin estado" };
     drawerEstado.textContent = etiquetas[estadoClase];
     drawerAlert.hidden = !m.requiere_revision_preventiva;
+    document.getElementById("drawerOrdenMsg").hidden = true;
     drawerVibracion.textContent = m.ultima_lectura ? m.ultima_lectura.vibracion : "Sin datos";
     drawerUmbral.textContent = m.umbral_vibracion;
     drawerTemperatura.textContent = m.ultima_lectura && m.ultima_lectura.temperatura != null ? m.ultima_lectura.temperatura + " °C" : "—";
     drawerTimestamp.textContent = m.ultima_lectura ? m.ultima_lectura.timestamp.slice(0, 16).replace("T", " ") : "—";
+    drawerModoSelect.value = m.modo_monitoreo || "simulado";
+    actualizarSeccionesPorModo(m.modo_monitoreo);
+    drawerModoMsg.hidden = true;
+    drawerManualMsg.hidden = true;
+    drawerSimularMsg.hidden = true;
+    drawerOpsMsg.hidden = true;
   }
+
+  function actualizarSeccionesPorModo(modo) {
+    drawerManualSection.hidden = modo !== "manual";
+    drawerSimuladoSection.hidden = modo !== "simulado";
+  }
+
+  // vista previa instantánea al elegir modo, sin esperar el clic en "Guardar"
+  drawerModoSelect.addEventListener("change", function () {
+    actualizarSeccionesPorModo(drawerModoSelect.value);
+  });
+
+  function mostrarMsg(el, texto, ok) {
+    el.hidden = false;
+    el.textContent = texto;
+    el.className = "feedback-msg " + (ok ? "is-ok" : "is-error");
+  }
+
+  drawerModoGuardar.addEventListener("click", function () {
+    if (!estado.seleccionada) return;
+    var codigo = estado.seleccionada;
+    fetch(urlPara(MODO_TPL, codigo), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify({ modo_monitoreo: drawerModoSelect.value }),
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          mostrarMsg(drawerModoMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo actualizar el modo.", false);
+          return;
+        }
+        mostrarMsg(drawerModoMsg, "Modo actualizado a " + res.data.modo_monitoreo + ".", true);
+        actualizarSeccionesPorModo(res.data.modo_monitoreo);
+        refrescar();
+      }).catch(function () { mostrarMsg(drawerModoMsg, "No fue posible conectar con el servidor.", false); });
+  });
+
+  drawerManualForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    if (!estado.seleccionada) return;
+    var payload = {
+      maquina: estado.seleccionada,
+      vibracion: parseFloat(document.getElementById("mVibracion").value),
+      temperatura: document.getElementById("mTemperatura").value ? parseFloat(document.getElementById("mTemperatura").value) : null,
+      golpe: document.getElementById("mGolpe").checked,
+    };
+    fetch(LECTURA_MANUAL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify(payload),
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          mostrarMsg(drawerManualMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo registrar la lectura.", false);
+          return;
+        }
+        mostrarMsg(drawerManualMsg, res.data.reporte_automatico
+          ? "Lectura registrada. Se generó un reporte de falla automático (#" + res.data.reporte_automatico + ")."
+          : "Lectura registrada correctamente.", true);
+        drawerManualForm.reset();
+        refrescar();
+        cargarDatosDrawer(estado.seleccionada, true);
+      }).catch(function () { mostrarMsg(drawerManualMsg, "No fue posible conectar con el servidor.", false); });
+  });
+
+  drawerSimularBtn.addEventListener("click", function () {
+    if (!estado.seleccionada) return;
+    drawerSimularBtn.disabled = true;
+    fetch(urlPara(SIMULAR_TPL, estado.seleccionada), {
+      method: "POST",
+      headers: { "X-CSRFToken": getCookie("csrftoken") },
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        drawerSimularBtn.disabled = false;
+        if (!res.ok) {
+          mostrarMsg(drawerSimularMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo generar la lectura.", false);
+          return;
+        }
+        mostrarMsg(drawerSimularMsg, res.data.reporte_automatico
+          ? "Lectura simulada generada. Se creó un reporte de falla automático (#" + res.data.reporte_automatico + ")."
+          : "Lectura simulada generada (vibración " + res.data.vibracion + ").", true);
+        refrescar();
+        cargarDatosDrawer(estado.seleccionada, true);
+      }).catch(function () {
+        drawerSimularBtn.disabled = false;
+        mostrarMsg(drawerSimularMsg, "No fue posible conectar con el servidor.", false);
+      });
+  });
+
+  drawerOpsForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    if (!estado.seleccionada) return;
+    var payload = {
+      fechaInicio: document.getElementById("opsFechaInicio").value,
+      fechaFin: document.getElementById("opsFechaFin").value,
+      horasOperacion: parseInt(document.getElementById("opsHoras").value, 10),
+    };
+    fetch(urlPara(REGISTRO_OPS_TPL, estado.seleccionada), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify(payload),
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          mostrarMsg(drawerOpsMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo registrar el periodo.", false);
+          return;
+        }
+        mostrarMsg(drawerOpsMsg, "Periodo registrado (" + res.data.horasOperacion + " h). Indicadores actualizados.", true);
+        drawerOpsForm.reset();
+        cargarDatosDrawer(estado.seleccionada, true);
+      }).catch(function () { mostrarMsg(drawerOpsMsg, "No fue posible conectar con el servidor.", false); });
+  });
 
   function cargarDatosDrawer(codigo, silencioso) {
     Promise.all([
@@ -395,4 +561,16 @@
         errorBox.textContent = "No fue posible conectar con el servidor.";
       });
   });
+  var CREAR_ORDEN_URL = root.dataset.crearOrdenUrl;
+  var btnLevantarOrden = document.getElementById("drawerLevantarOrden");
+  if (btnLevantarOrden && CREAR_ORDEN_URL) {
+    btnLevantarOrden.addEventListener("click", function () {
+      if (!estado.seleccionada) return;
+      var codigo = estado.seleccionada;
+      fetch(CREAR_ORDEN_URL, { method:"POST", headers:{"Content-Type":"application/json", "X-CSRFToken":getCookie("csrftoken")}, body:JSON.stringify({maquina:codigo, tipo_mantenimiento:"PREVE", descripcion:"Revisión preventiva sugerida por tendencia de vibración en " + codigo + "."}) })
+        .then(function(r){ return r.json().then(function(data){ return {ok:r.ok, data:data}; }); })
+        .then(function(res){ var msg=document.getElementById("drawerOrdenMsg"); mostrarMsg(msg, res.ok ? "Orden " + res.data.folio + " creada. Asígnala desde Mantenimiento." : "No se pudo levantar la orden.", res.ok); })
+        .catch(function(){ mostrarMsg(document.getElementById("drawerOrdenMsg"), "No fue posible conectar con el servidor.", false); });
+    });
+  }
 })();

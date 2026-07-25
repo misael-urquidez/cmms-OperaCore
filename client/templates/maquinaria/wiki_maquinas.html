@@ -1,0 +1,313 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Wiki de Equipos · OperaCore{% endblock %}
+
+{% block breadcrumb %}Maquinaria / Wiki{% endblock %}
+{% block page_title %}Wiki de Equipos SMT{% endblock %}
+
+{% block content %}
+<div class="row">
+
+    <!-- 1. Solder Paste Printer -->
+    <div class="col-xl-6 mb-4">
+        <div class="card bg-dark text-light border-secondary h-100 shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 d-flex justify-content-between align-items-center py-3">
+                <span class="fw-bold fs-6 text-white">1. Solder Paste Printer <span class="text-white fw-normal fs-7">/ Impresora de Pasta de Soldar</span></span>
+                <span class="badge bg-primary text-uppercase px-2 py-1">Impresión</span>
+            </div>
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="text-info bg-info bg-opacity-10 p-2 rounded small mb-2 border border-info border-opacity-25">
+                        <strong>Función principal:</strong> Depositar pasta de soldar de manera precisa sobre los pads de los circuitos impresos (PCB) utilizando un esténcil y una rasqueta.
+                    </p>
+                    <p class="text-warning bg-warning bg-opacity-10 p-2 rounded small mb-3 border border-warning border-opacity-25">
+                        <strong>Frecuencia de Mantenimiento Preventivo:</strong> Cada turno / Diario (limpieza de esténcil y rasquetas) y semanal (calibración de visión).
+                    </p>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25 h-100">
+                            <div class="text-danger fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-exclamation-triangle me-1"></i> Principales fallas:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Alineación incorrecta (offset) entre el esténcil y la tarjeta.</li>
+                                <li class="mb-1">Obstrucción o secado de pasta en las aperturas del esténcil.</li>
+                                <li>Impresión insuficiente o exceso de pasta (puentes).</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-success bg-opacity-10 border border-success border-opacity-25 h-100">
+                            <div class="text-success fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-tools me-1"></i> Cómo repararlas y mantenimiento:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Realizar limpiezas automáticas o manuales del esténcil con solvente y papel especial de forma periódica.</li>
+                                <li class="mb-1">Calibrar la visión de la máquina y verificar los pines fiduciales de la PCB.</li>
+                                <li>Ajustar la presión, velocidad y ángulo de las rasquetas (squeegees).</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Pick & Place -->
+    <div class="col-xl-6 mb-4">
+        <div class="card bg-dark text-light border-secondary h-100 shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 d-flex justify-content-between align-items-center py-3">
+                <span class="fw-bold fs-6 text-white">2. Pick & Place <span class="text-white fw-normal fs-7">/ Montadora SMT</span></span>
+                <span class="badge bg-primary text-uppercase px-2 py-1">Colocación</span>
+            </div>
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="text-info bg-info bg-opacity-10 p-2 rounded small mb-2 border border-info border-opacity-25">
+                        <strong>Función principal:</strong> Tomar componentes electrónicos de los alimentadores (feeders) y colocarlos a alta velocidad sobre los pads con pasta de la PCB.
+                    </p>
+                    <p class="text-warning bg-warning bg-opacity-10 p-2 rounded small mb-3 border border-warning border-opacity-25">
+                        <strong>Frecuencia de Mantenimiento Preventivo:</strong> Cada 3 días (limpieza de boquillas y verificación de feeders) y mensual (lubricación de guías).
+                    </p>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25 h-100">
+                            <div class="text-danger fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-exclamation-triangle me-1"></i> Principales fallas:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Desgaste o suciedad en las boquillas (nozzles), causando que la máquina suelte o no tome los componentes.</li>
+                                <li class="mb-1">Errores de calibración en los alimentadores (feeders).</li>
+                                <li>Tasas altas de errores de reconocimiento de visión de componentes.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-success bg-opacity-10 border border-success border-opacity-25 h-100">
+                            <div class="text-success fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-tools me-1"></i> Cómo repararlas y mantenimiento:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Limpiar ultrasonicamente las boquillas y revisar que no tengan obstrucciones.</li>
+                                <li class="mb-1">Calibrar las alturas de recogida y colocación del cabezal.</li>
+                                <li>Verificar el buen estado mecánico de los alimentadores y lubricar guías lineales según el manual del fabricante.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Reflow Oven -->
+    <div class="col-xl-6 mb-4">
+        <div class="card bg-dark text-light border-secondary h-100 shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 d-flex justify-content-between align-items-center py-3">
+                <span class="fw-bold fs-6 text-white">3. Reflow Oven <span class="text-white fw-normal fs-7">/ Horno de Reflujo</span></span>
+                <span class="badge bg-primary text-uppercase px-2 py-1">Soldadura</span>
+            </div>
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="text-info bg-info bg-opacity-10 p-2 rounded small mb-2 border border-info border-opacity-25">
+                        <strong>Función principal:</strong> Fundir la pasta de soldar aplicando perfiles térmicos controlados en múltiples zonas para lograr las conexiones eléctricas y mecánicas definitivas.
+                    </p>
+                    <p class="text-warning bg-warning bg-opacity-10 p-2 rounded small mb-3 border border-warning border-opacity-25">
+                        <strong>Frecuencia de Mantenimiento Preventivo:</strong> Semanal (limpieza de filtros colectores de flux) y mensual (perfil térmico de validación).
+                    </p>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25 h-100">
+                            <div class="text-danger fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-exclamation-triangle me-1"></i> Principales fallas:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Desviación en las temperaturas de las zonas de calentamiento.</li>
+                                <li class="mb-1">Acumulación excesiva de flujos y residuos volátiles en los filtros o paredes internas del horno.</li>
+                                <li>Atascos de tarjetas en el sistema de transporte (conveyor interno).</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-success bg-opacity-10 border border-success border-opacity-25 h-100">
+                            <div class="text-success fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-tools me-1"></i> Cómo repararlas y mantenimiento:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Realizar perfil térmico (profiling) usando un termo-registrador de manera regular para verificar las rampas de temperatura.</li>
+                                <li class="mb-1">Limpiar o reemplazar los colectores y filtros de residuo de flux de manera programada.</li>
+                                <li>Inspeccionar y tensar las cadenas o mallas del transportador interno.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. SMT Conveyor -->
+    <div class="col-xl-6 mb-4">
+        <div class="card bg-dark text-light border-secondary h-100 shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 d-flex justify-content-between align-items-center py-3">
+                <span class="fw-bold fs-6 text-white">4. SMT Conveyor <span class="text-white fw-normal fs-7">/ Cinta Transportadora</span></span>
+                <span class="badge bg-primary text-uppercase px-2 py-1">Transporte</span>
+            </div>
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="text-info bg-info bg-opacity-10 p-2 rounded small mb-2 border border-info border-opacity-25">
+                        <strong>Función principal:</strong> Transportar y transferir de forma sincronizada las tarjetas PCB entre las diferentes estaciones de la línea de producción SMT.
+                    </p>
+                    <p class="text-warning bg-warning bg-opacity-10 p-2 rounded small mb-3 border border-warning border-opacity-25">
+                        <strong>Frecuencia de Mantenimiento Preventivo:</strong> Cada 5 días (limpieza de bandas y revisión de sensores ópticos).
+                    </p>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25 h-100">
+                            <div class="text-danger fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-exclamation-triangle me-1"></i> Principales fallas:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Desalineación o desgaste de las bandas transportadoras.</li>
+                                <li class="mb-1">Fallas en los sensores ópticos de presencia de tarjeta (photocells).</li>
+                                <li>Atascos o detenciones en el motor paso a paso / de corriente continua.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-success bg-opacity-10 border border-success border-opacity-25 h-100">
+                            <div class="text-success fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-tools me-1"></i> Cómo repararlas y mantenimiento:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Limpiar las bandas con alcohol isopropílico para evitar acumulaciones de polvo o grasa que patinen con la PCB.</li>
+                                <li class="mb-1">Realinear los rieles ajustables al ancho de la tarjeta para evitar atascos laterales.</li>
+                                <li>Comprobar el correcto funcionamiento y cableado de los sensores de entrada y salida.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. AOI -->
+    <div class="col-xl-6 mb-4">
+        <div class="card bg-dark text-light border-secondary h-100 shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 d-flex justify-content-between align-items-center py-3">
+                <span class="fw-bold fs-6 text-white">5. Automatic Optical Inspection - AOI</span>
+                <span class="badge bg-primary text-uppercase px-2 py-1">Inspección</span>
+            </div>
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="text-info bg-info bg-opacity-10 p-2 rounded small mb-2 border border-info border-opacity-25">
+                        <strong>Función principal:</strong> Inspeccionar visualmente la calidad del proceso de impresión de pasta o la correcta colocación y soldadura mediante cámaras de alta resolución.
+                    </p>
+                    <p class="text-warning bg-warning bg-opacity-10 p-2 rounded small mb-3 border border-warning border-opacity-25">
+                        <strong>Frecuencia de Mantenimiento Preventivo:</strong> Semanal (limpieza de lentes y verificación de iluminación LED).
+                    </p>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25 h-100">
+                            <div class="text-danger fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-exclamation-triangle me-1"></i> Principales fallas:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Falsos positivos elevados (marcar tarjetas buenas como defectuosas).</li>
+                                <li class="mb-1">Descalibración en la iluminación o desgaste de las fuentes de luz LED.</li>
+                                <li>Errores de lectura de códigos de barras (barcode/QR).</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-success bg-opacity-10 border border-success border-opacity-25 h-100">
+                            <div class="text-success fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-tools me-1"></i> Cómo repararlas y mantenimiento:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Reentrenar las librerías y umbrales de tolerancia de las rutinas de inspección ante variaciones mínimas.</li>
+                                <li class="mb-1">Limpiar cuidadosamente las lentes de las cámaras y los sistemas de iluminación con paños antiestáticos.</li>
+                                <li>Actualizar las referencias CAD y optimizar las marcas fiduciales de la tarjeta en el software.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Flying Probe Tester -->
+    <div class="col-xl-6 mb-4">
+        <div class="card bg-dark text-light border-secondary h-100 shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 d-flex justify-content-between align-items-center py-3">
+                <span class="fw-bold fs-6 text-white">6. Flying Probe Tester <span class="text-white fw-normal fs-7">/ Probador de Sonda</span></span>
+                <span class="badge bg-primary text-uppercase px-2 py-1">Pruebas</span>
+            </div>
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="text-info bg-info bg-opacity-10 p-2 rounded small mb-2 border border-info border-opacity-25">
+                        <strong>Función principal:</strong> Realizar pruebas eléctricas (circuitos abiertos, cortos, valores de componentes) usando sondas móviles de alta precisión sin utillaje físico.
+                    </p>
+                    <p class="text-warning bg-warning bg-opacity-10 p-2 rounded small mb-3 border border-warning border-opacity-25">
+                        <strong>Frecuencia de Mantenimiento Preventivo:</strong> Cada 3 días (inspección y limpieza de puntas de prueba) y quincenal (calibración de ejes).
+                    </p>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25 h-100">
+                            <div class="text-danger fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-exclamation-triangle me-1"></i> Principales fallas:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Desgaste, doblado o daño en las puntas de las agujas de prueba (probes).</li>
+                                <li class="mb-1">Errores de posicionamiento debido a descalibración de los ejes de movimiento.</li>
+                                <li>Fallos de contacto en los puntos de prueba (test points) sucios u oxidados.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-success bg-opacity-10 border border-success border-opacity-25 h-100">
+                            <div class="text-success fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-tools me-1"></i> Cómo repararlas y mantenimiento:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Reemplazar periódicamente las puntas de prueba desgastadas.</li>
+                                <li class="mb-1">Ejecutar rutinas de autocalibración y autodiagnóstico del sistema de coordenadas.</li>
+                                <li>Asegurar una buena limpieza superficial de las placas antes de realizar las pruebas para optimizar la conductividad.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. Selective Soldering Machine -->
+    <div class="col-12 mb-4">
+        <div class="card bg-dark text-light border-secondary h-100 shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 d-flex justify-content-between align-items-center py-3">
+                <span class="fw-bold fs-6 text-white">7. Selective Soldering Machine <span class="text-white fw-normal fs-7">/ Soldadura Selectiva</span></span>
+                <span class="badge bg-primary text-uppercase px-2 py-1">Inserción THT</span>
+            </div>
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="text-info bg-info bg-opacity-10 p-2 rounded small mb-2 border border-info border-opacity-25">
+                        <strong>Función principal:</strong> Aplicar soldadura por ola de manera localizada y precisa en componentes THT en tarjetas que ya contienen componentes SMT sensibles.
+                    </p>
+                    <p class="text-warning bg-warning bg-opacity-10 p-2 rounded small mb-3 border border-warning border-opacity-25">
+                        <strong>Frecuencia de Mantenimiento Preventivo:</strong> Diario (retiro de escoria y limpieza de boquilla) y semanal (purgado del sistema de flux).
+                    </p>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25 h-100">
+                            <div class="text-danger fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-exclamation-triangle me-1"></i> Principales fallas:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Obstrucción o acumulación de escoria (dross) en la boquilla de soldadura.</li>
+                                <li class="mb-1">Problemas de flujo en el aplicador de flux por acumulación de residuos secos.</li>
+                                <li>Desviaciones en la temperatura del crisol de soldadura.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-2 rounded bg-success bg-opacity-10 border border-success border-opacity-25 h-100">
+                            <div class="text-success fw-bold small text-uppercase mb-2 bg-light text-dark px-2 py-1 rounded"><i class="fas fa-tools me-1"></i> Cómo repararlas y mantenimiento:</div>
+                            <ul class="small text-light ps-3 mb-0">
+                                <li class="mb-1">Realizar la limpieza constante de la boquilla y retirar la escoria aplicando líquido antiescoria y herramientas adecuadas.</li>
+                                <li class="mb-1">Purgar y limpiar periódicamente el sistema de aplicación de flux para evitar bloqueos en las boquillas pulverizadoras.</li>
+                                <li>Calibrar la altura de ola y verificar el estado de los calefactores y termopares del crisol.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

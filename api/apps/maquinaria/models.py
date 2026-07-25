@@ -1,5 +1,10 @@
 from django.db import models
 
+
+# ==========================================================
+# CATÁLOGOS Y UBICACIONES
+# ==========================================================
+
 class Planta(models.Model):
     codigo = models.CharField(primary_key=True, max_length=10)
     nombre = models.CharField(unique=True, max_length=100)
@@ -11,7 +16,7 @@ class Planta(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'planta'
+        db_table = 'PLANTA'
 
 class Area(models.Model):
     codigo = models.CharField(primary_key=True, max_length=10)
@@ -22,7 +27,7 @@ class Area(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'area'
+        db_table = 'AREA'
 
 class EdoMaquina(models.Model):
     codigo = models.CharField(primary_key=True, max_length=5)
@@ -31,7 +36,10 @@ class EdoMaquina(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'edo_maquina'
+        db_table = 'EDO_MAQUINA'
+
+    def __str__(self):
+        return self.nombre
 
 class Linea(models.Model):
     codigo = models.CharField(primary_key=True, max_length=10)
@@ -41,7 +49,10 @@ class Linea(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'linea'
+        db_table = 'LINEA'
+
+    def __str__(self):
+        return self.nombre
     
 class Marca(models.Model):
     clave = models.CharField(primary_key=True, max_length=10)
@@ -51,6 +62,7 @@ class Marca(models.Model):
     class Meta:
         managed = False
         db_table = 'marca'
+        db_table = 'MARCA'
 
 class Modelo(models.Model):
     codigo = models.CharField(primary_key=True, max_length=10)
@@ -60,7 +72,7 @@ class Modelo(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'modelo'
+        db_table = 'MODELO'
 
 class TipoMaquina(models.Model):
     numeroregistro = models.AutoField(db_column='numeroRegistro', primary_key=True)
@@ -69,8 +81,32 @@ class TipoMaquina(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'tipo_maquina'
-    
+        db_table = 'TIPO_MAQUINA'
+
+    def __str__(self):
+        return self.nombre
+
+
+class TipoMaquinaArea(models.Model):
+    """Qué tipos de máquina son válidos en cada área. Si un tipo_maquina no
+    tiene ninguna fila aquí, se considera UNIVERSAL (válido en cualquier área).
+    La garantía real vive en los triggers de MySQL (tg_validar_tipo_maquina_area_*)."""
+
+    tipo_maquina = models.ForeignKey(TipoMaquina, models.DO_NOTHING, db_column='tipo_maquina')
+    area = models.ForeignKey(Area, models.DO_NOTHING, db_column='area')
+
+    class Meta:
+        managed = False
+        db_table = 'TIPO_MAQUINA_AREA'
+        unique_together = (('tipo_maquina', 'area'),)
+
+    def __str__(self):
+        return f"{self.tipo_maquina_id} - {self.area_id}"
+
+# ==========================================================
+# MAQUINA
+# ==========================================================
+
 class Maquina(models.Model):
     codigo = models.CharField(primary_key=True, max_length=10)
     numeroserie = models.CharField(db_column='numeroSerie', unique=True, max_length=30, blank=True, null=True)
@@ -78,6 +114,10 @@ class Maquina(models.Model):
     descripcion = models.CharField(max_length=255, blank=True, null=True)
     imagen_url = models.CharField(max_length=255, blank=True, null=True)
     fechainstalacion = models.DateField(db_column='fechaInstalacion')
+    modelo_3d = models.CharField(max_length=255, blank=True, null=True)
+    fechainstalacion = models.DateField(db_column='fechaInstalacion')
+    
+
     linea = models.ForeignKey(Linea, models.DO_NOTHING, db_column='linea', blank=True, null=True)
     marca = models.ForeignKey(Marca, models.DO_NOTHING, db_column='marca', blank=True, null=True)
     modelo = models.ForeignKey(Modelo, models.DO_NOTHING, db_column='modelo', blank=True, null=True)
@@ -86,7 +126,10 @@ class Maquina(models.Model):
 
     class Meta:
         managed = False
+
         db_table = 'maquina'
+        db_table = 'MAQUINA'
+
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"

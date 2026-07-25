@@ -1,7 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from apps.fallas.models import EstadoMaquina, Linea, Maquina, Marca, Modelo, TipoMaquina
+from apps.fallas.models import EstadoMaquina, Linea, Maquina, Marca, Modelo, TipoMaquina, TipoMaquinaArea
 
 from . import services
 from .models import LecturaSensor
@@ -52,6 +52,17 @@ class CrearMaquinaSerializer(serializers.Serializer):
             raise serializers.ValidationError("Ya existe una máquina con este código.")
         return codigo
 
+    def validate(self, datos):
+        linea = datos.get("linea")
+        tipo_maquina = datos.get("tipo_maquina")
+        if linea and tipo_maquina:
+            restringido = TipoMaquinaArea.objects.filter(tipo_maquina=tipo_maquina).exists()
+            if restringido and not TipoMaquinaArea.objects.filter(tipo_maquina=tipo_maquina, area=linea.area).exists():
+                raise serializers.ValidationError({
+                    "tipo_maquina": "Este tipo de máquina no es compatible con el área de esa línea."
+                })
+        return datos
+
     def create(self, datos):
         linea = datos.get("linea")
         marca = datos.get("marca")
@@ -82,3 +93,29 @@ class ReporteFallaManualSerializer(serializers.Serializer):
     tiempoParo = serializers.IntegerField(required=False, allow_null=True, min_value=0)
     tipo_falla = serializers.IntegerField()
     tipo_severidad = serializers.CharField(max_length=5)
+
+
+class ModoMonitoreoSerializer(serializers.Serializer):
+    """Cambia el modo de monitoreo de una máquina (manual/simulado/iot).
+    iot queda bloqueado hasta que el puente del Wiimote / app móvil exista."""
+    modo_monitoreo = serializers.ChoiceField(choices=LecturaSensor.ORIGENES)
+
+    def validate_modo_monitoreo(self, valor):
+        if valor == LecturaSensor.ORIGEN_IOT:
+            raise serializers.ValidationError(
+                "El modo IoT aún no está habilitado en este entorno."
+            )
+        return valor
+
+
+class RegistroOpsSerializer(serializers.Serializer):
+    """Registra un periodo de horas de operación de la máquina.
+    No expone mtbf/mttr/disponibilidad: esos los calculan los triggers."""
+    fechaInicio = serializers.DateField()
+    fechaFin = serializers.DateField()
+    horasOperacion = serializers.IntegerField(min_value=0)
+
+    def validate(self, datos):
+        if datos["fechaFin"] < datos["fechaInicio"]:
+            raise serializers.ValidationError("fechaFin no puede ser anterior a fechaInicio.")
+        return datos

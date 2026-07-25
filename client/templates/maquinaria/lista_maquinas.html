@@ -1,0 +1,328 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>OPERACORE | Detalle de Máquina: {{ maquina.nombre|default:"Equipo" }}</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0f14, #1b0b16, #151415);
+            color: white;
+        }
+
+        /* HEADER */
+        header {
+            background: linear-gradient(90deg, #5b0017, #8b0030, #c2185b);
+            padding: 30px;
+            border-bottom: 2px solid #ff4d88;
+            box-shadow: 0 0 25px rgba(255, 77, 136, .45);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+            color: #fff;
+            font-size: 32px;
+            text-shadow: 0 0 12px #ff4d88;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .header-nav-btn {
+            background: #ffffff;
+            color: #8b0030;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            transition: .3s;
+        }
+
+        .header-nav-btn:hover {
+            background: #ffd6e8;
+            transform: scale(1.05);
+        }
+
+        .header-nav-btn-secondary {
+            background: transparent;
+            color: #ffd6e8;
+            border: 2px solid #ff4d88;
+            padding: 8px 18px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(255, 77, 136, 0.2);
+            transition: .3s;
+        }
+
+        .header-nav-btn-secondary:hover {
+            background: rgba(255, 77, 136, 0.2);
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        /* CONTENEDOR GRID DE DETALLE */
+        .container {
+            padding: 35px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 30px;
+            align-items: start;
+        }
+
+        /* TARJETA DETALLE IZQUIERDA */
+        .detail-card {
+            background: linear-gradient(180deg, #2b0b1a, #190811);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid #ff4d88;
+            box-shadow: 0 0 20px rgba(255, 77, 136, .15);
+        }
+
+        .detail-card h2 {
+            color: #ff80ab;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-size: 26px;
+            border-bottom: 2px solid #ff4d88;
+            padding-bottom: 15px;
+            text-shadow: 0 0 10px rgba(255, 128, 171, 0.4);
+        }
+
+        /* INFORMACION */
+        .info {
+            background: #330818;
+            padding: 12px 15px;
+            margin: 12px 0;
+            border-left: 4px solid #ff4d88;
+            border-radius: 10px;
+            color: #ffe4ee;
+            transition: .3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info:hover {
+            background: #441022;
+        }
+
+        .info b {
+            color: white;
+        }
+
+        /* ESTADO */
+        .estado {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 8px 18px;
+            border-radius: 25px;
+            background: #ff1744;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(255, 23, 68, .4);
+        }
+
+        /* VISOR 3D DERECHA */
+        .viewer-card {
+            background: linear-gradient(180deg, #2b0b1a, #190811);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid #ff4d88;
+            box-shadow: 0 0 20px rgba(255, 77, 136, .15);
+            text-align: center;
+        }
+
+        .viewer-card h3 {
+            color: #ff80ab;
+            font-size: 20px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #ff4d88;
+            padding-bottom: 10px;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 320px;
+            background: #12040b;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid #ff4d88;
+        }
+
+        .error-box {
+            text-align: center;
+            padding: 60px 0;
+            color: #ffd6e8;
+            grid-column: 1 / -1;
+        }
+    </style>
+
+    <!-- Importmap para Three.js y OrbitControls -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+
+<body>
+
+    <header>
+        <div>
+            <h1>⚙ OPERACORE CMMS</h1>
+            <p style="margin-top: 8px; color: #ffd6e8; font-size: 16px;">Panel de Detalle Técnico</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'maquinaria:index' %}" class="header-nav-btn-secondary">&larr; Menú Principal</a>
+            <a href="{% url 'maquinaria:list' %}" class="header-nav-btn">Ver Catálogo</a>
+        </div>
+    </header>
+
+    <div class="container">
+        {% if maquina %}
+        <div class="content-grid">
+            <!-- Columna Izquierda: Información técnica -->
+            <div class="detail-card">
+                <h2>{{ maquina.nombre }}</h2>
+                
+                <div class="info">
+                    <span>Código:</span>
+                    <b>{{ maquina.codigo }}</b>
+                </div>
+
+                <div class="info">
+                    <span>Línea:</span>
+                    <b>{{ maquina.linea|default:"Sin línea" }}</b>
+                </div>
+
+                <div class="info">
+                    <span>Marca:</span>
+                    <b>{{ maquina.marca|default:"Sin marca" }}</b>
+                </div>
+
+                <div class="info">
+                    <span>Modelo:</span>
+                    <b>{{ maquina.modelo|default:"Sin modelo" }}</b>
+                </div>
+
+                <div class="info">
+                    <span>Modelo 3D (Ruta):</span>
+                    <b style="color: #ff80ab;">{{ maquina.modelo_3d|default:"No asignado" }}</b>
+                </div>
+
+                <div class="info">
+                    <span>Tipo de máquina:</span>
+                    <b>{{ maquina.tipo_maquina|default:"Sin tipo" }}</b>
+                </div>
+
+                <div>
+                    <span class="estado">
+                        {{ maquina.estado_maquina|default:"Sin estado" }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Visor 3D con la misma estética -->
+            <div class="viewer-card">
+                <h3>Visualizador 3D</h3>
+                <div id="canvas-container"></div>
+                <p style="font-size: 12px; color: #ffd6e8; margin-top: 15px;">Arrastra para rotar el modelo 3D</p>
+            </div>
+        </div>
+        {% else %}
+        <div class="error-box">
+            <h2 style="color:#ff80ab;">No se pudo cargar la información de esta máquina o el equipo no existe.</h2>
+            <p>Verifica que el código sea correcto o que el registro esté activo.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Script de Three.js -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const container = document.getElementById('canvas-container');
+        const modelPath = "{{ maquina.modelo_3d }}";
+
+        if (container && modelPath && modelPath !== "None" && modelPath.trim() !== "") {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+            directionalLight.position.set(5, 10, 7);
+            scene.add(directionalLight);
+
+            const loader = new GLTFLoader();
+            const staticUrl = "{% get_static_prefix %}";
+            const fullUrl = staticUrl + 'maquinaria/' + modelPath;
+
+            loader.load(fullUrl, function (gltf) {
+                const model = gltf.scene;
+                
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 3.5 / maxDim;
+                model.scale.set(scale, scale, scale);
+
+                model.position.sub(center.multiplyScalar(scale));
+                scene.add(model);
+
+                camera.position.set(0, 2, 5);
+                controls.update();
+
+            }, undefined, function (error) {
+                console.error("Error al cargar el modelo 3D:", error);
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+    </script>
+</body>
+</html>

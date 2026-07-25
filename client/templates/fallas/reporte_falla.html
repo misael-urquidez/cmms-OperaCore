@@ -5,7 +5,7 @@
 {% block page_title %}Nuevo reporte de falla{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">{% endblock %}
 {% block content %}
-  <h1>Reporte de Falla</h1>
+  <h1>Reporte de Falla</h1> 
 
   <div class="guias">
     <details open>
@@ -28,17 +28,22 @@
     {% csrf_token %}
     <div class="contenedor">
       <div class="left-side">
-        <label for="asunto">Asunto</label>
-        <input type="text" name="asunto" id="asunto" required maxlength="500" />
+    <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
 
-        <label for="descripcion">Descripcion</label>
-        <textarea name="descripcion" id="descripcion" maxlength="500"></textarea>
+        <label for="asunto">Asunto  <span id="asunto-error"></span></label>
+        <input type="text" name="asunto" id="asunto" data-error-id="asunto-error"  required maxlength="500" />
 
-        <label for="causaRaiz">Causa raiz</label>
-        <input type="text" name="causaRaiz" id="causaRaiz" required maxlength="500" />
+        <label for="descripcion">Descripcion <span id="descripcion-error"></span></label>
+        <textarea name="descripcion" id="descripcion" maxlength="500" data-error-id="descripcion-error"></textarea>
 
-        <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas)</label>
-        <input type="number" name="tiempoParo" id="tiempoParo" min="0" />
+        <label for="causaRaiz">Causa raiz <span id="causaRaiz-error"></span></label>
+        <input type="text" name="causaRaiz" id="causaRaiz" required maxlength="500" data-error-id="causaRaiz-error" />
+
+        <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas) <span id="horas-error"></span></label>
+        <input type="number" name="tiempoParo" id="tiempoParo" min="0" data-error-id="horas-error"  />
+
+        <label for="fechaSolucion">Fecha de solucion</label>
+        <input type="date" name="fechaSolucion" id="fechaSolucion" />
 
         <label for="maquina">Maquina</label>
         <select name="maquina" id="maquina" required>
@@ -56,13 +61,21 @@
           {% endfor %}
         </select>
 
-        <label for="tipo_falla">Tipo de falla</label>
+        <label for="tipo_falla">Selecione una o mas fallas encontradas</label>
         <select name="tipo_falla" id="tipo_falla" required>
           <option value="">Seleccione...</option>
           {% for tf in tipos_falla %}
             <option value="{{ tf.numeroRegistro }}">{{ tf.nombre }}</option>
           {% endfor %}
         </select>
+        <div class="contenedor-tipo-fallas" id="nuevas-fallas">
+
+        </div>
+        <div class="botones">
+            <button onclick="quitarSelect('tipo-falla')">- Quitar</button>
+            <button onclick="anadirFalla()">+ Añadir</button>
+        </div>
+
 
         <label for="estado_reporte">Estado del reporte</label>
         <select name="estado_reporte" id="estado_reporte" required>
@@ -71,6 +84,18 @@
             <option value="{{ e.codigo }}">{{ e.nombre }}</option>
           {% endfor %}
         </select>
+
+        <label for="trabajador">Selecciona el trabajador</label>
+        <select name="trabajador" id="trabajador" required>
+          <option value="">Seleccione...</option>
+          {% for t in trabajadores %}
+            <option value="{{ t.numeroNomina }}">{{ t.nombre }} {{ t.apellidoPat }}</option>
+          {% endfor %}
+        </select>
+
+
+
+
       </div>
 
       <div class="right-side">
@@ -91,12 +116,22 @@
         </div>
 
         <div class="contenedor-botones">
-        <button type="submit">Reportar falla</button>
+        <button type="submit" id="boton-registrar">Reportar falla</button>
         <a class="btn-cancel" href="{% url 'fallas:lista' %}">Cancelar</a>
         </div>
 
       </div>
     </div>
   </form>
+
+
+
+
+
+  
 {% endblock %}
-{% block extra_js %}<script src="{% static 'fallas/js/preview-imagenes.js' %}"></script>{% endblock %}
+{% block extra_js %}
+<script src="{% static 'fallas/js/preview-imagenes.js' %}"></script>
+<script src="{% static 'fallas/js/añadir-elementos.js' %}"></script>
+<script src="{% static 'js/validaciones-inputs.js' %}"></script>
+{% endblock %}

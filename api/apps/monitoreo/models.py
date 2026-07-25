@@ -73,3 +73,20 @@ class OrdenMantenimiento(models.Model):
     class Meta:
         managed = False
         db_table = "ORDEN_MANTENIMIENTO"
+
+
+class RegistroOps(models.Model):
+    """Periodo de horas de operación de una máquina. Cada INSERT aquí
+    dispara el trigger `tg_actualizar_mtbf_registroops`, que recalcula
+    el MTBF de la máquina y actualiza INDICADOR (y en cascada, mediante
+    `tg_actualizar_disponibilidad_indicador`, la disponibilidad)."""
+
+    numeroRegistro = models.AutoField(primary_key=True)
+    fechaInicio = models.DateField()
+    fechaFin = models.DateField()
+    horasOperacion = models.IntegerField()
+    maquina = models.ForeignKey(Maquina, on_delete=models.DO_NOTHING, db_column="maquina")
+
+    class Meta:
+        managed = False
+        db_table = "REGISTRO_OPS"

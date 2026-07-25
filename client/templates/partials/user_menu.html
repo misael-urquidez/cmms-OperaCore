@@ -1,7 +1,10 @@
 {# Menu del usuario logueado (avatar + dropdown). Usado en base.html y base_admin.html; el JS esta en static/js/navbar.js #}
+{% if request.session.usuario %}
 <div class="user-menu" id="userMenu"
      data-username="{{ request.session.usuario.usuario }}"
-     data-nombre="{{ request.session.usuario.nombre|default:request.session.usuario.usuario }}">
+     data-nombre="{{ request.session.usuario.nombre|default:request.session.usuario.usuario }}"
+     data-foto="{{ request.session.usuario.foto|default:'' }}"
+     data-perfil-url="{% url 'usuarios:perfil_actualizar' %}">
     <button type="button" class="user-menu__trigger" id="userMenuTrigger" aria-haspopup="true" aria-expanded="false">
         <span class="user-menu__avatar" data-avatar-node></span>
         <span class="user-menu__name" data-display-nombre>{{ request.session.usuario.nombre|default:request.session.usuario.usuario }}</span>
@@ -43,3 +46,4 @@
         </a>
     </div>
 </div>
+{% endif %}
