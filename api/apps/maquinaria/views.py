@@ -1,7 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from django.views.generic import TemplateView
 from . import models
 from .models import Maquina
 from .serializers import *
@@ -190,3 +190,6 @@ class UpdateMaquinaAPIView(generics.UpdateAPIView):
     queryset = Maquina.objects.all()
     serializer_class = UpdateMaquinaSerializer
     lookup_field = 'codigo'
+
+class WikiMaquinasView(TemplateView):
+    template_name = "maquinaria/wiki_maquinas.html"

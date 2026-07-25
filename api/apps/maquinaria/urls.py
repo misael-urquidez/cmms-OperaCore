@@ -70,4 +70,9 @@ urlpatterns = [
     path("v1/maquina/create/", views.CrearMaquinaAPIView.as_view(), name="create_maquina"),
     path("v1/maquina/<str:codigo>/", views.DetailMaquinaAPIView.as_view(), name="detail_maquina"),
     path("v1/maquina/update/<str:codigo>/", views.UpdateMaquinaAPIView.as_view(), name="update_maquina"),
+
+    # =====================================================
+    # WIKI DE EQUIPOS SMT
+    # =====================================================
+    path("wiki/", views.WikiMaquinasView.as_view(), name="wiki_maquinas"),
 ]
