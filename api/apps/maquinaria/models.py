@@ -1,5 +1,6 @@
 from django.db import models
 
+
 # ==========================================================
 # CATÁLOGOS Y UBICACIONES
 # ==========================================================
@@ -60,6 +61,7 @@ class Marca(models.Model):
 
     class Meta:
         managed = False
+        db_table = 'marca'
         db_table = 'MARCA'
 
 class Modelo(models.Model):
@@ -111,9 +113,11 @@ class Maquina(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.CharField(max_length=255, blank=True, null=True)
     imagen_url = models.CharField(max_length=255, blank=True, null=True)
+    fechainstalacion = models.DateField(db_column='fechaInstalacion')
     modelo_3d = models.CharField(max_length=255, blank=True, null=True)
     fechainstalacion = models.DateField(db_column='fechaInstalacion')
     
+
     linea = models.ForeignKey(Linea, models.DO_NOTHING, db_column='linea', blank=True, null=True)
     marca = models.ForeignKey(Marca, models.DO_NOTHING, db_column='marca', blank=True, null=True)
     modelo = models.ForeignKey(Modelo, models.DO_NOTHING, db_column='modelo', blank=True, null=True)
@@ -122,7 +126,10 @@ class Maquina(models.Model):
 
     class Meta:
         managed = False
+
+        db_table = 'maquina'
         db_table = 'MAQUINA'
+
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
