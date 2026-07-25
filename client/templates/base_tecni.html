@@ -1,0 +1,124 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include 'favicon.html' %}
+    <title>{% block title %}Panel Técnico · OperaCore{% endblock %}</title>
+
+    <link rel="icon" href="{% static 'img/pre_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
+    <link rel="stylesheet" href="{% static 'css/tecni.css' %}">
+    <link rel="stylesheet" href="{% static 'css/tecni-themes.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="tecni-body">
+
+<div class="tecni-shell" id="tecniShell">
+
+    {# ============ SIDEBAR ============ #}
+    <aside class="tecni-sidebar" id="tecniSidebar">
+        <div class="tecni-sidebar__brand">
+            <img src="{% static 'img/pre_logo.png' %}" alt="OperaCore" width="30" height="30">
+            <div class="tecni-sidebar__brand-text">
+                <span class="tecni-sidebar__brand-name">OperaCore</span>
+                <span class="tecni-sidebar__brand-sub">Panel de técnico</span>
+            </div>
+            <button type="button" class="tecni-sidebar__collapse" id="tecniSidebarCollapse" aria-label="Contraer menú">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+        </div>
+
+        <nav class="tecni-sidebar__nav">
+            <p class="tecni-sidebar__section">General</p>
+
+            <a class="tecni-sidebar__link {% if seccion == 'dashboard' %}is-active{% endif %}" href="{% url 'usuarios:tecni_dashboard' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                <span>Dashboard</span>
+            </a>
+
+            <a class="tecni-sidebar__link {% if seccion == 'mantenimiento' %}is-active{% endif %}" href="{% url 'mantenimiento:index' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                <span>Mantenimiento</span>
+            </a>
+
+            <div class="tecni-sidebar__group {% if seccion == 'fallas' %}is-open{% endif %}">
+                <button type="button" class="tecni-sidebar__link tecni-sidebar__group-toggle" aria-expanded="{% if seccion == 'fallas' %}true{% else %}false{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+                    <span>Fallas</span>
+                    <svg class="tecni-sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="tecni-sidebar__submenu">
+                    <a href="{% url 'fallas:reporte' %}" class="{% if seccion == 'fallas' and subseccion == 'reporte' %}is-active{% endif %}">Nuevo reporte</a>
+                    <a href="{% url 'fallas:lista' %}" class="{% if seccion == 'fallas' and subseccion == 'lista' %}is-active{% endif %}">Ver reportes</a>
+                </div>
+            </div>
+
+            <a class="tecni-sidebar__link {% if seccion == 'maquinaria' %}is-active{% endif %}" href="{% url 'maquinaria:index' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <span>Maquinaria</span>
+            </a>
+            {# Nota: a proposito NO se incluye "Registrar nueva" maquina ni Elipse ni Gestion #}
+        </nav>
+
+        <div class="tecni-sidebar__foot">
+            <span class="tecni-sidebar__foot-dot"></span>
+            <span class="tecni-sidebar__foot-text">Modo técnico</span>
+        </div>
+    </aside>
+
+    {# ============ ÁREA PRINCIPAL ============ #}
+    <div class="tecni-main">
+
+        <header class="tecni-topbar">
+            <button type="button" class="tecni-topbar__menu" id="tecniSidebarOpen" aria-label="Abrir menú">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            </button>
+
+            <div class="tecni-topbar__titles">
+                <p class="tecni-topbar__breadcrumb">{% block breadcrumb %}Panel técnico{% endblock %}</p>
+                <h1 class="tecni-topbar__title">{% block page_title %}Dashboard{% endblock %}</h1>
+            </div>
+
+            <div class="tecni-topbar__right">
+                {% include 'partials/user_menu.html' %}
+            </div>
+        </header>
+
+        <main class="tecni-content">
+            {% if messages %}
+                <ul class="messages">
+                    {% for message in messages %}
+                        <li class="messages__item messages__item--{{ message.tags }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<div class="tecni-sidebar-backdrop" id="tecniSidebarBackdrop"></div>
+
+{% include 'partials/config_modal_tecni.html' %}
+
+<script src="{% static 'js/navbar.js' %}"></script>
+<script src="{% static 'js/tecni-theme.js' %}"></script>
+<script src="{% static 'js/tecni-sidebar.js' %}"></script>
+<script>
+(function(){
+  var msgs = document.querySelectorAll('.messages__item');
+  msgs.forEach(function(el){
+    setTimeout(function(){
+      el.classList.add('messages__item--hide');
+      el.addEventListener('transitionend', function(){ el.remove(); });
+    }, 3500);
+  });
+})();
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

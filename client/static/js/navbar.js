@@ -1,16 +1,30 @@
 /* ==========================================================================
    Menú de usuario + modal de "Configuración de cuenta".
-   La edición de datos y la foto son PROTOTIPO: se guardan solo en
-   localStorage (por usuario) para poder demostrar el flujo sin tener
-   todavía un endpoint en el api/ para actualizarlos. El botón de
-   "Cerrar sesión" sí es real y usa la vista de logout de Django.
+   Nombre, correo, teléfono y foto se guardan de verdad contra el api/
+   (PATCH a v1/trabajadores/<numeroNomina>/, via el endpoint
+   usuarios:perfil_actualizar del client). La apariencia (tema/colores)
+   sigue siendo solo local, ver theme.js. El botón de "Cerrar sesión" usa
+   la vista de logout de Django.
    ========================================================================== */
 (function () {
   const root = document.getElementById("userMenu");
   if (!root) return; // no hay sesión iniciada, nada que montar
 
   const username = root.dataset.username || "invitado";
-  const storageKey = `operacore_perfil_${username}`;
+  const perfilUrl = root.dataset.perfilUrl;
+
+  function getCookie(nombre) {
+    let valor = null;
+    if (document.cookie && document.cookie !== "") {
+      document.cookie.split(";").forEach((c) => {
+        c = c.trim();
+        if (c.substring(0, nombre.length + 1) === nombre + "=") {
+          valor = decodeURIComponent(c.substring(nombre.length + 1));
+        }
+      });
+    }
+    return valor;
+  }
 
   const trigger = document.getElementById("userMenuTrigger");
   const dropdown = document.getElementById("userMenuDropdown");
@@ -28,56 +42,52 @@
 
   const toast = document.getElementById("configToast");
 
-  /* ---------- estado guardado (prototipo, por navegador) ---------- */
-  function leerPerfilGuardado() {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      return raw ? JSON.parse(raw) : {};
-    } catch (e) {
-      return {};
-    }
-  }
-
-  function guardarPerfil(data) {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(data));
-    } catch (e) {
-      /* localStorage puede fallar en modo privado; no es crítico para el prototipo */
-    }
-  }
-
   function iniciales(texto) {
     return (texto || "?").trim().charAt(0).toUpperCase();
   }
 
-  function pintarAvatar(fotoDataUrl, nombreParaInicial) {
+function pintarAvatar(fotoUrl, nombreParaInicial) {
+  // Si no hay foto, directo a mostrar la inicial (sin intentar cargar nada).
+  if (!fotoUrl) {
     avatarNodes.forEach((node) => {
-      if (fotoDataUrl) {
-        node.style.backgroundImage = `url(${fotoDataUrl})`;
-        node.textContent = "";
-      } else {
-        node.style.backgroundImage = "";
-        node.textContent = iniciales(nombreParaInicial);
-      }
+      node.style.backgroundImage = "";
+      node.textContent = iniciales(nombreParaInicial);
     });
+    return;
   }
 
+  // Mientras se confirma si la imagen carga, dejamos la inicial puesta
+  // (evita el círculo vacío si la imagen tarda o nunca llega).
+  avatarNodes.forEach((node) => {
+    node.style.backgroundImage = "";
+    node.textContent = iniciales(nombreParaInicial);
+  });
+
+  // Precarga: solo si la imagen realmente existe/carga se pone de fondo.
+  // Si el fotoUrl es un data: URL (preview local del <input type=file>)
+  // esto también funciona igual, siempre "carga" porque ya está en memoria.
+  const probe = new Image();
+  probe.onload = () => {
+    avatarNodes.forEach((node) => {
+      node.style.backgroundImage = `url(${fotoUrl})`;
+      node.textContent = "";
+    });
+  };
+  probe.onerror = () => {
+    // 404 o cualquier error: se queda con la inicial, ya puesta arriba.
+  };
+  probe.src = fotoUrl;
+}
   function pintarNombre(nombre, usuarioTxt) {
     document.querySelectorAll("[data-display-nombre]").forEach((n) => (n.textContent = nombre));
     document.querySelectorAll("[data-display-usuario]").forEach((n) => (n.textContent = `@${usuarioTxt}`));
   }
 
-  /* ---------- carga inicial: combina lo del servidor con lo guardado local ---------- */
-  const perfilGuardado = leerPerfilGuardado();
-  const nombreInicial = perfilGuardado.nombre || root.dataset.nombre || root.dataset.username;
-  pintarAvatar(perfilGuardado.foto || null, nombreInicial);
-  if (perfilGuardado.nombre) pintarNombre(perfilGuardado.nombre, perfilGuardado.usuario || username);
-
-  if (form) {
-    if (perfilGuardado.nombre) form.nombre.value = perfilGuardado.nombre;
-    if (perfilGuardado.correo) form.correo.value = perfilGuardado.correo;
-    if (perfilGuardado.telefono) form.telefono.value = perfilGuardado.telefono;
-  }
+  /* ---------- carga inicial: viene directo de la sesión (ya real, del api/) ---------- */
+  const nombreInicial = root.dataset.nombre || root.dataset.username;
+  let nombreActual = nombreInicial; // se actualiza cada vez que se guarda un cambio de nombre
+  let fotoGuardada = root.dataset.foto || null;
+  pintarAvatar(fotoGuardada, nombreActual);
 
   /* ---------- dropdown ---------- */
   function cerrarDropdown() {
@@ -113,6 +123,15 @@
     if (!modal) return;
     modal.classList.remove("is-open");
     modal.setAttribute("aria-hidden", "true");
+
+    // Se cierra sin guardar: se descarta cualquier foto/campo que haya
+    // quedado a medias (si no, al reabrir se veria un preview que en
+    // realidad nunca se mando al api/).
+    archivoFotoPendiente = null;
+    quitarFotoPendiente = false;
+    if (avatarInput) avatarInput.value = "";
+    pintarAvatar(fotoGuardada, nombreActual);
+    if (form) form.reset();
   }
 
   if (openConfigBtn) openConfigBtn.addEventListener("click", abrirModal);
@@ -123,8 +142,18 @@
     if (e.key === "Escape" && modal && modal.classList.contains("is-open")) cerrarModal();
   });
 
-  /* ---------- foto de perfil (prototipo, se guarda como base64 local) ---------- */
-  let fotoActual = perfilGuardado.foto || null;
+  /* ---------- foto de perfil ----------
+     No se manda nada al api/ hasta que se le da "Guardar cambios": aqui solo
+     se guarda el archivo elegido (o la intención de quitar la foto) y se
+     pinta el preview. */
+  let archivoFotoPendiente = null; // File elegido en avatarInput, o null
+  let quitarFotoPendiente = false; // true si dieron "Quitar foto"
+
+  function previsualizarArchivo(file) {
+    const reader = new FileReader();
+    reader.onload = () => pintarAvatar(reader.result, form ? form.nombre.value : nombreInicial);
+    reader.readAsDataURL(file);
+  }
 
   if (avatarInput) {
     avatarInput.addEventListener("change", () => {
@@ -132,47 +161,91 @@
       if (!file) return;
       if (!file.type.startsWith("image/")) return;
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        fotoActual = reader.result;
-        pintarAvatar(fotoActual, form ? form.nombre.value : nombreInicial);
-      };
-      reader.readAsDataURL(file);
+      archivoFotoPendiente = file;
+      quitarFotoPendiente = false;
+      previsualizarArchivo(file);
     });
   }
 
   if (avatarRemoveBtn) {
     avatarRemoveBtn.addEventListener("click", () => {
-      fotoActual = null;
+      archivoFotoPendiente = null;
+      quitarFotoPendiente = true;
       if (avatarInput) avatarInput.value = "";
       pintarAvatar(null, form ? form.nombre.value : nombreInicial);
     });
   }
 
-  /* ---------- guardar cambios (prototipo: no pega al api/, solo local) ---------- */
-  function mostrarToast(msg) {
+  /* ---------- guardar cambios: PATCH real contra el api/ ---------- */
+  function mostrarToast(msg, esError) {
     if (!toast) return;
     toast.textContent = msg;
+    toast.classList.toggle("is-error", !!esError);
     toast.classList.add("is-visible");
     window.clearTimeout(mostrarToast._t);
     mostrarToast._t = window.setTimeout(() => toast.classList.remove("is-visible"), 2600);
   }
 
+  function primerError(errores) {
+    if (!errores || typeof errores !== "object") return "No se pudieron guardar los cambios.";
+    const primeraClave = Object.keys(errores)[0];
+    if (!primeraClave) return "No se pudieron guardar los cambios.";
+    const detalle = errores[primeraClave];
+    return Array.isArray(detalle) ? detalle[0] : String(detalle);
+  }
+
   if (form) {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
+      if (!perfilUrl) return;
+
       const nombre = form.nombre.value.trim() || nombreInicial;
-      const correo = form.correo.value.trim();
-      const telefono = form.telefono.value.trim();
+      const submitBtn = form.querySelector('button[type="submit"]');
 
-      const nuevoPerfil = { nombre, correo, telefono, usuario: username, foto: fotoActual };
-      guardarPerfil(nuevoPerfil);
+      const datos = new FormData();
+      datos.append("nombre", nombre);
+      datos.append("correo", form.correo.value.trim());
+      datos.append("telefono", form.telefono.value.trim());
+      if (archivoFotoPendiente) {
+        datos.append("foto", archivoFotoPendiente);
+      } else if (quitarFotoPendiente) {
+        datos.append("eliminar_foto", "1");
+      }
 
-      pintarNombre(nombre, username);
-      pintarAvatar(fotoActual, nombre);
+      if (submitBtn) submitBtn.disabled = true;
 
-      cerrarModal();
-      mostrarToast("Cambios guardados en este navegador (modo prototipo).");
+      fetch(perfilUrl, {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: datos,
+      })
+        .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+          if (!ok || !data.ok) {
+            mostrarToast(primerError(data.errores), true);
+            return;
+          }
+
+          const usuario = data.usuario || {};
+          fotoGuardada = usuario.foto || null;
+          nombreActual = usuario.nombre || nombre;
+          archivoFotoPendiente = null;
+          quitarFotoPendiente = false;
+
+          form.nombre.defaultValue = form.nombre.value;
+          form.correo.defaultValue = form.correo.value;
+          form.telefono.defaultValue = form.telefono.value;
+
+          pintarNombre(nombreActual, username);
+          pintarAvatar(fotoGuardada, nombreActual);
+
+          cerrarModal();
+          mostrarToast("Cambios guardados.");
+        })
+        .catch(() => mostrarToast("No se pudo conectar con el servidor.", true))
+        .finally(() => {
+          if (submitBtn) submitBtn.disabled = false;
+        });
     });
   }
 })();

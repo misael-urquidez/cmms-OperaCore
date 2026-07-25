@@ -342,6 +342,10 @@
     transition: opacity 0.2s ease, transform 0.2s ease;
 }
 .config-toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+.config-toast.is-error {
+    border-color: rgba(252, 165, 165, 0.4);
+    color: #fecaca;
+}
 
 @media (max-width: 480px) {
     .user-menu__name { display: none; }

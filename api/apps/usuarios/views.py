@@ -86,7 +86,7 @@ class RegistroAPIView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         trabajador = serializer.save()
-        data = serializers.TrabajadorSerializer(trabajador).data
+        data = serializers.TrabajadorSerializer(trabajador, context={"request": request}).data
         return Response(data, status=status.HTTP_201_CREATED)
 
 
@@ -136,5 +136,5 @@ class LoginAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        data = serializers.TrabajadorSerializer(trabajador).data
+        data = serializers.TrabajadorSerializer(trabajador, context={"request": request}).data
         return Response(data, status=status.HTTP_200_OK)
