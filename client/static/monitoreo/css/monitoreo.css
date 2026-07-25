@@ -17,6 +17,10 @@
 
 /* -------- leyenda -------- */
 .plant-legend { display:flex; flex-wrap:wrap; gap:1rem; font-size:.78rem; color:var(--color-muted); }
+.plant-filter { display:flex; align-items:center; gap:.6rem; margin:.9rem 0 0; }
+.plant-filter label { font-size:.78rem; color:var(--color-muted); }
+.plant-filter select { background:var(--input-bg); border:1px solid var(--line); border-radius:.45rem; padding:.45rem .6rem; color:var(--color-text); font-size:.85rem; font-family:inherit; min-width:200px; }
+.plant-filter select:focus { outline:none; border-color:var(--color-primary); }
 .plant-legend .dot { display:inline-block; width:.55rem; height:.55rem; border-radius:50%; margin-right:.35rem; }
 .dot--OPERA { background:#22c55e; } .dot--MANTE { background:#f59e0b; } .dot--FALLO { background:#ef4444; }
 .dot--ALERT { background:#fbbf24; box-shadow:0 0 0 3px rgba(251,191,36,.25); } .dot--sin { background:var(--color-muted); }
@@ -28,6 +32,7 @@
 .plant-canvas { position:relative; min-height:560px; min-width:100%; width:max-content; }
 .plant-canvas__links { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
 .plant-canvas__empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--color-muted); font-size:.9rem; }
+.plant-canvas__empty[hidden] { display:none; }
 
 /* -------- nodo de máquina -------- */
 .machine-node { position:absolute; width:150px; touch-action:none; cursor:grab; user-select:none; }
@@ -53,8 +58,15 @@
 .machine-node__flag { display:inline-flex; align-items:center; gap:.25rem; margin-top:.4rem; font-size:.68rem; color:#fbbf24; font-weight:700; }
 
 .plant-link { stroke:var(--line); stroke-width:2; fill:none; }
-.plant-link--anim { stroke:var(--color-primary); stroke-width:2; stroke-dasharray:6 6; fill:none; opacity:.55; animation:dash-flow 1.4s linear infinite; }
+.plant-link--anim { stroke-width:2; stroke-dasharray:6 6; fill:none; opacity:.6; animation:dash-flow 1.4s linear infinite; }
 @keyframes dash-flow { to { stroke-dashoffset:-24; } }
+
+.plant-link--linea0 { stroke:#22d3ee; }
+.plant-link--linea1 { stroke:#f472b6; }
+.plant-link--linea2 { stroke:#a3e635; }
+.plant-link--linea3 { stroke:#fb923c; }
+.plant-link--linea4 { stroke:#818cf8; }
+.plant-link--linea5 { stroke:#facc15; }
 
 /* -------- drawer lateral -------- */
 .machine-drawer { position:fixed; inset:0; z-index:60; visibility:hidden; }

@@ -1,7 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from apps.fallas.models import EstadoMaquina, Linea, Maquina, Marca, Modelo, TipoMaquina
+from apps.fallas.models import EstadoMaquina, Linea, Maquina, Marca, Modelo, TipoMaquina, TipoMaquinaArea
 
 from . import services
 from .models import LecturaSensor
@@ -51,6 +51,17 @@ class CrearMaquinaSerializer(serializers.Serializer):
         if Maquina.objects.filter(codigo=codigo).exists():
             raise serializers.ValidationError("Ya existe una máquina con este código.")
         return codigo
+
+    def validate(self, datos):
+        linea = datos.get("linea")
+        tipo_maquina = datos.get("tipo_maquina")
+        if linea and tipo_maquina:
+            restringido = TipoMaquinaArea.objects.filter(tipo_maquina=tipo_maquina).exists()
+            if restringido and not TipoMaquinaArea.objects.filter(tipo_maquina=tipo_maquina, area=linea.area).exists():
+                raise serializers.ValidationError({
+                    "tipo_maquina": "Este tipo de máquina no es compatible con el área de esa línea."
+                })
+        return datos
 
     def create(self, datos):
         linea = datos.get("linea")

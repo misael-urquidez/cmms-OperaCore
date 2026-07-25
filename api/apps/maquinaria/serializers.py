@@ -7,6 +7,7 @@ from .models import (
     Marca,
     Modelo,
     TipoMaquina,
+    TipoMaquinaArea,
     Maquina,
 )
 from apps.mantenimiento.models import Refaccion, OrdenMantenimiento
@@ -205,7 +206,24 @@ class DetailMaquinaSerializer(serializers.ModelSerializer):
         model = Maquina
         fields = "__all__"
 
-class CreateMaquinaSerializer(serializers.ModelSerializer):
+class ValidarTipoMaquinaAreaMixin:
+    """Bloquea guardar una máquina cuyo tipo_maquina no sea compatible con el
+    área de la línea elegida. El getattr(self.instance, ...) cubre el caso de
+    un PATCH parcial donde `linea` o `tipo_maquina` no vienen en el payload."""
+
+    def validate(self, datos):
+        linea = datos.get("linea") or getattr(self.instance, "linea", None)
+        tipo_maquina = datos.get("tipo_maquina") or getattr(self.instance, "tipo_maquina", None)
+        if linea and tipo_maquina:
+            restringido = TipoMaquinaArea.objects.filter(tipo_maquina=tipo_maquina).exists()
+            if restringido and not TipoMaquinaArea.objects.filter(tipo_maquina=tipo_maquina, area=linea.area).exists():
+                raise serializers.ValidationError({
+                    "tipo_maquina": "Este tipo de máquina no es compatible con el área de esa línea."
+                })
+        return datos
+
+
+class CreateMaquinaSerializer(ValidarTipoMaquinaAreaMixin, serializers.ModelSerializer):
     class Meta:
         model = Maquina
         fields = [
@@ -214,7 +232,7 @@ class CreateMaquinaSerializer(serializers.ModelSerializer):
             "estado_maquina", "tipo_maquina"
         ]
 
-class UpdateMaquinaSerializer(serializers.ModelSerializer):
+class UpdateMaquinaSerializer(ValidarTipoMaquinaAreaMixin, serializers.ModelSerializer):
     class Meta:
         model = Maquina
         fields = [

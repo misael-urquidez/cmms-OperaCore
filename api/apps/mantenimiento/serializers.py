@@ -157,3 +157,44 @@ class UpdateTrabaOrdePersonalSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TrabaOrdePersonal
         fields = ["trabajador", "orden_mantenimiento"]
+
+
+# ------------ ORDEN_MANTENIMIENTO ---------------------------------------
+class ListOrdenMantenimientoSerializer(serializers.ModelSerializer):
+    maquina_nombre = serializers.CharField(source="maquina.nombre", read_only=True)
+    trabajador_nombre = serializers.CharField(source="trabajador.nombre", read_only=True)
+    tipo_mantenimiento_nombre = serializers.CharField(source="tipo_mantenimiento.nombre", read_only=True)
+    estado_orden_nombre = serializers.CharField(source="estado_orden.nombre", read_only=True)
+
+    class Meta:
+        model = models.OrdenMantenimiento
+        fields = ["folio", "descripcion", "fechacreacion", "horacreacion", "fechaprogramada", "fechacierre", "maquina", "maquina_nombre", "trabajador", "trabajador_nombre", "reporte_falla", "tipo_mantenimiento", "tipo_mantenimiento_nombre", "estado_orden", "estado_orden_nombre"]
+
+
+class DetailOrdenMantenimientoSerializer(ListOrdenMantenimientoSerializer):
+    class Meta(ListOrdenMantenimientoSerializer.Meta):
+        fields = ["folio", "descripcion", "diagnostico", "notas", "fechaprogramada", "fechacreacion", "horacreacion", "fechacierre", "horacierre", "horasintervenidas", "porcentaje", "maquina", "maquina_nombre", "trabajador", "trabajador_nombre", "reporte_falla", "tipo_mantenimiento", "tipo_mantenimiento_nombre", "estado_orden", "estado_orden_nombre"]
+
+
+class CreateOrdenMantenimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.OrdenMantenimiento
+        fields = ["descripcion", "fechaprogramada", "maquina", "trabajador", "reporte_falla", "tipo_mantenimiento", "notas"]
+        extra_kwargs = {"trabajador": {"required": False, "allow_null": True}, "reporte_falla": {"required": False, "allow_null": True}, "notas": {"required": False, "allow_null": True}, "fechaprogramada": {"required": False, "allow_null": True}}
+
+    def create(self, validated_data):
+        from django.utils import timezone
+        ahora = timezone.localtime()
+        folio = f"OMP{ahora:%y%m%d%H%M%S}"
+        estado = models.EstadoOrden.objects.filter(codigo="PROGR" if validated_data.get("trabajador") else "SOLIC").first()
+        return models.OrdenMantenimiento.objects.create(folio=folio, fechacreacion=ahora.date(), horacreacion=ahora.time(), estado_orden=estado, **validated_data)
+
+
+class AsignarTrabajadorOrdenSerializer(serializers.Serializer):
+    trabajador = serializers.CharField()
+
+
+class CerrarOrdenSerializer(serializers.Serializer):
+    diagnostico = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    notas = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    horasIntervenidas = serializers.FloatField(required=False, allow_null=True)
