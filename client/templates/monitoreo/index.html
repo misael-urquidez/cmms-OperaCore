@@ -15,7 +15,8 @@
          data-modo-url-base="{% url 'monitoreo:modo' codigo='__CODIGO__' %}"
          data-lectura-manual-url="{% url 'monitoreo:lectura-manual' %}"
          data-simular-url-base="{% url 'monitoreo:simular' codigo='__CODIGO__' %}"
-         data-registro-ops-url-base="{% url 'monitoreo:registro-ops' codigo='__CODIGO__' %}">
+         data-registro-ops-url-base="{% url 'monitoreo:registro-ops' codigo='__CODIGO__' %}"
+         data-crear-orden-url="{% url 'mantenimiento:ordenes-crear' %}">
 
   {{ maquinas|json_script:"maquinas-data" }}
 
@@ -153,6 +154,8 @@
 
     <div class="machine-drawer__foot">
       <a href="{% url 'fallas:reporte' %}" class="btn-plant-secondary" id="drawerReportarFalla">Reportar falla en esta máquina</a>
+      <button type="button" class="btn-plant-new" id="drawerLevantarOrden" style="margin-top:.6rem;width:100%;">Levantar orden de mantenimiento preventivo</button>
+      <p class="feedback-msg" id="drawerOrdenMsg" hidden></p>
     </div>
   </aside>
 </div>

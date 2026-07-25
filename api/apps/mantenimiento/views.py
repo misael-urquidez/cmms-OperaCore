@@ -1,5 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
+from django.utils import timezone
+from apps.usuarios.models import Trabajador
 from rest_framework import generics, status
 from . import models
 from . import serializers
@@ -183,3 +186,57 @@ class TrabaOrdePersonalDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 # A partir de aqui sigue el mismo patron cuando quieras exponer
 # OrdenMantenimiento / Movimiento.
+
+
+# ------------ ORDEN_MANTENIMIENTO ---------------------------------------
+class OrdenMantenimientoListAPIView(generics.ListAPIView):
+    serializer_class = serializers.ListOrdenMantenimientoSerializer
+    def get_queryset(self):
+        qs = models.OrdenMantenimiento.objects.select_related("maquina", "trabajador", "tipo_mantenimiento", "estado_orden").order_by("-fechacreacion", "-horacreacion")
+        if self.request.query_params.get("trabajador"):
+            qs = qs.filter(trabajador_id=self.request.query_params["trabajador"])
+        if self.request.query_params.get("estado"):
+            qs = qs.filter(estado_orden_id=self.request.query_params["estado"])
+        return qs
+
+class OrdenMantenimientoDetailAPIView(generics.RetrieveAPIView):
+    queryset = models.OrdenMantenimiento.objects.select_related("maquina", "trabajador", "tipo_mantenimiento", "estado_orden")
+    serializer_class = serializers.DetailOrdenMantenimientoSerializer
+    lookup_field = "folio"
+
+class OrdenMantenimientoCreateAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateOrdenMantenimientoSerializer
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data); serializer.is_valid(raise_exception=True)
+        return Response(serializers.DetailOrdenMantenimientoSerializer(serializer.save()).data, status=status.HTTP_201_CREATED)
+
+class OrdenMantenimientoAsignarAPIView(APIView):
+    def patch(self, request, folio):
+        try: orden = models.OrdenMantenimiento.objects.get(pk=folio)
+        except models.OrdenMantenimiento.DoesNotExist as exc: raise NotFound("Orden no encontrada.") from exc
+        serializer = serializers.AsignarTrabajadorOrdenSerializer(data=request.data); serializer.is_valid(raise_exception=True)
+        try: orden.trabajador = Trabajador.objects.get(pk=serializer.validated_data["trabajador"])
+        except Trabajador.DoesNotExist: return Response({"trabajador": "No existe ese trabajador."}, status=400)
+        if orden.estado_orden_id == "SOLIC": orden.estado_orden_id = "PROGR"
+        orden.save(update_fields=["trabajador", "estado_orden"])
+        return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
+
+class OrdenMantenimientoIniciarAPIView(APIView):
+    def patch(self, request, folio):
+        try: orden = models.OrdenMantenimiento.objects.get(pk=folio)
+        except models.OrdenMantenimiento.DoesNotExist as exc: raise NotFound("Orden no encontrada.") from exc
+        orden.estado_orden_id = "ENPRO"; orden.save(update_fields=["estado_orden"])
+        return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
+
+class OrdenMantenimientoCerrarAPIView(APIView):
+    def patch(self, request, folio):
+        try: orden = models.OrdenMantenimiento.objects.get(pk=folio)
+        except models.OrdenMantenimiento.DoesNotExist as exc: raise NotFound("Orden no encontrada.") from exc
+        if orden.fechacierre is not None: return Response({"detail": "Esta orden ya está cerrada."}, status=400)
+        serializer = serializers.CerrarOrdenSerializer(data=request.data); serializer.is_valid(raise_exception=True)
+        datos, ahora = serializer.validated_data, timezone.localtime()
+        for campo, valor in (("diagnostico", datos.get("diagnostico")), ("notas", datos.get("notas")), ("horasintervenidas", datos.get("horasIntervenidas"))):
+            if valor is not None: setattr(orden, campo, valor)
+        orden.fechacierre, orden.horacierre, orden.estado_orden_id = ahora.date(), ahora.time(), "CERRA"
+        orden.save(update_fields=["diagnostico", "notas", "horasintervenidas", "fechacierre", "horacierre", "estado_orden"])
+        return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)

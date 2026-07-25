@@ -173,6 +173,27 @@ END$$
 
 DELIMITER ;
 
+DROP TRIGGER IF EXISTS tg_disponibilidad_indicador_insert;
+
+DELIMITER $$
+
+CREATE TRIGGER tg_disponibilidad_indicador_insert
+BEFORE INSERT ON INDICADOR
+FOR EACH ROW
+BEGIN
+    DECLARE nuevaDisponibilidad INT;
+
+    IF NEW.mtbf IS NOT NULL AND NEW.mttr IS NOT NULL AND (NEW.mtbf + NEW.mttr) > 0 THEN
+        SET nuevaDisponibilidad = ROUND((NEW.mtbf / (NEW.mtbf + NEW.mttr)) * 100);
+    ELSE
+        SET nuevaDisponibilidad = NULL;
+    END IF;
+
+    SET NEW.porcentajeDispo = nuevaDisponibilidad;
+END$$
+
+DELIMITER ;
+
 /*
 Trigger 6 y 7
 Validan que el tipo_maquina asignado a una MAQUINA sea compatible con el
