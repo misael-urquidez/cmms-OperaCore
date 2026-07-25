@@ -4,10 +4,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    
     {% include 'favicon.html' %}
     <title>{% block title %}Panel Técnico · OperaCore{% endblock %}</title>
 
     <link rel="icon" href="{% static 'img/pre_logo.png' %}">
+    
+    <!-- Fuentes recomendadas para una UI más limpia (Opcional, puedes removerlo si ya usas una) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Estilos base -->
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
     <link rel="stylesheet" href="{% static 'css/tecni.css' %}">
@@ -19,36 +28,59 @@
 <div class="tecni-shell" id="tecniShell">
 
     {# ============ SIDEBAR ============ #}
-    <aside class="tecni-sidebar" id="tecniSidebar">
+    <aside class="tecni-sidebar" id="tecniSidebar" aria-label="Navegación principal">
+        
+        <!-- Branding -->
         <div class="tecni-sidebar__brand">
-            <img src="{% static 'img/pre_logo.png' %}" alt="OperaCore" width="30" height="30">
+            <img src="{% static 'img/pre_logo.png' %}" alt="Logo OperaCore" width="32" height="32" class="tecni-sidebar__brand-logo">
             <div class="tecni-sidebar__brand-text">
                 <span class="tecni-sidebar__brand-name">OperaCore</span>
-                <span class="tecni-sidebar__brand-sub">Panel de técnico</span>
+                <span class="tecni-sidebar__brand-sub">Panel de Técnico</span>
             </div>
-            <button type="button" class="tecni-sidebar__collapse" id="tecniSidebarCollapse" aria-label="Contraer menú">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            <button type="button" class="tecni-sidebar__collapse" id="tecniSidebarCollapse" aria-label="Contraer menú" title="Contraer menú">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
             </button>
         </div>
 
+        <!-- Menú de Navegación -->
         <nav class="tecni-sidebar__nav">
             <p class="tecni-sidebar__section">General</p>
 
-            <a class="tecni-sidebar__link {% if seccion == 'dashboard' %}is-active{% endif %}" href="{% url 'usuarios:tecni_dashboard' %}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+            <a class="tecni-sidebar__link {% if seccion == 'dashboard' %}is-active{% endif %}" 
+               href="{% url 'usuarios:tecni_dashboard' %}"
+               {% if seccion == 'dashboard' %}aria-current="page"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+                    <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+                    <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+                    <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+                </svg>
                 <span>Dashboard</span>
             </a>
 
-            <a class="tecni-sidebar__link {% if seccion == 'mantenimiento' %}is-active{% endif %}" href="{% url 'mantenimiento:index' %}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <a class="tecni-sidebar__link {% if seccion == 'mantenimiento' %}is-active{% endif %}" 
+               href="{% url 'mantenimiento:index' %}"
+               {% if seccion == 'mantenimiento' %}aria-current="page"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                </svg>
                 <span>Mantenimiento</span>
             </a>
 
+            <!-- Grupo Desplegable: Fallas -->
             <div class="tecni-sidebar__group {% if seccion == 'fallas' %}is-open{% endif %}">
                 <button type="button" class="tecni-sidebar__link tecni-sidebar__group-toggle" aria-expanded="{% if seccion == 'fallas' %}true{% else %}false{% endif %}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
                     <span>Fallas</span>
-                    <svg class="tecni-sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    <svg class="tecni-sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                 </button>
                 <div class="tecni-sidebar__submenu">
                     <a href="{% url 'fallas:reporte' %}" class="{% if seccion == 'fallas' and subseccion == 'reporte' %}is-active{% endif %}">Nuevo reporte</a>
@@ -56,30 +88,52 @@
                 </div>
             </div>
 
-            <a class="tecni-sidebar__link {% if seccion == 'maquinaria' %}is-active{% endif %}" href="{% url 'maquinaria:index' %}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            <a class="tecni-sidebar__link {% if seccion == 'maquinaria' %}is-active{% endif %}" 
+               href="{% url 'maquinaria:index' %}"
+               {% if seccion == 'maquinaria' %}aria-current="page"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                    <rect x="9" y="9" width="6" height="6"></rect>
+                    <line x1="9" y1="1" x2="9" y2="4"></line>
+                    <line x1="15" y1="1" x2="15" y2="4"></line>
+                    <line x1="9" y1="20" x2="9" y2="23"></line>
+                    <line x1="15" y1="20" x2="15" y2="23"></line>
+                    <line x1="20" y1="9" x2="23" y2="9"></line>
+                    <line x1="20" y1="14" x2="23" y2="14"></line>
+                    <line x1="1" y1="9" x2="4" y2="9"></line>
+                    <line x1="1" y1="14" x2="4" y2="14"></line>
+                </svg>
                 <span>Maquinaria</span>
             </a>
-            {# Nota: a proposito NO se incluye "Registrar nueva" maquina ni Elipse ni Gestion #}
+            {# Nota: a propósito NO se incluye "Registrar nueva" máquina ni Elipse ni Gestión #}
         </nav>
 
         <div class="tecni-sidebar__foot">
             <span class="tecni-sidebar__foot-dot"></span>
-            <span class="tecni-sidebar__foot-text">Modo técnico</span>
+            <span class="tecni-sidebar__foot-text">Modo Técnico Activo</span>
         </div>
     </aside>
 
     {# ============ ÁREA PRINCIPAL ============ #}
     <div class="tecni-main">
 
+        <!-- Topbar -->
         <header class="tecni-topbar">
-            <button type="button" class="tecni-topbar__menu" id="tecniSidebarOpen" aria-label="Abrir menú">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-            </button>
+            <div class="tecni-topbar__left">
+                <button type="button" class="tecni-topbar__menu" id="tecniSidebarOpen" aria-label="Abrir menú de navegación">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
 
-            <div class="tecni-topbar__titles">
-                <p class="tecni-topbar__breadcrumb">{% block breadcrumb %}Panel técnico{% endblock %}</p>
-                <h1 class="tecni-topbar__title">{% block page_title %}Dashboard{% endblock %}</h1>
+                <div class="tecni-topbar__titles">
+                    <nav aria-label="breadcrumb">
+                        <p class="tecni-topbar__breadcrumb">{% block breadcrumb %}Panel técnico{% endblock %}</p>
+                    </nav>
+                    <h1 class="tecni-topbar__title">{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
             </div>
 
             <div class="tecni-topbar__right">
@@ -87,38 +141,56 @@
             </div>
         </header>
 
-        <main class="tecni-content">
+        <!-- Contenido Principal -->
+        <main class="tecni-content" role="main">
+            
+            <!-- Sistema de Notificaciones (Toasts) -->
             {% if messages %}
-                <ul class="messages">
+                <div class="messages" aria-live="polite">
                     {% for message in messages %}
-                        <li class="messages__item messages__item--{{ message.tags }}">{{ message }}</li>
+                        <div class="messages__item messages__item--{{ message.tags }}" role="alert">
+                            {{ message }}
+                        </div>
                     {% endfor %}
-                </ul>
+                </div>
             {% endif %}
 
-            {% block content %}{% endblock %}
+            <!-- Bloque de inyección de contenido -->
+            <div class="tecni-content__wrapper">
+                {% block content %}{% endblock %}
+            </div>
         </main>
     </div>
 </div>
 
-<div class="tecni-sidebar-backdrop" id="tecniSidebarBackdrop"></div>
+<!-- Backdrop para móviles -->
+<div class="tecni-sidebar-backdrop" id="tecniSidebarBackdrop" aria-hidden="true"></div>
 
+<!-- Modales -->
 {% include 'partials/config_modal_tecni.html' %}
 
+<!-- Scripts Base -->
 <script src="{% static 'js/navbar.js' %}"></script>
 <script src="{% static 'js/tecni-theme.js' %}"></script>
 <script src="{% static 'js/tecni-sidebar.js' %}"></script>
+
+<!-- Lógica de Notificaciones -->
 <script>
-(function(){
-  var msgs = document.querySelectorAll('.messages__item');
-  msgs.forEach(function(el){
-    setTimeout(function(){
-      el.classList.add('messages__item--hide');
-      el.addEventListener('transitionend', function(){ el.remove(); });
-    }, 3500);
-  });
-})();
+    document.addEventListener("DOMContentLoaded", function() {
+        const msgs = document.querySelectorAll('.messages__item');
+        msgs.forEach(function(el) {
+            setTimeout(function() {
+                el.classList.add('messages__item--hide');
+                el.addEventListener('transitionend', function() { 
+                    el.remove(); 
+                });
+            }, 4000); // Ligeramente aumentado a 4s para mejorar la legibilidad
+        });
+    });
 </script>
+
+<!-- Scripts Adicionales -->
 {% block extra_js %}{% endblock %}
+
 </body>
 </html>

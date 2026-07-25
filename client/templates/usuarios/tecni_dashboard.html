@@ -1,90 +1,144 @@
 {% extends "base_tecni.html" %}
+
 {% block title %}Dashboard · Panel Técnico{% endblock %}
 {% block breadcrumb %}Panel de técnico{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard Operativo{% endblock %}
 
 {% block content %}
 
-  <section class="hero" style="margin-bottom:1.5rem;">
-    <p class="hero__eyebrow">Hola, {{ request.session.usuario.nombre|default:request.session.usuario.usuario }} 👋</p>
-    <p style="color:var(--color-muted); margin:0;">Esto es lo que tienes pendiente hoy.</p>
+  <!-- Sección de Bienvenida / Hero -->
+  <section class="tecni-hero-modern" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end;">
+    <div>
+      <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-primary, #38bdf8); font-weight: 600; display: block; margin-bottom: 0.35rem;">Panel de Control</span>
+      <h1 style="margin: 0 0 0.3rem 0; font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em;">
+        Hola, {{ request.session.usuario.nombre|default:request.session.usuario.usuario|title }}
+      </h1>
+      <p style="color: var(--color-muted, #94a3b8); margin: 0; font-size: 0.95rem;">
+        Aquí tienes el resumen operativo actual y los accesos rápidos para tu jornada.
+      </p>
+    </div>
   </section>
 
-  <section class="tecni-stat-grid">
-    <div class="tecni-stat-card">
-      <div class="tecni-stat-card__icon tecni-stat-card__icon--amber">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+  <!-- Tarjetas de Estadísticas -->
+  <section class="tecni-stat-grid" style="margin-bottom: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem;">
+    <div class="tecni-stat-card" style="position: relative; overflow: hidden;">
+      <div class="tecni-stat-card__icon tecni-stat-card__icon--amber" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>
+          <path d="M12 9v4M12 17h.01"/>
+        </svg>
       </div>
       <div>
         <p class="tecni-stat-card__label">Fallas abiertas</p>
-        <p class="tecni-stat-card__value">{{ stats.fallas_abiertas|default:"—" }}</p>
+        <p class="tecni-stat-card__value" style="font-size: 1.85rem; font-weight: 700; letter-spacing: -0.03em;">{{ stats.fallas_abiertas|default:"0" }}</p>
         <p class="tecni-stat-card__hint">reportes sin resolver</p>
       </div>
     </div>
 
-    <div class="tecni-stat-card">
-      <div class="tecni-stat-card__icon tecni-stat-card__icon--green">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.8-2.8 2.4-2.8Z"/></svg>
+    <div class="tecni-stat-card" style="position: relative; overflow: hidden;">
+      <div class="tecni-stat-card__icon tecni-stat-card__icon--green" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.8-2.8 2.4-2.8Z"/>
+        </svg>
       </div>
       <div>
         <p class="tecni-stat-card__label">Mis órdenes activas</p>
-        <p class="tecni-stat-card__value">{{ stats.ordenes_activas|default:"—" }}</p>
+        <p class="tecni-stat-card__value" style="font-size: 1.85rem; font-weight: 700; letter-spacing: -0.03em;">{{ stats.ordenes_activas|default:"0" }}</p>
         <p class="tecni-stat-card__hint">mantenimientos en curso</p>
       </div>
     </div>
   </section>
 
-  <section class="tecni-panel-grid">
-    <div class="tecni-panel">
-      <div class="tecni-panel__head">
-        <h2 class="tecni-panel__title">Acciones rápidas</h2>
+  <!-- Contenedor de Paneles Principales -->
+  <section class="tecni-panel-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+    
+    <!-- Acciones Rápidas -->
+    <div class="tecni-panel" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div class="tecni-panel__head" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06); padding-bottom: 1rem; margin-bottom: 1rem;">
+        <h2 class="tecni-panel__title" style="font-size: 1.1rem; font-weight: 600;">Acciones rápidas</h2>
       </div>
-      <div class="tecni-quick-actions">
-        <a class="tecni-quick-action" href="{% url 'fallas:reporte' %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
-          Nuevo reporte de falla
+      <div class="tecni-quick-actions" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+        <a class="tecni-quick-action" href="{% url 'fallas:reporte' %}" style="display: flex; flex-direction: column; gap: 0.5rem; padding: 1.1rem; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.06); background: rgba(255, 255, 255, 0.01); transition: all 0.2s ease;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="color: var(--color-primary, #38bdf8);">
+            <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>
+          </svg>
+          <span style="font-weight: 500; font-size: 0.9rem;">Nuevo reporte de falla</span>
         </a>
-        <a class="tecni-quick-action" href="{% url 'fallas:lista' %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5M4 12h4l2-5 4 10 2-5h4"/></svg>
-          Ver mis reportes
+        <a class="tecni-quick-action" href="{% url 'fallas:lista' %}" style="display: flex; flex-direction: column; gap: 0.5rem; padding: 1.1rem; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.06); background: rgba(255, 255, 255, 0.01); transition: all 0.2s ease;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="color: #34d399;">
+            <path d="M4 19V5M4 12h4l2-5 4 10 2-5h4"/>
+          </svg>
+          <span style="font-weight: 500; font-size: 0.9rem;">Ver mis reportes</span>
         </a>
-        <a class="tecni-quick-action" href="{% url 'mantenimiento:index' %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-          Ir a mantenimiento
+        <a class="tecni-quick-action" href="{% url 'mantenimiento:index' %}" style="display: flex; flex-direction: column; gap: 0.5rem; padding: 1.1rem; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.06); background: rgba(255, 255, 255, 0.01); transition: all 0.2s ease;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="color: #a78bfa;">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <path d="M16 2v4M8 2v4M3 10h18"/>
+          </svg>
+          <span style="font-weight: 500; font-size: 0.9rem;">Ir a mantenimiento</span>
         </a>
-        <a class="tecni-quick-action" href="{% url 'maquinaria:index' %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          Ver máquinas
+        <a class="tecni-quick-action" href="{% url 'maquinaria:index' %}" style="display: flex; flex-direction: column; gap: 0.5rem; padding: 1.1rem; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.06); background: rgba(255, 255, 255, 0.01); transition: all 0.2s ease;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="color: #fbbf24;">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span style="font-weight: 500; font-size: 0.9rem;">Ver máquinas</span>
         </a>
       </div>
     </div>
 
+    <!-- Últimas Fallas Reportadas -->
     <div class="tecni-panel">
-      <div class="tecni-panel__head">
-        <h2 class="tecni-panel__title">Últimas fallas reportadas</h2>
-        <a class="tecni-panel__link" href="{% url 'fallas:lista' %}">Ver todas →</a>
+      <div class="tecni-panel__head" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06); padding-bottom: 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+        <h2 class="tecni-panel__title" style="font-size: 1.1rem; font-weight: 600;">Últimas fallas reportadas</h2>
+        {% if ultimas_fallas %}
+          <a class="tecni-panel__link" href="{% url 'fallas:lista' %}" style="font-size: 0.85rem; font-weight: 500; text-decoration: none; color: var(--color-primary, #38bdf8);">Ver todas →</a>
+        {% endif %}
       </div>
+
       {% if ultimas_fallas %}
         <div class="tecni-data-table-wrap">
-          <table class="tecni-data-table">
+          <table class="tecni-data-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
             <thead>
-              <tr><th>Asunto</th><th>Fecha</th><th>Severidad</th></tr>
+              <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); color: var(--color-muted, #94a3b8);">
+                <th scope="col" style="padding-bottom: 0.75rem; font-weight: 500;">Asunto</th>
+                <th scope="col" style="padding-bottom: 0.75rem; font-weight: 500;">Fecha</th>
+                <th scope="col" style="padding-bottom: 0.75rem; font-weight: 500;">Severidad</th>
+              </tr>
             </thead>
             <tbody>
               {% for r in ultimas_fallas %}
-                <tr>
-                  <td>{{ r.asunto }}</td>
-                  <td>{{ r.fechaCreacion }}</td>
-                  <td><span class="tecni-badge">{{ r.tipo_severidad_nombre|default:"-" }}</span></td>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                  <td style="padding: 0.85rem 0;" title="{{ r.asunto }}">{{ r.asunto|truncatechars:40 }}</td>
+                  <td style="padding: 0.85rem 0; color: var(--color-muted, #94a3b8); font-size: 0.85rem;">
+                    {% if r.fechaCreacion %}
+                      {{ r.fechaCreacion|date:"d/m/Y H:i" }}
+                    {% else %}
+                      —
+                    {% endif %}
+                  </td>
+                  <td style="padding: 0.85rem 0;">
+                    <span class="tecni-badge {% if r.tipo_severidad_nombre == 'Crítica' or r.tipo_severidad_nombre == 'Alta' %}tecni-badge--alert{% endif %}">
+                      {{ r.tipo_severidad_nombre|default:"General" }}
+                    </span>
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
       {% else %}
-        <p class="tecni-panel__empty">Aún no hay reportes de falla registrados.</p>
+        <div class="tecni-panel__empty" style="text-align: center; padding: 3rem 1rem; color: var(--color-muted, #94a3b8); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+          <div style="background: rgba(56, 189, 248, 0.05); padding: 1rem; border-radius: 50%; margin-bottom: 0.75rem; border: 1px solid rgba(56, 189, 248, 0.1);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width: 28px; height: 28px; color: var(--color-primary, #38bdf8);" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+            </svg>
+          </div>
+          <p style="margin: 0; font-size: 0.92rem; font-weight: 500; color: inherit;">¡Excelente trabajo!</p>
+          <p style="margin: 0.25rem 0 0 0; font-size: 0.82rem; opacity: 0.7;">Aún no hay reportes de falla registrados.</p>
+        </div>
       {% endif %}
     </div>
+
   </section>
 
 {% endblock %}
