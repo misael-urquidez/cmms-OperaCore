@@ -89,6 +89,7 @@
 
 <script>
 (function() {
+  var apiRootUrl = "{{ api_root_url }}";
   var todasLasColumnas = [
     {% for col in todas_las_columnas %}
       {% if not col.name|es_pk:config.pk_field %}
@@ -101,6 +102,8 @@
     var tr = btn.closest('tr');
     var body = document.getElementById('gestion-modal-body');
     var html = '<div class="gestion-modal__grid">';
+    var imagenSrc = '';
+    var imagenLabel = '';
 
     for (var i = 0; i < todasLasColumnas.length; i++) {
       var col = todasLasColumnas[i];
@@ -109,10 +112,8 @@
 
       if (col.tipo === 'file') {
         if (valor) {
-          html += '<div class="gestion-modal__field">';
-          html += '<span class="gestion-modal__label">' + col.label + '</span>';
-          html += '<img class="gestion-modal__img" src="/media/' + valor + '" alt="' + col.label + '">';
-          html += '</div>';
+          imagenSrc = apiRootUrl + '/media/' + valor;
+          imagenLabel = col.label;
         }
         continue;
       }
@@ -130,6 +131,14 @@
     }
 
     html += '</div>';
+
+    if (imagenSrc) {
+      html += '<div class="gestion-modal__section">';
+      html += '<span class="gestion-modal__label">' + imagenLabel + '</span>';
+      html += '<img class="gestion-modal__img" src="' + imagenSrc + '" alt="' + imagenLabel + '">';
+      html += '</div>';
+    }
+
     body.innerHTML = html;
     document.getElementById('gestion-modal-detalles').classList.add('is-open');
   }

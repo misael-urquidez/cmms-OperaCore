@@ -205,6 +205,7 @@ class GestionListView(generic.View):
             "todas_las_columnas": todas_las_con_archivos,
             "necesita_modal": necesita_modal,
             "tiene_imagen": tiene_imagen,
+            "api_root_url": settings.API_ROOT_URL,
             "seccion": "gestion",
             "subseccion": slug,
         }

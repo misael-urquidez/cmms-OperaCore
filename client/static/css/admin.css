@@ -649,6 +649,13 @@
   border: 1px solid var(--admin-border);
 }
 
+.gestion-modal__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+}
+
 .gestion-modal__footer {
   display: flex;
   justify-content: flex-end;
