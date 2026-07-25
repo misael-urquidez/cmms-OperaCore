@@ -1,5 +1,6 @@
 {% extends "base_admin.html" %}
 {% load static %}
+{% load gestion_extras %}
 
 {% block title %}{% if modo == "editar" %}Editar{% else %}Nuevo{% endif %} · {{ config.label }}{% endblock %}
 {% block breadcrumb %}Gestión{% endblock %}
@@ -51,7 +52,7 @@
 
       {% elif campo.tipo == "file" %}
         <input type="file" name="{{ campo.name }}" id="id_{{ campo.name }}" accept="image/*">
-        <span class="file-name" id="{{ campo.name }}-filename" style="margin-left:8px;color:#64748b;font-size:13px;"></span>
+        <span class="file-name" id="{{ campo.name }}-filename" style="margin-left:8px;color:#64748b;font-size:13px;">{% if campo.valor %}{{ campo.valor|basename }}{% endif %}</span>
 
       {% elif campo.tipo == "password" %}
         <input type="password" name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error"

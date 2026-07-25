@@ -54,3 +54,11 @@ def default_sin(valor, label):
     if valor is None or valor == "" or valor == "None":
         return f"Sin {label}"
     return valor
+
+
+@register.filter
+def basename(value):
+    """Extrae el nombre de archivo de una ruta como 'carpeta/archivo.jpg'."""
+    if not value:
+        return ""
+    return value.split("/")[-1]
