@@ -113,6 +113,31 @@ class Linea(models.Model):
         return self.nombre
 
 
+class TipoMaquinaArea(models.Model):
+    """Qué tipos de máquina son válidos en cada área. Si un tipo_maquina no
+    tiene ninguna fila aquí, se considera UNIVERSAL (válido en cualquier área).
+    La garantía real vive en los triggers de MySQL (tg_validar_tipo_maquina_area_*);
+    este modelo solo permite consultarla desde Django para dar un error 400
+    legible en vez de dejar que el INSERT/UPDATE truene con un 500.
+
+    Nota: `area` es CharField (no ForeignKey) a propósito, porque en este
+    archivo Linea.area también es CharField (no hay una clase Area aquí) —
+    así se puede comparar directamente contra linea.area sin necesitar
+    importar el modelo Area de otra app.
+    """
+
+    tipo_maquina = models.ForeignKey(TipoMaquina, on_delete=models.DO_NOTHING, db_column="tipo_maquina")
+    area = models.CharField(max_length=10, db_column="area")
+
+    class Meta:
+        managed = False
+        db_table = "TIPO_MAQUINA_AREA"
+        unique_together = (("tipo_maquina", "area"),)
+
+    def __str__(self):
+        return f"{self.tipo_maquina_id} - {self.area}"
+
+
 class Maquina(models.Model):
 
 

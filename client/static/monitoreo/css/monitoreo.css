@@ -17,6 +17,10 @@
 
 /* -------- leyenda -------- */
 .plant-legend { display:flex; flex-wrap:wrap; gap:1rem; font-size:.78rem; color:var(--color-muted); }
+.plant-filter { display:flex; align-items:center; gap:.6rem; margin:.9rem 0 0; }
+.plant-filter label { font-size:.78rem; color:var(--color-muted); }
+.plant-filter select { background:var(--input-bg); border:1px solid var(--line); border-radius:.45rem; padding:.45rem .6rem; color:var(--color-text); font-size:.85rem; font-family:inherit; min-width:200px; }
+.plant-filter select:focus { outline:none; border-color:var(--color-primary); }
 .plant-legend .dot { display:inline-block; width:.55rem; height:.55rem; border-radius:50%; margin-right:.35rem; }
 .dot--OPERA { background:#22c55e; } .dot--MANTE { background:#f59e0b; } .dot--FALLO { background:#ef4444; }
 .dot--ALERT { background:#fbbf24; box-shadow:0 0 0 3px rgba(251,191,36,.25); } .dot--sin { background:var(--color-muted); }
