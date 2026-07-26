@@ -189,10 +189,29 @@ class TrabaOrdePersonalDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ------------ ORDEN_MANTENIMIENTO ---------------------------------------
+# ------------ REPORTE_FALLA disponibles (para "adjuntar reporte") --------
+class ReporteFallaDisponibleListAPIView(generics.ListAPIView):
+    """Reportes de falla elegibles para adjuntarse a una nueva orden correctiva:
+    de la maquina indicada, en un estado 'vivo' (ABIER/ENATE/ENESP) y que
+    todavia no tengan ninguna orden de mantenimiento vinculada."""
+    serializer_class = serializers.ReporteFallaDisponibleSerializer
+
+    def get_queryset(self):
+        from apps.fallas.models import ReporteFalla
+        maquina = self.request.query_params.get("maquina")
+        if not maquina:
+            return ReporteFalla.objects.none()
+        qs = ReporteFalla.objects.select_related("tipo_severidad", "estado_reporte").filter(
+            maquina_id=maquina,
+            estado_reporte_id__in=["ABIER", "ENATE", "ENESP"],
+        ).exclude(mantenimiento_ordenes__isnull=False)
+        return qs.order_by("-fechaCreacion", "-horaCreacion")
+
+
 class OrdenMantenimientoListAPIView(generics.ListAPIView):
     serializer_class = serializers.ListOrdenMantenimientoSerializer
     def get_queryset(self):
-        qs = models.OrdenMantenimiento.objects.select_related("maquina", "trabajador", "tipo_mantenimiento", "estado_orden").order_by("-fechacreacion", "-horacreacion")
+        qs = models.OrdenMantenimiento.objects.select_related("maquina", "trabajador", "tipo_mantenimiento", "estado_orden", "reporte_falla").order_by("-fechacreacion", "-horacreacion")
         if self.request.query_params.get("trabajador"):
             qs = qs.filter(trabajador_id=self.request.query_params["trabajador"])
         if self.request.query_params.get("estado"):

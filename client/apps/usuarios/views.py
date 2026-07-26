@@ -158,17 +158,33 @@ class LogoutView(generic.View):
 
 
 class ConfigPerfilView(generic.View):
-    """Guarda los cambios del modal de Configuracion -> Cuenta (nombre,
-    correo, telefono y foto). Llamada por fetch() desde navbar.js, responde
-    JSON. Reemplaza el prototipo anterior que solo guardaba en localStorage:
-    ahora si pega al api/ (PATCH a v1/trabajadores/<numeroNomina>/).
+    """Guarda los cambios del modal de Configuracion -> Cuenta. Llamada por
+    fetch() desde navbar.js, responde JSON. Pega de verdad al api/ (PATCH a
+    v1/trabajadores/<numeroNomina>/).
 
-    Para la foto:
+    Quien puede editar que, segun el rol en sesion (esto se vuelve a
+    verificar aqui, NO solo se confia en que el formulario del front ya
+    haya deshabilitado los campos):
+    - ADMIN: nombre, apellidoPat, apellidoMat, correo, telefono, usuario,
+      contraseña y foto.
+    - Cualquier otro rol (p.ej. TECNI): SOLO usuario y contraseña. Si llega
+      cualquier otro campo en el POST, se ignora sin avisar (no es un
+      error del usuario, es que el front para su rol ni siquiera manda
+      esos inputs).
+
+    Para la foto (cualquier rol, incluido TECNI, puede cambiar/quitar la suya):
     - si llega un archivo en 'foto' -> se manda tal cual al api/, que
       reemplaza el archivo anterior.
     - si llega 'eliminar_foto=1' (y no hay archivo nuevo) -> se le indica
       al api/ que borre la foto actual.
+
+    Para la contraseña (cualquier rol):
+    - solo se manda si 'password' viene con contenido; se exige ademas
+      'password2' identico (el front ya valida esto, pero se repite aqui
+      por si alguien pega directo al endpoint).
     """
+
+    CAMPOS_SOLO_ADMIN = ("nombre", "apellidoPat", "apellidoMat", "correo", "telefono")
 
     def post(self, request):
         usuario = request.session.get("usuario")
@@ -178,12 +194,37 @@ class ConfigPerfilView(generic.View):
                 status=401,
             )
 
+        es_admin = usuario.get("rol") == "ADMIN"
         numero_nomina = usuario.get("numeroNomina")
-        payload = {
-            "nombre": request.POST.get("nombre", "").strip(),
-            "correo": request.POST.get("correo", "").strip(),
-            "telefono": request.POST.get("telefono", "").strip(),
-        }
+        payload = {}
+
+        if es_admin:
+            for campo in self.CAMPOS_SOLO_ADMIN:
+                payload[campo] = request.POST.get(campo, "").strip()
+
+        usuario_nuevo = request.POST.get("usuario", "").strip()
+        if not usuario_nuevo:
+            return JsonResponse(
+                {"ok": False, "errores": {"usuario": "El usuario es obligatorio."}},
+                status=400,
+            )
+        payload["usuario"] = usuario_nuevo
+
+        password = request.POST.get("password", "")
+        password2 = request.POST.get("password2", "")
+        if password or password2:
+            if password != password2:
+                return JsonResponse(
+                    {"ok": False, "errores": {"password2": "Las contraseñas no coinciden."}},
+                    status=400,
+                )
+            if len(password) < 8:
+                return JsonResponse(
+                    {"ok": False, "errores": {"password": "Debe tener al menos 8 caracteres."}},
+                    status=400,
+                )
+            payload["password"] = password
+            payload["password2"] = password2
 
         files_payload = {}
         foto_file = request.FILES.get("foto")

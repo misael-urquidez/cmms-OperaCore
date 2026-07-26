@@ -10,12 +10,14 @@ con sugerencias en vez de un error crudo.
 Como extender: agrega un "if has(...): return 'mi_intent'" en _intent() y
 su bloque correspondiente "if intent == 'mi_intent':" en _resolve().
 """
+import base64
 import difflib
 import json
 import re
 import urllib.request
 import urllib.error
-from html import unescape
+from datetime import date
+from html import escape, unescape
 from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 
 from django.conf import settings
@@ -211,6 +213,15 @@ def _q(sql, params=None):
     return cols, rows
 
 
+def _esc(val):
+    """Escapa un valor que viene de la BD antes de meterlo en el HTML.
+
+    Los textos libres (descripcion de una falla, notas de una orden) los
+    escribe el usuario desde el panel, asi que pueden traer < > & sin mala
+    intencion -- o con ella. Todo lo que sale de _q() pasa por aqui."""
+    return escape(str(val), quote=False)
+
+
 BADGES = {
     'operativa': 'disponible', 'ejecutada': 'disponible', 'resuelto': 'disponible',
     'en falla': 'cancelado', 'cancelado': 'cancelado', 'cancelada': 'cancelado',
@@ -224,7 +235,7 @@ def _badge(val):
         return ''
     tr = str.maketrans('áéíóú', 'aeiou')
     cls = BADGES.get(str(val).lower().translate(tr), 'finalizado')
-    return '<span class="badge %s">&#9679; %s</span>' % (cls, val)
+    return '<span class="badge %s">&#9679; %s</span>' % (cls, _esc(val))
 
 def _dinero(val):
     try:
@@ -239,7 +250,7 @@ def _tabla(cols, rows, est=None, dinero=None, max_r=50):
     dinero = dinero or []
     vis = rows[:max_r]
     extra = len(rows) - len(vis)
-    th = ''.join('<th>%s</th>' % c for c in cols)
+    th = ''.join('<th>%s</th>' % _esc(c) for c in cols)
     trs = []
     for row in vis:
         tds = []
@@ -248,16 +259,19 @@ def _tabla(cols, rows, est=None, dinero=None, max_r=50):
             if c in est:
                 tds.append('<td>%s</td>' % _badge(v))
             elif c in dinero:
-                tds.append('<td>%s</td>' % _dinero(v))
+                tds.append('<td>%s</td>' % _esc(_dinero(v)))
             elif v is None:
                 tds.append('<td>-</td>')
             else:
-                tds.append('<td>%s</td>' % v)
+                tds.append('<td>%s</td>' % _esc(v))
         trs.append('<tr>%s</tr>' % ''.join(tds))
     nota = ('<p style="margin-top:6px;font-size:11px;color:var(--color-muted,#94a3b8)">... y %d filas mas.</p>' % extra) if extra else ''
     return '<table><thead><tr>%s</tr></thead><tbody>%s</tbody></table>%s' % (th, ''.join(trs), nota)
 
 def _cards(items):
+    """Tarjetas de resumen. 'label' y 'sub' se escapan siempre; 'val' se
+    inserta tal cual porque a veces ya es HTML (un _badge). Quien llame con
+    un valor de la BD en 'val' debe pasarlo por _esc()."""
     parts = []
     for i in items:
         parts.append(
@@ -265,7 +279,7 @@ def _cards(items):
             '<div class="s-label">%s</div>'
             '<div class="s-val">%s</div>'
             '<div class="s-sub">%s</div>'
-            '</div>' % (i['label'], i['val'], i.get('sub', ''))
+            '</div>' % (_esc(i['label']), i['val'], _esc(i.get('sub', '')))
         )
     return '<div class="stat-cards">%s</div>' % ''.join(parts)
 
@@ -305,6 +319,49 @@ def _chips_sugeridas(items):
             'data-q="%s">%s %s</button>' % (q_attr, it['icon'], it['label'])
         )
     return '<div class="elipse-chips">%s</div>' % ''.join(parts)
+
+def _catalogo_texto(items, campos):
+    """Formatea una lista de dicts en lineas 'valor | valor' para meter en un
+    prompt (catalogo de maquinas/severidades/tipos de falla que Elipse puede
+    usar para el autocompletado del reporte de falla)."""
+    out = []
+    for it in (items or [])[:200]:
+        if not isinstance(it, dict):
+            continue
+        out.append(' | '.join(str(it.get(c, '')) for c in campos))
+    return '\n'.join(out) if out else '(sin datos disponibles)'
+
+
+def _parsear_json_autofill(crudo):
+    """El modelo deberia regresar JSON puro, pero a veces lo envuelve en
+    ```json ... ``` pese a la instruccion, o le mete texto alrededor. Este
+    parser es tolerante a eso; regresa (campos, mensaje), o (None, None) si
+    no logra sacar un dict."""
+    if not crudo:
+        return None, None
+    s = crudo.strip()
+    if s.startswith('```'):
+        s = re.sub(r'^```[a-zA-Z]*\n?', '', s)
+        s = re.sub(r'```\s*$', '', s).strip()
+    data = None
+    try:
+        data = json.loads(s)
+    except ValueError:
+        m = re.search(r'\{.*\}', s, re.S)
+        if m:
+            try:
+                data = json.loads(m.group(0))
+            except ValueError:
+                data = None
+    if not isinstance(data, dict):
+        return None, None
+
+    mensaje = data.get('mensaje') or None
+    claves = ('asunto', 'descripcion', 'causaRaiz', 'tiempoParo', 'fecha',
+              'maquina', 'tipo_severidad', 'tipo_falla')
+    campos = {k: data.get(k) for k in claves}
+    return campos, mensaje
+
 
 def _es_error_conexion(msg):
     if not msg:
@@ -389,9 +446,18 @@ def _intent(q_orig):
     if re.match(r'^\s*SELECT\s+', q_orig.strip(), re.IGNORECASE):
         return 'sql_puro'
 
-    # Intento de modificar BD
+    # Levantar un reporte de falla guiado. Va ANTES del candado de escritura
+    # porque comparte verbos con el ("registra", "crea"): aqui no escribimos
+    # en la BD, solo proponemos los campos del formulario para que el tecnico
+    # los revise y mande el mismo.
+    if has('reporta', 'reportar', 'levanta', 'levantar', 'registra', 'registrar',
+           'abre', 'crea') and has('falla', 'reporte de falla'):
+        return 'crear_reporte_falla'
+
+    # Intento de modificar BD. Palabra completa, no substring: "registra" no
+    # debe hacer match dentro de "maquinas registradas", que es solo consulta.
     for palabra in PALABRAS_MODIFICAR:
-        if palabra in q:
+        if re.search(r'\b' + re.escape(palabra) + r'\b', q):
             return 'solo_lectura'
 
     # Saludo / bienvenida guiada
@@ -542,7 +608,7 @@ def _resolve(intent, pregunta):
                 return (
                     '<p style="color:var(--danger)"><strong>Error en tu SQL:</strong> %s</p>'
                     '<code style="display:block;padding:8px;background:#1a1a1a;border-radius:6px;'
-                    'white-space:pre-wrap;font-size:12px;margin-top:8px">%s</code>' % (str(e), sql_usuario)
+                    'white-space:pre-wrap;font-size:12px;margin-top:8px">%s</code>' % (_esc(e), _esc(sql_usuario))
                 )
         return '<p style="color:var(--danger)">Solo se permiten consultas <strong>SELECT</strong>.</p>'
 
@@ -589,12 +655,12 @@ def _resolve(intent, pregunta):
             " WHERE m.codigo = %s", [codigo]
         )
         if not rows:
-            return '<p>No encontre ninguna maquina con codigo <strong>%s</strong>.</p>' % codigo
+            return '<p>No encontre ninguna maquina con codigo <strong>%s</strong>.</p>' % _esc(codigo)
         row = rows[0]
         cards = _cards([
-            {'label': 'Maquina',  'val': row['Nombre'],  'sub': row['Codigo']},
+            {'label': 'Maquina',  'val': _esc(row['Nombre']),  'sub': row['Codigo']},
             {'label': 'Estado',   'val': _badge(row['Estado']), 'sub': row['Linea'] or '-'},
-            {'label': 'Marca/Modelo', 'val': '%s %s' % (row['Marca'] or '', row['Modelo'] or ''), 'sub': 'instalada %s' % row['Instalada']},
+            {'label': 'Marca/Modelo', 'val': _esc('%s %s' % (row['Marca'] or '', row['Modelo'] or '')), 'sub': 'instalada %s' % row['Instalada']},
         ])
         _, ordenes = _q(
             "SELECT folio Folio, descripcion Descripcion, eo.nombre Estado, fechaProgramada Programada"
@@ -603,7 +669,7 @@ def _resolve(intent, pregunta):
         )
         extra = ('<p style="margin-top:10px"><strong>Ultimas ordenes:</strong></p>%s' % _tabla(
             ['Folio', 'Descripcion', 'Estado', 'Programada'], ordenes, est=['Estado'])) if ordenes else ''
-        return '<p><strong>Maquina %s:</strong></p>%s%s' % (codigo, cards, extra)
+        return '<p><strong>Maquina %s:</strong></p>%s%s' % (_esc(codigo), cards, extra)
 
     if intent in ('maquinas_en_falla', 'maquinas_en_mantenimiento', 'maquinas_operativas', 'maquinas_lista'):
         filtro = {
@@ -638,8 +704,8 @@ def _resolve(intent, pregunta):
                 " WHERE i.maquina = %s ORDER BY i.fechaFin DESC LIMIT 5", [codigo]
             )
             if not rows:
-                return '<p>No hay indicadores registrados para <strong>%s</strong>.</p>' % codigo
-            return '<p><strong>Indicadores de %s:</strong></p>%s' % (codigo, _tabla(cols, rows))
+                return '<p>No hay indicadores registrados para <strong>%s</strong>.</p>' % _esc(codigo)
+            return '<p><strong>Indicadores de %s:</strong></p>%s' % (_esc(codigo), _tabla(cols, rows))
         cols, rows = _q(
             "SELECT m.codigo Codigo, m.nombre Nombre, i.mttr MTTR_horas, i.mtbf MTBF_horas,"
             " i.porcentajeDispo Disponibilidad"
@@ -664,10 +730,10 @@ def _resolve(intent, pregunta):
             " WHERE r.numeroRegistro = %s", [num]
         )
         if not rows:
-            return '<p>No encontre el reporte de falla #%s.</p>' % num
+            return '<p>No encontre el reporte de falla #%s.</p>' % _esc(num)
         row = rows[0]
         cards = _cards([
-            {'label': 'Reporte', 'val': '#%s' % row['Reporte'], 'sub': row['Asunto']},
+            {'label': 'Reporte', 'val': '#%s' % _esc(row['Reporte']), 'sub': row['Asunto']},
             {'label': 'Severidad', 'val': _badge(row['Severidad']), 'sub': row['Maquina']},
             {'label': 'Estado', 'val': _badge(row['Estado']), 'sub': row['Reportado_por'] or '-'},
         ])
@@ -720,12 +786,12 @@ def _resolve(intent, pregunta):
             " WHERE o.folio = %s", [folio]
         )
         if not rows:
-            return '<p>No encontre la orden <strong>%s</strong>.</p>' % folio
+            return '<p>No encontre la orden <strong>%s</strong>.</p>' % _esc(folio)
         row = rows[0]
         cards = _cards([
-            {'label': 'Orden', 'val': row['Folio'], 'sub': row['Tipo'] or '-'},
+            {'label': 'Orden', 'val': _esc(row['Folio']), 'sub': row['Tipo'] or '-'},
             {'label': 'Estado', 'val': _badge(row['Estado']), 'sub': '%s%% avance' % (row['Avance'] or 0)},
-            {'label': 'Maquina', 'val': row['Maquina'] or '-', 'sub': row['Tecnico'] or 'sin asignar'},
+            {'label': 'Maquina', 'val': _esc(row['Maquina'] or '-'), 'sub': row['Tecnico'] or 'sin asignar'},
         ])
         return '<p><strong>Orden %s:</strong></p>%s%s' % (
             folio, cards, _tabla(['Descripcion', 'Diagnostico', 'Programada', 'Cierre'], rows))
@@ -774,8 +840,8 @@ def _resolve(intent, pregunta):
             " ORDER BY o.fechaCreacion DESC LIMIT 20", ['%' + nombre + '%']
         )
         if not rows:
-            return '<p>No encontre ordenes para <strong>%s</strong>.</p>' % nombre
-        return '<p><strong>Ordenes de %s:</strong></p>%s' % (nombre, _tabla(cols, rows, est=['Estado']))
+            return '<p>No encontre ordenes para <strong>%s</strong>.</p>' % _esc(nombre)
+        return '<p><strong>Ordenes de %s:</strong></p>%s' % (_esc(nombre), _tabla(cols, rows, est=['Estado']))
 
     # ── INVENTARIO ───────────────────────────────────────────
     if intent == 'refacciones_bajo_stock':
@@ -799,8 +865,8 @@ def _resolve(intent, pregunta):
             " FROM REFACCION r WHERE LOWER(r.nombre) LIKE LOWER(%s) LIMIT 20", ['%' + nombre + '%']
         )
         if not rows:
-            return '<p>No encontre refacciones con "%s".</p>' % nombre
-        return '<p><strong>Resultados para "%s":</strong></p>%s' % (nombre, _tabla(cols, rows, dinero=['Costo']))
+            return '<p>No encontre refacciones con "%s".</p>' % _esc(nombre)
+        return '<p><strong>Resultados para "%s":</strong></p>%s' % (_esc(nombre), _tabla(cols, rows, dinero=['Costo']))
 
     if intent == 'herramientas_disponibles':
         cols, rows = _q(
@@ -847,8 +913,8 @@ def _resolve(intent, pregunta):
             " LIMIT 20", ['%' + nombre + '%']
         )
         if not rows:
-            return '<p>No encontre trabajadores con "%s".</p>' % nombre
-        return '<p><strong>Resultados para "%s":</strong></p>%s' % (nombre, _tabla(cols, rows))
+            return '<p>No encontre trabajadores con "%s".</p>' % _esc(nombre)
+        return '<p><strong>Resultados para "%s":</strong></p>%s' % (_esc(nombre), _tabla(cols, rows))
 
     return None  # → cae a la IA
 
@@ -905,7 +971,7 @@ def _ai_con_sql(pregunta, modelo_key, historial=None):
     if err:
         if _es_error_conexion(err):
             return _respuesta_sin_internet(pregunta)
-        return '<p class="msg-error">%s</p>' % err
+        return '<p class="msg-error">%s</p>' % _esc(err)
 
     sql_raw = sql_raw.strip()
     sql_raw = re.sub(r'^```sql\s*', '', sql_raw, flags=re.IGNORECASE)
@@ -917,7 +983,7 @@ def _ai_con_sql(pregunta, modelo_key, historial=None):
         if err2:
             if _es_error_conexion(err2):
                 return _respuesta_sin_internet(pregunta)
-            return '<p class="msg-error">%s</p>' % err2
+            return '<p class="msg-error">%s</p>' % _esc(err2)
         return _texto_a_html(resp)
 
     try:
@@ -929,7 +995,7 @@ def _ai_con_sql(pregunta, modelo_key, historial=None):
             '<code style="display:block;padding:6px;background:#1a1a1a;border-radius:6px;'
             'white-space:pre-wrap;color:#fff">%s</code>'
             '<p style="color:var(--danger)">Error: %s</p>'
-            '</details>' % (sql_raw, str(e))
+            '</details>' % (_esc(sql_raw), _esc(e))
         )
 
     SYSTEM_ADMIN = (
@@ -1058,7 +1124,7 @@ def _resolver_busqueda_web(pregunta, modelo_key, historial=None):
     if err or not resultados:
         return (
             '<p>No pude buscar en internet en este momento'
-            + (' (%s).' % err if err else ', no encontre resultados relevantes.')
+            + (' (%s).' % _esc(err) if err else ', no encontre resultados relevantes.')
             + ' Puedo seguir ayudandote con lo que ya tenemos registrado en el sistema.</p>'
         )
 
@@ -1096,9 +1162,164 @@ def _resolver_busqueda_web(pregunta, modelo_key, historial=None):
         '🌐 Fuentes de internet:</p><ul style="font-size:12px">%s</ul>' % fuentes_html
     )
     return ''.join(partes)
+
+
+# ─────────────────────────────────────────────────────────
+# Autocompletado del reporte de falla
+# ─────────────────────────────────────────────────────────
+
+AUTOFILL_SYSTEM_TPL = """Eres Elipse, el asistente conversacional de OperaCore (CMMS de
+mantenimiento industrial), ayudando a un tecnico a llenar el formulario de
+"Reporte de falla" mientras platican. En cada turno debes devolver SOLO un
+objeto JSON (nada de texto antes o despues, nada de markdown, nada de
+bloques de codigo) con estas claves exactas:
+
+{
+  "mensaje": string, tu respuesta conversacional breve (1-2 oraciones, tono
+    cercano). Si ya tienes lo esencial (asunto, maquina, severidad) confirma
+    y pregunta por lo que falte, ej. "que tan grave dirias que esta? y
+    que estado tiene el reporte?". No repitas literalmente lo que ya dijo
+    el tecnico.
+  "asunto": string corto (max 80 caracteres), o null si aun no hay info,
+  "descripcion": string tecnica de que sucede (max 500 caracteres), o null,
+  "causaRaiz": string, tu mejor hipotesis de causa raiz (max 500
+    caracteres), o null,
+  "tiempoParo": numero de horas (float, ej 2 o 1.5), o null,
+  "fecha": fecha de solucion/atencion en formato YYYY-MM-DD SOLO si el
+    tecnico menciono una fecha explicita o relativa ("hoy", "ayer", "el
+    lunes"). Si no dijo nada de fechas, regresa null -- el sistema pone la
+    fecha de hoy por default, no la inventes tu,
+  "maquina": "codigo" (string) de la maquina de la lista de abajo que mejor
+    corresponda, o null,
+  "tipo_severidad": "codigo" (string) de severidad de la lista de abajo, o
+    null,
+  "tipo_falla": "numeroRegistro" (numero) del tipo de falla de la lista de
+    abajo, o null
+}
+
+Reglas estrictas:
+- SOLO puedes usar codigos / numeroRegistro que aparezcan tal cual en las
+  listas de abajo. Si ninguno encaja, regresa null. NUNCA inventes uno.
+- No agregues claves extra ni comentarios. Responde unicamente con el JSON.
+- Si un campo ya se lleno en un turno anterior (viene en el historial) y el
+  tecnico no lo contradice, sigue regresandolo con el mismo valor.
+- Nunca inventes datos que el tecnico no haya dado o insinuado.
+
+MAQUINAS DISPONIBLES (codigo | nombre):
+%s
+
+SEVERIDADES DISPONIBLES (codigo | nombre):
+%s
+
+TIPOS DE FALLA DISPONIBLES (numeroRegistro | nombre):
+%s
+"""
+
+
+def _resolver_crear_reporte_falla(pregunta, modelo_key, historial=None):
+    """Levanta un reporte de falla guiado desde el chat general: entiende la
+    descripcion, propone los campos y devuelve un boton que lleva al modulo
+    de fallas con el formulario ya lleno. NUNCA escribe en la BD."""
+    modelo_id = MODELOS_IA.get(modelo_key, MODELOS_IA[MODELO_DEFAULT])['id']
+
+    _, maquinas = _q("SELECT codigo, nombre FROM MAQUINA")
+    _, severidades = _q("SELECT codigo, nombre FROM TIPO_SEVERIDAD")
+    _, tipos_falla = _q("SELECT numeroRegistro, nombre FROM TIPO_FALLA")
+
+    system = AUTOFILL_SYSTEM_TPL % (
+        _catalogo_texto(maquinas, ['codigo', 'nombre']),
+        _catalogo_texto(severidades, ['codigo', 'nombre']),
+        _catalogo_texto(tipos_falla, ['numeroRegistro', 'nombre']),
+    )
+    crudo, err = _llamar_groq(system, pregunta, modelo_id, historial=historial, max_tokens=500, temperature=0.3)
+    if err:
+        if _es_error_conexion(err):
+            return _respuesta_sin_internet(pregunta)
+        return '<p class="msg-error">%s</p>' % _esc(err)
+
+    campos, mensaje = _parsear_json_autofill(crudo)
+    if campos is None:
+        return '<p>No logre entender bien la falla, me das un poco mas de detalle?</p>'
+    if not campos.get('fecha'):
+        campos['fecha'] = date.today().isoformat()
+
+    campos_b64 = base64.urlsafe_b64encode(
+        json.dumps(campos, ensure_ascii=False).encode('utf-8')
+    ).decode('ascii')
+
+    resumen = ''.join(
+        '<li><strong>%s:</strong> %s</li>' % (_esc(k), _esc(v))
+        for k, v in campos.items() if v not in (None, '')
+    )
+    return (
+        '<p>%s</p>'
+        '<ul style="font-size:12px;color:var(--color-muted,#94a3b8);margin:6px 0 10px">%s</ul>'
+        '<button type="button" class="elipse-chip" '
+        "onclick=\"window.elipseIrAModulo('/fallas/reporte/', '%s')\">"
+        '📄 Abrir formulario ya llenado</button>'
+        % (_esc(mensaje) if mensaje else 'Esto entendi, revisalo en el formulario:', resumen, campos_b64)
+    )
+
+
+class ElipseAutocompletarFallaAPIView(APIView):
+    """Toma una descripcion libre de una falla ('la banda del pick and place
+    se traba, lleva 2 horas parada...') y regresa un JSON con los campos
+    sugeridos para el formulario de 'Reporte de falla'.
+
+    Esto NUNCA escribe en la base de datos: solo propone texto para que el
+    tecnico lo revise, ajuste y mande el mismo desde el formulario normal."""
+
+    def post(self, request):
+        texto = (request.data.get('texto') or '').strip()
+        if not texto:
+            return Response({'error': 'Describe la falla primero.'}, status=400)
+        texto = texto[:2000]
+
+        modelo_k = request.data.get('modelo', MODELO_DEFAULT)
+        if modelo_k not in MODELOS_IA:
+            modelo_k = MODELO_DEFAULT
+
+        historial = request.data.get('historial') or []
+
+        system = AUTOFILL_SYSTEM_TPL % (
+            _catalogo_texto(request.data.get('maquinas'), ['codigo', 'nombre']),
+            _catalogo_texto(request.data.get('severidades'), ['codigo', 'nombre']),
+            _catalogo_texto(request.data.get('tipos_falla'), ['numeroRegistro', 'nombre']),
+        )
+
+        modelo_id = MODELOS_IA[modelo_k]['id']
+        crudo, err = _llamar_groq(system, texto, modelo_id, historial=historial, max_tokens=500, temperature=0.3)
+        if err:
+            if _es_error_conexion(err):
+                return Response(
+                    {'error': 'Elipse no tiene conexion ahorita. Puedes llenar el formulario a mano mientras tanto.'},
+                    status=503,
+                )
+            return Response({'error': err}, status=502)
+
+        campos, mensaje = _parsear_json_autofill(crudo)
+        if campos is None:
+            return Response(
+                {'error': 'No pude interpretar bien esa descripcion, intenta darle un poco mas de detalle.'},
+                status=502,
+            )
+
+        if not campos.get('fecha'):
+            campos['fecha'] = date.today().isoformat()
+
+        return Response({'campos': campos, 'mensaje': mensaje or ''})
+
+
 # ─────────────────────────────────────────────────────────
 # Vista principal
 # ─────────────────────────────────────────────────────────
+
+class ElipseSugerenciasAPIView(APIView):
+    """Devuelve PREGUNTAS_RAPIDAS para que el client arme los chips."""
+
+    def get(self, request):
+        return Response({'sugerencias': PREGUNTAS_RAPIDAS})
+
 
 class ElipseChatAPIView(APIView):
     def post(self, request):
@@ -1114,11 +1335,13 @@ class ElipseChatAPIView(APIView):
         intent = _intent(pregunta)
         if intent == 'buscar_web':
             html = _resolver_busqueda_web(pregunta, modelo_k, historial=historial)
+        elif intent == 'crear_reporte_falla':
+            html = _resolver_crear_reporte_falla(pregunta, modelo_k, historial=historial)
         else:
             try:
                 html = _resolve(intent, pregunta)
             except Exception as e:
-                html = '<p class="msg-error">Error consultando la base de datos: %s</p>' % str(e)
+                html = '<p class="msg-error">Error consultando la base de datos: %s</p>' % _esc(e)
 
             if html is None:
                 html = _ai_con_sql(pregunta, modelo_k, historial=historial)

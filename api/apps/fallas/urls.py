@@ -19,6 +19,7 @@ urlpatterns = [
     path("v2/tipos-severidad/create/", views.TipoSeveridadCreateAPIView.as_view(), name="tipos-severidad-create"),
     path("v2/tipos-severidad/<str:codigo>/", views.TipoSeveridadDetailAPIView.as_view(), name="tipos-severidad-detail"),
     path("v2/tipos-falla/create/", views.TipoFallaCreateAPIView.as_view(), name="tipos-falla-create"),
+    path("v2/tipos-falla/<str:numeroRegistro>/", views.TipoFallaDetailAPIView.as_view(), name="tipos-falla-detail"),
     path("v2/reportes/create/", views.ReporteFallaCreateAPIView.as_view(), name="reportes-create"),
     path("v2/reportes/update/<int:pk>/", views.ReporteFallaUpdateAPIView.as_view(), name="reportes-update"),
     # tipo-reporte (llave compuesta)

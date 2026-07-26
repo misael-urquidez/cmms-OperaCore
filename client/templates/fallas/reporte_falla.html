@@ -1,11 +1,15 @@
-{% extends "base_admin.html" %}
+{% extends base_template %}
 {% load static %}
 {% block title %}Reporte de Falla · OperaCore{% endblock %}
 {% block breadcrumb %}Fallas{% endblock %}
 {% block page_title %}Nuevo reporte de falla{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}"><link rel="stylesheet" href="{% static 'fallas/css/elipse-falla.css' %}">{% endblock %}
 {% block content %}
-  <h1>Reporte de Falla</h1> 
+  <h1>Reporte de Falla</h1>
+
+  <button type="button" class="btn-elipse-falla" id="btnElipseFalla" title="Describe la falla y Elipse te ayuda a llenar el formulario">
+    <span class="elipse-bolt">⚡</span> Ayúdame a redactar con Elipse
+  </button>
 
   <div class="guias">
     <details open>
@@ -40,7 +44,7 @@
         <input type="text" name="causaRaiz" id="causaRaiz" required maxlength="500" data-error-id="causaRaiz-error" />
 
         <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas) <span id="horas-error"></span></label>
-        <input type="number" name="tiempoParo" id="tiempoParo" min="0" data-error-id="horas-error"  />
+        <input type="number" name="tiempoParo" id="tiempoParo" min="0" step="any" data-error-id="horas-error"  />
 
         <label for="fechaSolucion">Fecha de solucion</label>
         <input type="date" name="fechaSolucion" id="fechaSolucion" />
@@ -89,7 +93,7 @@
         <select name="trabajador" id="trabajador" required>
           <option value="">Seleccione...</option>
           {% for t in trabajadores %}
-            <option value="{{ t.numeroNomina }}">{{ t.nombre }} {{ t.apellidoPat }}</option>
+            <option value="{{ t.numeroNomina }}" {% if usuario.numeroNomina == t.numeroNomina %}selected{% endif %}>{{ t.nombre }} {{ t.apellidoPat }}</option>
           {% endfor %}
         </select>
 
@@ -124,14 +128,40 @@
     </div>
   </form>
 
+  {# ---- datos de catalogo para que Elipse pueda proponer codigos validos ---- #}
+  {{ maquinas|json_script:"elipseMaquinasData" }}
+  {{ severidades|json_script:"elipseSeveridadesData" }}
+  {{ tipos_falla|json_script:"elipseTiposFallaData" }}
 
+  {# ---- panel lateral de Elipse: no toca la BD, solo propone texto ---- #}
+  <div class="elipse-falla-overlay" id="elipseFallaOverlay" hidden></div>
+  <aside class="elipse-falla-panel" id="elipseFallaPanel" aria-hidden="true">
+    <div class="elipse-falla-panel__head">
+      <div class="elipse-falla-panel__title"><span class="elipse-bolt">⚡</span> Elipse</div>
+      <button type="button" class="elipse-falla-panel__close" id="elipseFallaClose" aria-label="Cerrar panel">✕</button>
+    </div>
+    <p class="elipse-falla-panel__hint">
+      Cuéntame qué pasó con la máquina. Voy preguntando lo que falte
+      (severidad, estado, fecha…) y lleno el formulario contigo.
+    </p>
+    <div class="elipse-falla-panel__chat" id="elipseFallaChat"></div>
+    <form class="elipse-falla-panel__form" id="elipseFallaForm" onsubmit="return false;">
+      <textarea id="elipseFallaInput" rows="2" placeholder="Ej. la banda del pick and place se trabó, lleva 2 horas parada..."></textarea>
+      <button type="button" class="elipse-falla-panel__btn" id="elipseFallaBtn">➤</button>
+    </form>
+    <p class="elipse-falla-panel__footnote">Elipse solo propone texto; nada se guarda hasta que tú das "Reportar falla".</p>
+  </aside>
 
-
-
-  
 {% endblock %}
 {% block extra_js %}
+<script>
+  window.ELIPSE_FALLA_CONFIG = {
+      csrf: "{{ csrf_token }}",
+      urlAutocompletar: "{% url 'elipse:autocompletar_falla' %}"
+  };
+</script>
 <script src="{% static 'fallas/js/preview-imagenes.js' %}"></script>
 <script src="{% static 'fallas/js/añadir-elementos.js' %}"></script>
 <script src="{% static 'js/validaciones-inputs.js' %}"></script>
+<script src="{% static 'fallas/js/elipse-falla.js' %}"></script>
 {% endblock %}
