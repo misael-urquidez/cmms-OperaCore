@@ -1,11 +1,13 @@
 from rest_framework import serializers
+import os
+from django.conf import settings
 from . import models
 
 # ------------ CLASIFICACION ----------------------------------------------------
 class ListClasificacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Clasificacion
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 class DetailClasificacionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -27,7 +29,7 @@ class UpdateClasificacionSerializer(serializers.ModelSerializer):
 class ListEdoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EdoHerramienta
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 class DetailEdoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,7 +51,7 @@ class UpdateEdoHerramientaSerializer(serializers.ModelSerializer):
 class ListEdoPiezaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EdoPieza
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 class DetailEdoPiezaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -71,7 +73,7 @@ class UpdateEdoPiezaSerializer(serializers.ModelSerializer):
 class ListEdoRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EdoRefaccion
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 class DetailEdoRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -93,7 +95,7 @@ class UpdateEdoRefaccionSerializer(serializers.ModelSerializer):
 class ListTipoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoHerramienta
-        fields = ["numeroregistro", "nombre"]
+        fields = "__all__"
 
 class DetailTipoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -115,7 +117,7 @@ class UpdateTipoHerramientaSerializer(serializers.ModelSerializer):
 class ListTipoPiezaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoPieza
-        fields = ["numeroregistro", "nombre"]
+        fields = "__all__"
 
 class DetailTipoPiezaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -137,7 +139,7 @@ class UpdateTipoPiezaSerializer(serializers.ModelSerializer):
 class ListTipoRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoRefaccion
-        fields = ["numeroregistro", "nombre"]
+        fields = "__all__"
 
 class DetailTipoRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -159,7 +161,7 @@ class UpdateTipoRefaccionSerializer(serializers.ModelSerializer):
 class ListProveedorSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Proveedor
-        fields = ["codigo", "rfc", "razonsocial", "nombrecomercial", "telefono"]
+        fields = "__all__"
 
 class DetailProveedorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -207,7 +209,7 @@ class UpdateProveedorSerializer(serializers.ModelSerializer):
 class ListHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Herramienta
-        fields = ["numeroregistro", "nombre", "tipo_herramienta"]
+        fields = "__all__"
 
 class DetailHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -215,21 +217,49 @@ class DetailHerramientaSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class CreateHerramientaSerializer(serializers.ModelSerializer):
+    imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
+
     class Meta:
         model = models.Herramienta
         fields = ["nombre", "descripcion", "imagen", "tipo_herramienta"]
 
+    def create(self, validated_data):
+        imagen_file = validated_data.pop("imagen", None)
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "inventario")
+            os.makedirs(carpeta, exist_ok=True)
+            ruta = os.path.join(carpeta, imagen_file.name)
+            with open(ruta, "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            validated_data["imagen"] = f"inventario/{imagen_file.name}"
+        return super().create(validated_data)
+
 class UpdateHerramientaSerializer(serializers.ModelSerializer):
+    imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
+
     class Meta:
         model = models.Herramienta
         fields = ["nombre", "descripcion", "imagen", "tipo_herramienta"]
+
+    def update(self, instance, validated_data):
+        imagen_file = validated_data.pop("imagen", None)
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "inventario")
+            os.makedirs(carpeta, exist_ok=True)
+            ruta = os.path.join(carpeta, imagen_file.name)
+            with open(ruta, "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            validated_data["imagen"] = f"inventario/{imagen_file.name}"
+        return super().update(instance, validated_data)
 
 
 # ------------ PIEZA ------------------------------------------------------------
 class ListPiezaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Pieza
-        fields = ["numeroserie", "codigoetiqueta", "nombre", "maquina", "edo_pieza"]
+        fields = "__all__"
 
 class DetailPiezaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -279,7 +309,7 @@ class UpdatePiezaSerializer(serializers.ModelSerializer):
 class ListRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Refaccion
-        fields = ["numeroregistro", "nombre", "codigosku", "stock", "proveedor"]
+        fields = "__all__"
 
 class DetailRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -327,7 +357,7 @@ class UpdateRefaccionSerializer(serializers.ModelSerializer):
 class ListRefaccMaquiSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.RefaccMaqui
-        fields = ["maquina", "refaccion"]
+        fields = "__all__"
 
 class DetailRefaccMaquiSerializer(serializers.ModelSerializer):
     class Meta:
@@ -348,7 +378,7 @@ class UpdateRefaccMaquiSerializer(serializers.ModelSerializer):
 class ListEstadoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EstadoHerramienta
-        fields = ["herramienta", "edo_herramienta", "cantidad"]
+        fields = "__all__"
 
 class DetailEstadoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -369,7 +399,7 @@ class UpdateEstadoHerramientaSerializer(serializers.ModelSerializer):
 class ListEstadoRefaccionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EstadoRefaccion
-        fields = ["estado_refaccion", "refaccion", "cantidad"]
+        fields = "__all__"
 
 class DetailEstadoRefaccionSerializer(serializers.ModelSerializer):
     class Meta:

@@ -9,6 +9,7 @@
   var ASIGNAR_TPL = root.dataset.asignarUrlBase;
   var INICIAR_TPL = root.dataset.iniciarUrlBase;
   var CERRAR_TPL = root.dataset.cerrarUrlBase;
+  var REPORTES_DISPONIBLES_URL = root.dataset.reportesDisponiblesUrl;
   var ES_TECNICO = root.dataset.esTecnico === "1";
   var NUMERO_NOMINA = root.dataset.numeroNomina;
 
@@ -25,8 +26,118 @@
 
   var _modalNuevaOrden = document.getElementById("newOrdenModal");
   var _drawerOrden = document.getElementById("ordenDrawer");
+  var _modalReporteFalla = document.getElementById("reporteFallaPickerModal");
   if (_modalNuevaOrden) conBloqueoScroll(_modalNuevaOrden);
   if (_drawerOrden) conBloqueoScroll(_drawerOrden);
+  if (_modalReporteFalla) conBloqueoScroll(_modalReporteFalla);
+
+  // ------------------------------------------------- reporte de falla (crear orden)
+  // Estado del reporte que el usuario eligio para adjuntar a la orden correctiva
+  // en curso. Se resetea al cerrar/enviar el modal de "Nueva orden".
+  var reporteSeleccionado = null;
+
+  var oTipo = document.getElementById("oTipo");
+  var oReporteFallaWrap = document.getElementById("oReporteFallaWrap");
+  var oReporteFallaBtn = document.getElementById("oReporteFallaBtn");
+  var oReporteFallaEmpty = document.getElementById("oReporteFallaEmpty");
+  var oReporteFallaChip = document.getElementById("oReporteFallaChip");
+  var oReporteFallaTexto = document.getElementById("oReporteFallaTexto");
+  var oReporteFallaVer = document.getElementById("oReporteFallaVer");
+  var oReporteFallaQuitar = document.getElementById("oReporteFallaQuitar");
+  var rfLista = document.getElementById("rfLista");
+  var rfEmpty = document.getElementById("rfEmpty");
+  var rfCancelar = document.getElementById("rfCancelar");
+
+  function limpiarReporteSeleccionado() {
+    reporteSeleccionado = null;
+    if (oReporteFallaEmpty) oReporteFallaEmpty.hidden = false;
+    if (oReporteFallaChip) oReporteFallaChip.hidden = true;
+  }
+
+  function pintarReporteSeleccionado() {
+    if (!reporteSeleccionado) { limpiarReporteSeleccionado(); return; }
+    oReporteFallaEmpty.hidden = true;
+    oReporteFallaChip.hidden = false;
+    oReporteFallaTexto.textContent = "#" + reporteSeleccionado.numeroRegistro + " · " + reporteSeleccionado.asunto;
+  }
+
+  if (oTipo && oReporteFallaWrap) {
+    oTipo.addEventListener("change", function () {
+      oReporteFallaWrap.hidden = oTipo.value !== "CORRE";
+      if (oTipo.value !== "CORRE") limpiarReporteSeleccionado();
+    });
+  }
+
+  if (oReporteFallaBtn && _modalReporteFalla && rfLista) {
+    oReporteFallaBtn.addEventListener("click", function () {
+      var maquina = document.getElementById("oMaquina").value;
+      if (!maquina) { errorNuevaOrden("Selecciona primero la máquina."); return; }
+      rfLista.innerHTML = "<p>Cargando…</p>";
+      rfEmpty.hidden = true;
+      _modalReporteFalla.showModal();
+      fetch(REPORTES_DISPONIBLES_URL + "?maquina=" + encodeURIComponent(maquina))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          rfLista.innerHTML = "";
+          var reportes = Array.isArray(data) ? data : [];
+          rfEmpty.hidden = reportes.length > 0;
+          reportes.forEach(function (rep) {
+            var item = document.createElement("button");
+            item.type = "button";
+            item.className = "orden-reporte__item";
+            item.innerHTML =
+              '<span class="orden-reporte__item-asunto">#' + rep.numeroRegistro + " · " + rep.asunto + '</span>' +
+              '<span class="orden-reporte__item-meta">' + (rep.tipo_severidad_nombre || "") + " · " + (rep.estado_reporte_nombre || "") + " · " + (rep.fechaCreacion || "") + '</span>';
+            item.addEventListener("click", function () {
+              reporteSeleccionado = { numeroRegistro: rep.numeroRegistro, asunto: rep.asunto };
+              pintarReporteSeleccionado();
+              _modalReporteFalla.close();
+            });
+            rfLista.appendChild(item);
+          });
+        })
+        .catch(function () {
+          rfLista.innerHTML = "";
+          rfEmpty.hidden = false;
+          rfEmpty.textContent = "No fue posible conectar con el servidor.";
+        });
+    });
+  }
+
+  if (rfCancelar && _modalReporteFalla) {
+    rfCancelar.addEventListener("click", function () { _modalReporteFalla.close(); });
+  }
+
+  if (oReporteFallaVer) {
+    oReporteFallaVer.addEventListener("click", function () {
+      if (reporteSeleccionado && window.abrir_modal_detalle) {
+        // Un <dialog> abierto con .showModal() vive en el "top layer" y se
+        // pinta encima de todo sin importar z-index: si no lo cerramos, el
+        // modal de la falla queda atrapado detras.
+        if (_modalNuevaOrden && _modalNuevaOrden.open) _modalNuevaOrden.close();
+        window.abrir_modal_detalle(reporteSeleccionado.numeroRegistro);
+      }
+    });
+  }
+
+  if (oReporteFallaQuitar) {
+    oReporteFallaQuitar.addEventListener("click", function () { limpiarReporteSeleccionado(); });
+  }
+
+  // Si cambian de maquina despues de elegir un reporte, el reporte ya no
+  // necesariamente corresponde: se limpia para evitar mandar un folio que
+  // el backend va a rechazar por pertenecer a otra maquina.
+  var _selectMaquinaGlobal = document.getElementById("oMaquina");
+  if (_selectMaquinaGlobal) {
+    _selectMaquinaGlobal.addEventListener("change", limpiarReporteSeleccionado);
+  }
+
+  function errorNuevaOrden(texto) {
+    var errorEl = document.getElementById("newOrdenError");
+    if (!errorEl) return;
+    errorEl.hidden = false;
+    errorEl.textContent = texto;
+  }
 
   function getCookie(nombre) {
     var valor = null;
@@ -112,7 +223,12 @@
     });
 
     function abrirModal() { errorEl.hidden = true; errorEl.textContent = ""; modal.showModal(); }
-    function cerrarModal() { modal.close(); form.reset(); }
+    function cerrarModal() {
+      modal.close();
+      form.reset();
+      limpiarReporteSeleccionado();
+      if (oReporteFallaWrap) oReporteFallaWrap.hidden = true;
+    }
 
     btnNueva.addEventListener("click", abrirModal);
     var btnCancelar = document.getElementById("newOrdenCancel");
@@ -126,6 +242,7 @@
         trabajador: selectTrabajador.value || null,
         fechaprogramada: document.getElementById("oFecha").value || null,
         descripcion: document.getElementById("oDescripcion").value,
+        reporte_falla: reporteSeleccionado ? reporteSeleccionado.numeroRegistro : null,
       };
       fetch(CREAR_URL, {
         method: "POST",
@@ -180,6 +297,15 @@
       (orden.trabajador_nombre || "Sin asignar");
     document.getElementById("ordenDrawerDescripcion").textContent = orden.descripcion || "";
 
+    var reporteWrap = document.getElementById("ordenDrawerReporte");
+    if (reporteWrap) {
+      reporteWrap.hidden = !orden.reporte_falla;
+      var btnVerReporte = document.getElementById("ordenDrawerVerReporte");
+      if (orden.reporte_falla && btnVerReporte) {
+        btnVerReporte.textContent = "📄 Ver reporte de falla: #" + orden.reporte_falla + (orden.reporte_falla_asunto ? " · " + orden.reporte_falla_asunto : "");
+      }
+    }
+
     var cerrada = !!orden.fechacierre;
 
     if (asignarSelect && btnAsignar) {
@@ -202,6 +328,32 @@
 
   var btnCerrarDrawer = document.getElementById("ordenDrawerClose");
   if (btnCerrarDrawer) btnCerrarDrawer.addEventListener("click", function () { drawer.close(); estado.seleccionada = null; });
+
+  // Folio del drawer que cerramos para mostrar el reporte encima, y al que
+  // volvemos cuando el usuario cierra ese reporte.
+  var _volverAlDrawer = null;
+
+  var btnVerReporteDrawer = document.getElementById("ordenDrawerVerReporte");
+  if (btnVerReporteDrawer) {
+    btnVerReporteDrawer.addEventListener("click", function () {
+      if (estado.seleccionada && estado.seleccionada.reporte_falla && window.abrir_modal_detalle) {
+        drawer.close();  // el <dialog> nativo pinta arriba de TODO; si no lo
+                         // cerramos, el modal de falla queda atrapado detras.
+        _volverAlDrawer = estado.seleccionada.folio;
+        window.abrir_modal_detalle(estado.seleccionada.reporte_falla);
+      }
+    });
+  }
+
+  // Al cerrar el reporte volvemos al drawer, que cerramos solo para no quedar
+  // tapados. Solo si fuimos nosotros quienes lo cerramos: el mismo modal se
+  // abre tambien desde "Nueva orden", y ahi no hay drawer al que regresar.
+  document.addEventListener("fallas:modal-cerrado", function () {
+    if (!_volverAlDrawer) return;
+    var folio = _volverAlDrawer;
+    _volverAlDrawer = null;
+    abrirDrawer(folio);
+  });
 
   if (btnAsignar && asignarSelect) {
     btnAsignar.addEventListener("click", function () {

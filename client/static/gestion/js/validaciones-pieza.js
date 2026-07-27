@@ -59,7 +59,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   setupInputValidation(
     document.getElementById("id_fechainstalacion"),
-    { required: true },
+    { required: true, customValidator: function(v) {
+      if (!v) return true;
+      return new Date(v) <= new Date(new Date().toDateString()) ? true : "La fecha no puede ser mayor a la actual";
+    }},
     document.getElementById("fechainstalacion-error"),
     estadoElement,
   );

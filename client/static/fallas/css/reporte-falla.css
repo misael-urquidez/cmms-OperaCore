@@ -2,7 +2,7 @@
     display: flex;
     gap: 1.5rem;
     background: var(--color-surface);
-    border: 1px solid var(--admin-border);
+    border: 1px solid var(--line);
     border-radius: 0.5rem;
     padding: 1.5rem;
 }
@@ -300,4 +300,83 @@
 .data-table a:hover {
     color: var(--color-primary);
     border-color: var(--color-primary);
+}
+
+/* ============================================================
+   Estilos base de "panel" / "tabla de datos" / "badge" para las
+   pantallas de Fallas (lista, reporte, actualizar).
+
+   Estas clases (.panel, .data-table, .badge...) originalmente solo
+   estaban definidas en admin.css. Como estas pantallas ahora pueden
+   renderizarse con base_admin.html O base_tecni.html segun el rol
+   en sesion (ver fallas/views.py: base_template), y tecni.css NO
+   carga admin.css, se quedaban sin estilos para el tecnico.
+
+   Se definen aqui, self-contained, usando SOLO variables
+   compartidas entre ambos temas (--line, --color-surface,
+   --color-text, --color-muted, --color-primary, --color-bg), para
+   que se vean bien sin importar cual de los dos temas este activo.
+   ============================================================ */
+
+.panel {
+    background: var(--color-surface);
+    border: 1px solid var(--line);
+    border-radius: 0.8rem;
+    padding: 1.2rem 1.3rem;
+}
+.panel__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; flex-wrap: wrap; gap: 0.6rem; }
+.panel__title { margin: 0; font-size: 0.95rem; font-weight: 700; }
+.panel__actions { display: flex; gap: 0.6rem; align-items: center; }
+.panel__empty { color: var(--color-muted); font-size: 0.85rem; padding: 1.2rem 0; text-align: center; }
+
+.btn-primary-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    background: var(--color-primary);
+    color: var(--color-bg, #08131f);
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+}
+.btn-primary-sm:hover { opacity: 0.85; }
+.btn-primary-sm svg { width: 15px; height: 15px; }
+
+.data-table-wrap { overflow-x: auto; }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.data-table th {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    color: var(--color-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+}
+.data-table td {
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+    color: var(--color-text);
+    vertical-align: middle;
+}
+.data-table tbody tr:hover { background: rgba(128, 128, 128, 0.08); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: rgba(128, 128, 128, 0.14);
+    color: var(--color-primary);
+    white-space: nowrap;
 }

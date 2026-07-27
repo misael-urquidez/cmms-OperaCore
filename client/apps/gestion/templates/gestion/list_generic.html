@@ -31,15 +31,24 @@
   <tbody>
     {% for registro in registros %}
       {% with pk_val=registro|pk_valor:config.pk_field %}
-      <tr>
+      <tr {% if necesita_modal %}
+            {% for col in todas_las_columnas %}
+              {% if not col.name|es_pk:config.pk_field %}
+                data-col-{{ col.name }}="{{ registro|get_item:col.name|default_if_none:'' }}"
+              {% endif %}
+            {% endfor %}
+          {% endif %}>
         <td>{{ pk_val }}</td>
         {% for col in columnas %}
           {% if not col.name|es_pk:config.pk_field %}
-            <td>{{ registro|get_item:col.name }}</td>
+            <td>{% if col.es_booleano %}{{ registro|get_item:col.name|si_no }}{% else %}{{ registro|get_item:col.name|default_sin:col.label }}{% endif %}</td>
           {% endif %}
         {% endfor %}
         {% if config.detail_path or config.delete_path %}
           <td class="gestion-acciones">
+            {% if necesita_modal %}
+              <button type="button" class="btn-detalles" onclick="abrir_modal_detalles(this)">Detalles</button>
+            {% endif %}
             {% if config.detail_path %}
               <a href="{% url 'gestion:editar' config.slug pk_val %}">Editar</a>
             {% endif %}
@@ -60,4 +69,93 @@
     {% endfor %}
   </tbody>
 </table></div>
+
+{% if necesita_modal %}
+<div class="gestion-modal" id="gestion-modal-detalles" role="dialog">
+  <div class="gestion-modal__backdrop" data-dismiss="modal"></div>
+  <div class="gestion-modal__dialog">
+    <div class="gestion-modal__content">
+      <div class="gestion-modal__header">
+        <h2 class="gestion-modal__title">Detalle del registro</h2>
+        <button type="button" class="gestion-modal__close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="gestion-modal__body" id="gestion-modal-body"></div>
+      <div class="gestion-modal__footer">
+        <button type="button" class="gestion-modal__btn gestion-modal__btn--close" data-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var apiRootUrl = "{{ api_root_url }}";
+  var todasLasColumnas = [
+    {% for col in todas_las_columnas %}
+      {% if not col.name|es_pk:config.pk_field %}
+        {name: "{{ col.name }}", label: "{{ col.label }}", tipo: "{{ col.tipo }}", esBooleano: {% if col.es_booleano %}true{% else %}false{% endif %}}{% if not forloop.last %},{% endif %}
+      {% endif %}
+    {% endfor %}
+  ];
+
+  function abrir_modal_detalles(btn) {
+    var tr = btn.closest('tr');
+    var body = document.getElementById('gestion-modal-body');
+    var html = '<div class="gestion-modal__grid">';
+    var imagenSrc = '';
+    var imagenLabel = '';
+
+    for (var i = 0; i < todasLasColumnas.length; i++) {
+      var col = todasLasColumnas[i];
+      var valor = tr.getAttribute('data-col-' + col.name) || '';
+      if (valor === 'None') valor = '';
+
+      if (col.tipo === 'file') {
+        if (valor) {
+          imagenSrc = apiRootUrl + '/media/' + valor;
+          imagenLabel = col.label;
+        }
+        continue;
+      }
+
+      var display = valor;
+      if (col.esBooleano) {
+        if (valor === '1' || valor === 'true' || valor === 'True') display = 'Sí';
+        else if (valor === '0' || valor === 'false' || valor === 'False') display = 'No';
+      }
+
+      html += '<div class="gestion-modal__field">';
+      html += '<span class="gestion-modal__label">' + col.label + '</span>';
+      html += '<span class="gestion-modal__value">' + (display || ('Sin ' + col.label)) + '</span>';
+      html += '</div>';
+    }
+
+    html += '</div>';
+
+    if (imagenSrc) {
+      html += '<div class="gestion-modal__section">';
+      html += '<span class="gestion-modal__label">' + imagenLabel + '</span>';
+      html += '<img class="gestion-modal__img" src="' + imagenSrc + '" alt="' + imagenLabel + '">';
+      html += '</div>';
+    }
+
+    body.innerHTML = html;
+    document.getElementById('gestion-modal-detalles').classList.add('is-open');
+  }
+
+  function cerrar_modal() {
+    document.getElementById('gestion-modal-detalles').classList.remove('is-open');
+  }
+
+  document.addEventListener('click', function(e) {
+    if (e.target.hasAttribute('data-dismiss')) cerrar_modal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') cerrar_modal();
+  });
+
+  window.abrir_modal_detalles = abrir_modal_detalles;
+})();
+</script>
+{% endif %}
 {% endblock %}
