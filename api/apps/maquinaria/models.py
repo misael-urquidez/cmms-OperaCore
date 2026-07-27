@@ -127,3 +127,34 @@ class Maquina(models.Model):
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
+
+
+# ==========================================================
+# HISTORIAL DE ESTADOS (nuevo)
+# ==========================================================
+
+class HistorialEstadoMaquina(models.Model):
+    """Auditoría de cada cambio de Maquina.estado_maquina. El único punto
+    que debe escribir aquí es apps/maquinaria/services.py:cambiar_estado_maquina."""
+
+    numeroregistro = models.AutoField(db_column='numeroRegistro', primary_key=True)
+    maquina = models.ForeignKey(Maquina, models.DO_NOTHING, db_column='maquina')
+    estado_anterior = models.ForeignKey(
+        EdoMaquina, models.DO_NOTHING, db_column='estado_anterior',
+        related_name='historial_como_anterior', blank=True, null=True,
+    )
+    estado_nuevo = models.ForeignKey(
+        EdoMaquina, models.DO_NOTHING, db_column='estado_nuevo',
+        related_name='historial_como_nuevo',
+    )
+    fecha = models.DateTimeField(auto_now_add=True)
+    referencia_tipo = models.CharField(max_length=20, blank=True, null=True)
+    referencia_id = models.CharField(max_length=20, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'HISTORIAL_ESTADO_MAQUINA'
+        ordering = ['-fecha']
+
+    def __str__(self):
+        return f"{self.maquina_id}: {self.estado_anterior_id} -> {self.estado_nuevo_id}"

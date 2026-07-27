@@ -1,8 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
+from django.db import transaction
 from django.utils import timezone
 from apps.usuarios.models import Trabajador
+from apps.maquinaria.services import cambiar_estado_maquina
 from rest_framework import generics, status
 from . import models
 from . import serializers
@@ -96,9 +98,6 @@ class TipoMovimientoDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ------------ TAREA_ORDEN (llave compuesta) ------------------------------
-# PK real en BD: (tarea, orden_mantenimiento). Igual que en inventario,
-# cada Detail resuelve su propio get_object a mano; no se comparte mixin
-# entre tablas para que se puedan modificar por separado sin romper otras.
 class TareaOrdenListAPIView(generics.ListAPIView):
     queryset = models.TareaOrden.objects.all()
     serializer_class = serializers.ListTareaOrdenSerializer
@@ -245,17 +244,34 @@ class OrdenMantenimientoIniciarAPIView(APIView):
         try: orden = models.OrdenMantenimiento.objects.get(pk=folio)
         except models.OrdenMantenimiento.DoesNotExist as exc: raise NotFound("Orden no encontrada.") from exc
         orden.estado_orden_id = "ENPRO"; orden.save(update_fields=["estado_orden"])
+        cambiar_estado_maquina(orden.maquina_id, "MANTE", "orden_mantenimiento", orden.folio)
         return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
 
 class OrdenMantenimientoCerrarAPIView(APIView):
+    @transaction.atomic
     def patch(self, request, folio):
         try: orden = models.OrdenMantenimiento.objects.get(pk=folio)
         except models.OrdenMantenimiento.DoesNotExist as exc: raise NotFound("Orden no encontrada.") from exc
         if orden.fechacierre is not None: return Response({"detail": "Esta orden ya está cerrada."}, status=400)
         serializer = serializers.CerrarOrdenSerializer(data=request.data); serializer.is_valid(raise_exception=True)
         datos, ahora = serializer.validated_data, timezone.localtime()
-        for campo, valor in (("diagnostico", datos.get("diagnostico")), ("notas", datos.get("notas")), ("horasintervenidas", datos.get("horasIntervenidas"))):
+        for campo, valor in ((("diagnostico", datos.get("diagnostico")), ("notas", datos.get("notas")), ("horasintervenidas", datos.get("horasIntervenidas")))):
             if valor is not None: setattr(orden, campo, valor)
+
+        # IMPORTANTE: cerrar el reporte de falla ANTES de guardar fechaCierre
+        # en la orden, para que tg_actualizar_mttr_orden (dispara con el
+        # UPDATE de abajo) lea el tiempoParo ya actualizado. Ambos saves
+        # van en la misma transacción gracias al @transaction.atomic.
+        if orden.reporte_falla_id:
+            from datetime import datetime
+            reporte = orden.reporte_falla
+            creado = datetime.combine(reporte.fechaCreacion, reporte.horaCreacion)
+            reporte.tiempoParo = int((ahora.replace(tzinfo=None) - creado).total_seconds() / 3600)
+            reporte.estado_reporte_id = "RESUE"
+            reporte.save(update_fields=["tiempoParo", "estado_reporte"])
+
         orden.fechacierre, orden.horacierre, orden.estado_orden_id = ahora.date(), ahora.time(), "CERRA"
         orden.save(update_fields=["diagnostico", "notas", "horasintervenidas", "fechacierre", "horacierre", "estado_orden"])
+
+        cambiar_estado_maquina(orden.maquina_id, "ESPER", "orden_mantenimiento", orden.folio)
         return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)

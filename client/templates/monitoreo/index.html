@@ -10,6 +10,7 @@
          data-indicadores-url-base="{% url 'monitoreo:indicadores' codigo='__CODIGO__' %}"
          data-historial-url-base="{% url 'monitoreo:historial' codigo='__CODIGO__' %}"
          data-estado-url-base="{% url 'monitoreo:estado' codigo='__CODIGO__' %}"
+         data-estado-accion-url-base="{% url 'monitoreo:estado-accion' codigo='__CODIGO__' %}"
          data-catalogos-url="{% url 'monitoreo:catalogos' %}"
          data-crear-url="{% url 'monitoreo:crear-maquina' %}"
          data-modo-url-base="{% url 'monitoreo:modo' codigo='__CODIGO__' %}"
@@ -44,10 +45,12 @@
 
   {% if error %}<p class="monitoring__error" id="monitorError">{{ error }}</p>{% endif %}
 
-  <div class="plant-legend">
+<div class="plant-legend">
     <span><i class="dot dot--OPERA"></i> Operativa</span>
     <span><i class="dot dot--MANTE"></i> En mantenimiento</span>
     <span><i class="dot dot--FALLO"></i> En falla</span>
+    <span><i class="dot dot--ESPER"></i> En espera de validación</span>
+    <span><i class="dot dot--DESHA"></i> Deshabilitada</span>
     <span><i class="dot dot--ALERT"></i> Revisión preventiva sugerida</span>
     <span><i class="dot dot--sin"></i> Sin línea / sin dato</span>
   </div>
@@ -84,9 +87,9 @@
         <span class="metric-card__unit">horas</span>
       </div>
       <div class="metric-card">
-        <span class="metric-card__label" title="Tiempo medio de reparación: minutos que tarda en promedio resolver una falla.">MTTR</span>
+        <span class="metric-card__label" title="Tiempo medio de reparación: horas que tarda en promedio resolver una falla.">MTTR</span>
         <strong class="metric-card__value" id="drawerMttr">—</strong>
-        <span class="metric-card__unit">min</span>
+        <span class="metric-card__unit">horas</span>
       </div>
       <div class="metric-card metric-card--wide">
         <span class="metric-card__label" title="Porcentaje del tiempo que la máquina está disponible para operar: MTBF / (MTBF + MTTR).">Disponibilidad</span>
@@ -152,10 +155,10 @@
       <p class="trend-chart__empty" id="trendEmpty" hidden>Sin lecturas suficientes todavía.</p>
     </div>
 
-    <div class="machine-drawer__foot">
-      <a href="{% url 'fallas:reporte' %}" class="btn-plant-secondary" id="drawerReportarFalla">Reportar falla en esta máquina</a>
-      <button type="button" class="btn-plant-new" id="drawerLevantarOrden" style="margin-top:.6rem;width:100%;">Levantar orden de mantenimiento preventivo</button>
-      <p class="feedback-msg" id="drawerOrdenMsg" hidden></p>
+<div class="machine-drawer__section" id="drawerAccionEstadoSection" hidden>
+      <h3>Estado de la máquina</h3>
+      <button type="button" class="btn-plant-new" id="drawerAccionEstadoBtn" style="width:100%;"></button>
+      <p class="feedback-msg" id="drawerAccionEstadoMsg" hidden></p>
     </div>
   </aside>
 </div>

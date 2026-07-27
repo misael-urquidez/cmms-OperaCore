@@ -8,6 +8,7 @@
   var INDICADORES_TPL = root.dataset.indicadoresUrlBase;
   var HISTORIAL_TPL = root.dataset.historialUrlBase;
   var ESTADO_TPL = root.dataset.estadoUrlBase;
+  var ESTADO_ACCION_TPL = root.dataset.estadoAccionUrlBase;
   var CATALOGOS_URL = root.dataset.catalogosUrl;
   var CREAR_URL = root.dataset.crearUrl;
   var MODO_TPL = root.dataset.modoUrlBase;
@@ -53,7 +54,7 @@
     return valor;
   }
   function urlPara(tpl, codigo) { return tpl.replace("__CODIGO__", encodeURIComponent(codigo)); }
-  function estadoValido(codigo) { return ["OPERA", "MANTE", "FALLO"].indexOf(codigo) !== -1 ? codigo : "sin"; }
+  function estadoValido(codigo) { return ["OPERA", "MANTE", "FALLO", "ESPER", "DESHA"].indexOf(codigo) !== -1 ? codigo : "sin"; }
 
   // -------------------------------------------------------- layout inicial
   function posicionPorDefecto(codigo, index, lineaIndex, indexEnLinea) {
@@ -269,6 +270,19 @@ refrescar();
   var drawerOpsForm = document.getElementById("drawerOpsForm");
   var drawerOpsMsg = document.getElementById("drawerOpsMsg");
 
+  var drawerAccionEstadoSection = document.getElementById("drawerAccionEstadoSection");
+  var drawerAccionEstadoBtn = document.getElementById("drawerAccionEstadoBtn");
+  var drawerAccionEstadoMsg = document.getElementById("drawerAccionEstadoMsg");
+
+  // estado actual -> qué acción se ofrece y a qué endpoint de maquinaria pega
+  var ACCIONES_POR_ESTADO = {
+    ESPER: { accion: "validar",      label: "Validar y poner operativa" },
+    DESHA: { accion: "reactivar",    label: "Reactivar máquina" },
+    OPERA: { accion: "deshabilitar", label: "Deshabilitar máquina" },
+    // FALLO y MANTE no tienen botón aquí: esos se resuelven por el flujo
+    // normal de reporte de falla / orden de mantenimiento, no manual.
+  };
+
   function abrirDrawer(codigo) {
     estado.seleccionada = codigo;
     drawer.setAttribute("aria-hidden", "false");
@@ -288,8 +302,17 @@ refrescar();
     drawerLinea.textContent = m.linea || "Sin línea";
     drawerTitle.textContent = m.nombre + " · " + m.codigo;
     var estadoClase = estadoValido(m.estado_maquina);
-    var etiquetas = { OPERA: "Operativa", MANTE: "En mantenimiento", FALLO: "En falla", sin: "Sin estado" };
+    var etiquetas = { OPERA: "Operativa", MANTE: "En mantenimiento", FALLO: "En falla", ESPER: "En espera de validación", DESHA: "Deshabilitada", sin: "Sin estado" };
     drawerEstado.textContent = etiquetas[estadoClase];
+    var accionInfo = ACCIONES_POR_ESTADO[m.estado_maquina];
+    if (accionInfo) {
+      drawerAccionEstadoSection.hidden = false;
+      drawerAccionEstadoBtn.textContent = accionInfo.label;
+      drawerAccionEstadoBtn.dataset.accion = accionInfo.accion;
+    } else {
+      drawerAccionEstadoSection.hidden = true;
+    }
+    drawerAccionEstadoMsg.hidden = true;
     drawerAlert.hidden = !m.requiere_revision_preventiva;
     document.getElementById("drawerOrdenMsg").hidden = true;
     drawerVibracion.textContent = m.ultima_lectura ? m.ultima_lectura.vibracion : "Sin datos";
@@ -337,6 +360,30 @@ refrescar();
         actualizarSeccionesPorModo(res.data.modo_monitoreo);
         refrescar();
       }).catch(function () { mostrarMsg(drawerModoMsg, "No fue posible conectar con el servidor.", false); });
+  });
+
+  drawerAccionEstadoBtn.addEventListener("click", function () {
+    if (!estado.seleccionada) return;
+    var codigo = estado.seleccionada;
+    var accion = drawerAccionEstadoBtn.dataset.accion;
+    drawerAccionEstadoBtn.disabled = true;
+    fetch(urlPara(ESTADO_ACCION_TPL, codigo), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify({ accion: accion }),
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        drawerAccionEstadoBtn.disabled = false;
+        if (!res.ok) {
+          mostrarMsg(drawerAccionEstadoMsg, res.data.detail || "No se pudo cambiar el estado.", false);
+          return;
+        }
+        mostrarMsg(drawerAccionEstadoMsg, "Estado actualizado a " + res.data.estado_maquina + ".", true);
+        refrescar();
+      }).catch(function () {
+        drawerAccionEstadoBtn.disabled = false;
+        mostrarMsg(drawerAccionEstadoMsg, "No fue posible conectar con el servidor.", false);
+      });
   });
 
   drawerManualForm.addEventListener("submit", function (ev) {

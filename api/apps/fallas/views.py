@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.usuarios.models import Trabajador
+from apps.maquinaria.services import cambiar_estado_maquina
 from . import models, serializers
 
 
@@ -112,6 +113,9 @@ class ReporteFallaCreateAPIView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         reporte = serializer.save()
+        cambiar_estado_maquina(
+            reporte.maquina_id, "FALLO", "reporte_falla", str(reporte.numeroRegistro),
+        )
         data = serializers.ReporteFallaDetailSerializer(reporte).data
         return Response(data, status=status.HTTP_201_CREATED)
 
@@ -234,4 +238,4 @@ class CatalogosReporteAPIView(APIView):
                 many=True,
             ).data,
         }
-        return Response(data, status=status.HTTP_200_OK) 
+        return Response(data, status=status.HTTP_200_OK)
