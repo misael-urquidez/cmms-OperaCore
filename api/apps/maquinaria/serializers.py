@@ -223,6 +223,8 @@ class ValidarTipoMaquinaAreaMixin:
 
 
 class CreateMaquinaSerializer(ValidarTipoMaquinaAreaMixin, serializers.ModelSerializer):
+    imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
+
     class Meta:
         model = Maquina
         fields = [
@@ -257,16 +259,35 @@ class UpdateMaquinaSerializer(serializers.ModelSerializer):
         ]
 
     def update(self, instance, validated_data):
-        imagen_file = validated_data.pop("imagen", None)
-        if imagen_file:
-            carpeta = os.path.join(settings.MEDIA_ROOT, "maquinaria")
-            os.makedirs(carpeta, exist_ok=True)
-            ruta = os.path.join(carpeta, imagen_file.name)
-            with open(ruta, "wb+") as dest:
-                for chunk in imagen_file.chunks():
-                    dest.write(chunk)
-            validated_data["imagen_url"] = f"maquinaria/{imagen_file.name}"
-        return super().update(instance, validated_data)
+            imagen_file = validated_data.pop("imagen", None)
+            if imagen_file:
+                carpeta = os.path.join(settings.MEDIA_ROOT, "maquinaria")
+                os.makedirs(carpeta, exist_ok=True)
+                ruta = os.path.join(carpeta, imagen_file.name)
+                with open(ruta, "wb+") as dest:
+                    for chunk in imagen_file.chunks():
+                        dest.write(chunk)
+                validated_data["imagen_url"] = f"maquinaria/{imagen_file.name}"
+
+            # estado_maquina NUNCA se pisa directo aquí: si viene en el payload
+            # (p. ej. desde Gestión) se saca del validated_data y se enruta por
+            # cambiar_estado_maquina(), para que HISTORIAL_ESTADO_MAQUINA y
+            # REGISTRO_OPS (y con ello MTBF/MTTR/Disponibilidad) queden
+            # consistentes sin importar que el cambio venga de Gestión o de los
+            # endpoints dedicados (validar/deshabilitar/reactivar).
+            nuevo_estado = validated_data.pop("estado_maquina", None)
+            if nuevo_estado is not None:
+                nuevo_estado_id = nuevo_estado.pk if hasattr(nuevo_estado, "pk") else nuevo_estado
+                if nuevo_estado_id != instance.estado_maquina_id:
+                    from django.core.exceptions import ValidationError as DjangoValidationError
+                    from .services import cambiar_estado_maquina
+                    try:
+                        cambiar_estado_maquina(instance.codigo, nuevo_estado_id, referencia_tipo="gestion")
+                    except DjangoValidationError as e:
+                        raise serializers.ValidationError({"estado_maquina": e.messages if hasattr(e, "messages") else str(e)})
+                    instance.refresh_from_db()
+
+            return super().update(instance, validated_data)
 
 
 # ==========================================================

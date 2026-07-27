@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -5,6 +6,7 @@ from rest_framework.views import APIView
 from . import models
 from .models import Maquina
 from .serializers import *
+from .services import cambiar_estado_maquina
 
 
 class PingAPIView(APIView):
@@ -190,3 +192,36 @@ class UpdateMaquinaAPIView(generics.UpdateAPIView):
     queryset = Maquina.objects.all()
     serializer_class = UpdateMaquinaSerializer
     lookup_field = 'codigo'
+
+
+# ==========================================================
+# CAMBIOS DE ESTADO MANUALES (nuevo)
+# ==========================================================
+class ValidarMaquinaAPIView(APIView):
+    """ESPER -> OPERA. El admin/encargado valida que la reparación quedó bien."""
+    def patch(self, request, codigo):
+        try:
+            maquina = cambiar_estado_maquina(codigo, "OPERA", "manual", None)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=400)
+        return Response({"codigo": maquina.codigo, "estado_maquina": maquina.estado_maquina_id})
+
+
+class DeshabilitarMaquinaAPIView(APIView):
+    """OPERA -> DESHA."""
+    def patch(self, request, codigo):
+        try:
+            maquina = cambiar_estado_maquina(codigo, "DESHA", "manual", None)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=400)
+        return Response({"codigo": maquina.codigo, "estado_maquina": maquina.estado_maquina_id})
+
+
+class ReactivarMaquinaAPIView(APIView):
+    """DESHA -> OPERA."""
+    def patch(self, request, codigo):
+        try:
+            maquina = cambiar_estado_maquina(codigo, "OPERA", "manual", None)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=400)
+        return Response({"codigo": maquina.codigo, "estado_maquina": maquina.estado_maquina_id})
