@@ -38,6 +38,19 @@ class ProxyOrden(View):
     def post(self, request, folio=None): return self.responder(request, folio)
     def patch(self, request, folio=None): return self.responder(request, folio)
 
+class ReportesDisponiblesAPIView(View):
+    def get(self, request):
+        params = {}
+        if request.GET.get("maquina"):
+            params["maquina"] = request.GET["maquina"]
+        try:
+            r = SESSION.get(f"{API_URL}/v1/reportes-disponibles/list/", params=params, timeout=5)
+            cuerpo = r.json()
+        except (requests.RequestException, ValueError):
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        return JsonResponse(cuerpo, safe=False, status=r.status_code)
+
+
 class OrdenesListAPIView(ProxyOrden): action = "list"
 class OrdenCrearAPIView(ProxyOrden): action = "create"
 class OrdenAsignarAPIView(ProxyOrden): action = "asignar"

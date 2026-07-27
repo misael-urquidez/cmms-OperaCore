@@ -1,5 +1,6 @@
 import requests
 from django.conf import settings
+from django.contrib import messages
 from django.core.cache import cache
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import generic
@@ -21,6 +22,11 @@ class Index(generic.View):
     template_name = "maquinaria/index.html"
 
     def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
         # 1. Obtener estado del servicio vía ping (usando caché)
         api_status = cache.get("maquinaria_ping")
         if api_status is None:
@@ -52,6 +58,8 @@ class Index(generic.View):
             "total_maquinas": total_maquinas,
             "operativas": operativas,
             "en_mantenimiento": en_mantenimiento,
+            "usuario": usuario,
+            "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
         }
         return render(request, self.template_name, context)
 

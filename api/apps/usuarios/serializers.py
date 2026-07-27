@@ -111,9 +111,14 @@ class UpdateTrabajadorSerializer(serializers.ModelSerializer):
     - Mandar 'foto' (archivo) en el multipart -> reemplaza la foto actual.
     - Mandar 'eliminar_foto' = true (sin 'foto') -> borra la foto actual.
     - No mandar ninguno de los dos -> la foto actual no se toca.
+
+    Para la contraseña: si se manda 'password' hay que mandar tambien
+    'password2' identico (igual que en el registro). Si no se quiere
+    cambiar la contraseña, simplemente no se mandan ninguno de los dos.
     """
 
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    password2 = serializers.CharField(write_only=True, required=False, allow_blank=True)
     foto = serializers.ImageField(required=False, allow_null=True)
     eliminar_foto = serializers.BooleanField(write_only=True, required=False, default=False)
 
@@ -122,11 +127,44 @@ class UpdateTrabajadorSerializer(serializers.ModelSerializer):
         fields = [
             "nombre", "apellidoPat", "apellidoMat", "telefono", "correo",
             "usuario", "actividad", "rol", "especialidad", "password",
-            "foto", "eliminar_foto",
+            "password2", "foto", "eliminar_foto",
         ]
+
+    def _validar_unico(self, campo, value):
+        """Unicidad al editar: se excluye la instancia actual (si no, se
+        rechazaria a si mismo con su propio dato sin cambios)."""
+        qs = Trabajador.objects.filter(**{f"{campo}__iexact": value})
+        if self.instance is not None:
+            qs = qs.exclude(pk=self.instance.pk)
+        return qs.exists()
+
+    def validate_usuario(self, value):
+        if self._validar_unico("usuario", value):
+            raise serializers.ValidationError("Ese usuario ya existe.")
+        return value
+
+    def validate_correo(self, value):
+        if self._validar_unico("correo", value):
+            raise serializers.ValidationError("Ese correo ya está registrado.")
+        return value
+
+    def validate_telefono(self, value):
+        if self._validar_unico("telefono", value):
+            raise serializers.ValidationError("Ese teléfono ya está registrado.")
+        return value
+
+    def validate(self, attrs):
+        password = attrs.get("password")
+        password2 = attrs.get("password2")
+        if password or password2:
+            if password != password2:
+                raise serializers.ValidationError({"password2": "Las contraseñas no coinciden."})
+            validate_password(password)
+        return attrs
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
+        validated_data.pop("password2", None)
         eliminar_foto = validated_data.pop("eliminar_foto", False)
         foto_nueva = validated_data.pop("foto", None)
 

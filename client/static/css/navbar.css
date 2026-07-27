@@ -281,7 +281,51 @@
     transition: border-color 0.15s ease;
 }
 .config-field input:focus { border-color: var(--color-primary); }
-.config-field input:disabled { opacity: 0.55; cursor: not-allowed; }
+.config-field input.has-error { border-color: #f87171; }
+
+.config-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+@media (max-width: 480px) {
+    .config-field-row { grid-template-columns: 1fr; }
+}
+
+.config-field__error {
+    display: block;
+    min-height: 1em;
+    margin-top: 0.3rem;
+    font-size: 0.72rem;
+    color: #fca5a5;
+}
+
+.config-form__divider {
+    margin: 1.1rem 0 0.2rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-text);
+}
+.config-form__hint {
+    margin: 0.2rem 0 0.7rem;
+    font-size: 0.72rem;
+    color: var(--color-muted);
+}
+.config-form__error-general {
+    display: none;
+    margin: -0.4rem 0 0.9rem;
+    padding: 0.55rem 0.75rem;
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    border-radius: 0.5rem;
+    font-size: 0.78rem;
+    color: #fca5a5;
+}
+.config-form__error-general.is-visible { display: block; }
 
 .config-modal__note {
     display: flex;

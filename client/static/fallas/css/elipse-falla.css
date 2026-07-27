@@ -1,0 +1,136 @@
+/* ==========================================================================
+   Panel de Elipse en el reporte de falla — "ayudame a redactar".
+
+   Un boton abre un panel lateral (como el panel de IA de YouTube): el tecnico
+   describe la falla en texto libre y Elipse rellena los campos del formulario
+   de al lado. Nunca manda nada a la BD por su cuenta; solo propone texto que
+   el tecnico revisa antes de dar "Reportar falla".
+   ========================================================================== */
+
+.btn-elipse-falla {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  border: 1px solid var(--line);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: .5rem;
+  padding: .55rem .9rem;
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin: .5rem 0 1rem;
+  transition: border-color .15s ease, background .15s ease;
+}
+.btn-elipse-falla:hover { border-color: var(--color-primary); }
+.btn-elipse-falla .elipse-bolt { font-size: 1rem; line-height: 1; }
+
+/* -------- overlay (solo tapa el fondo para poder cerrar tocando fuera) -------- */
+.elipse-falla-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(2, 6, 15, .55);
+  backdrop-filter: blur(1px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+}
+.elipse-falla-overlay:not([hidden]) { opacity: 1; pointer-events: auto; }
+
+/* -------- panel lateral -------- */
+.elipse-falla-panel {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  z-index: 201;
+  width: min(400px, 92vw);
+  background: var(--color-surface);
+  border-left: 1px solid var(--line);
+  box-shadow: -18px 0 40px rgba(0, 0, 0, .35);
+  display: flex;
+  flex-direction: column;
+  gap: .85rem;
+  padding: 1.1rem 1.1rem 1.4rem;
+  transform: translateX(100%);
+  transition: transform .22s cubic-bezier(.22, .61, .36, 1);
+  color: var(--color-text);
+}
+.elipse-falla-panel.is-open { transform: translateX(0); }
+
+.elipse-falla-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--line);
+}
+.elipse-falla-panel__title {
+  display: flex; align-items: center; gap: .4rem;
+  font-weight: 700; font-size: 1rem;
+}
+.elipse-falla-panel__close {
+  border: none; background: transparent; color: var(--color-muted);
+  cursor: pointer; font-size: 1.1rem; line-height: 1; padding: .2rem .35rem;
+  border-radius: .4rem;
+}
+.elipse-falla-panel__close:hover { color: var(--color-text); background: rgba(255, 255, 255, .06); }
+
+.elipse-falla-panel__hint {
+  margin: 0; font-size: .8rem; color: var(--color-muted); line-height: 1.5;
+}
+
+/* -------- chat: burbujas de la conversacion con Elipse -------- */
+.elipse-falla-panel__chat {
+  display: flex; flex-direction: column; gap: .5rem;
+  overflow-y: auto; flex: 1; margin: .5rem 0; padding-right: .25rem;
+}
+.elipse-falla-panel__msg {
+  max-width: 88%; padding: .55rem .75rem; border-radius: .7rem;
+  font-size: .85rem; line-height: 1.35; margin: 0;
+}
+.elipse-falla-panel__msg--user {
+  align-self: flex-end; background: var(--color-primary); color: #04121c;
+  border-bottom-right-radius: .2rem;
+}
+.elipse-falla-panel__msg--ai {
+  align-self: flex-start; background: var(--color-bg);
+  border: 1px solid var(--line); border-bottom-left-radius: .2rem;
+}
+.elipse-falla-panel__msg--ai ul {
+  margin: .35rem 0 0; padding-left: 1.1rem; font-size: .75rem; color: var(--color-muted);
+}
+.elipse-falla-panel__form { display: flex; gap: .5rem; align-items: flex-end; }
+.elipse-falla-panel__form textarea { flex: 1; }
+
+#elipseFallaInput {
+  width: 100%; resize: vertical; min-height: 44px; max-height: 140px;
+  padding: .6rem .7rem; font: inherit; font-size: .88rem;
+  background: var(--color-bg); color: var(--color-text);
+  border: 1px solid var(--line); border-radius: .5rem;
+  box-sizing: border-box;
+}
+#elipseFallaInput:focus { outline: none; border-color: var(--color-primary); }
+
+.elipse-falla-panel__btn {
+  flex: 0 0 auto;
+  border: none; border-radius: .5rem;
+  background: var(--color-primary); color: #04121c;
+  font-weight: 700; font-size: .95rem;
+  padding: .6rem .85rem; cursor: pointer;
+  transition: filter .12s ease, opacity .12s ease;
+}
+.elipse-falla-panel__btn:hover { filter: brightness(1.08); }
+.elipse-falla-panel__btn:disabled { opacity: .6; cursor: not-allowed; filter: none; }
+
+.elipse-falla-panel__footnote {
+  margin: 0; font-size: .7rem; color: var(--color-muted); line-height: 1.4;
+}
+
+/* -------- destello en los campos que Elipse acaba de rellenar -------- */
+@keyframes elipseFallaFlash {
+  0%   { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 55%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.elipse-filled { animation: elipseFallaFlash 1.4s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .elipse-falla-panel, .elipse-falla-overlay, .elipse-filled { transition: none !important; animation: none !important; }
+}
