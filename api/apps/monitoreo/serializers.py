@@ -107,6 +107,10 @@ class ModoMonitoreoSerializer(serializers.Serializer):
             )
         return valor
 
+class ReparacionManualSerializer(serializers.Serializer):
+    """Alimenta el MTTR a mano (para pruebas/expo). No expone mttr:
+    lo calcula el trigger tg_actualizar_mttr_orden."""
+    horas_reparacion = serializers.IntegerField(min_value=0)
 
 class RegistroOpsSerializer(serializers.Serializer):
     """Registra un periodo de horas de operación de la máquina.

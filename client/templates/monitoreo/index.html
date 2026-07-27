@@ -17,6 +17,7 @@
          data-lectura-manual-url="{% url 'monitoreo:lectura-manual' %}"
          data-simular-url-base="{% url 'monitoreo:simular' codigo='__CODIGO__' %}"
          data-registro-ops-url-base="{% url 'monitoreo:registro-ops' codigo='__CODIGO__' %}"
+         data-reparacion-manual-url-base="{% url 'monitoreo:reparacion-manual' codigo='__CODIGO__' %}"
          data-crear-orden-url="{% url 'mantenimiento:ordenes-crear' %}">
 
   {{ maquinas|json_script:"maquinas-data" }}
@@ -98,6 +99,31 @@
       </div>
     </div>
 
+    <p class="machine-drawer__group-title">Indicadores</p>
+
+    <div class="machine-drawer__section">
+      <h3>Horas de operación <span class="section-hint">(alimenta el MTBF)</span></h3>
+      <form id="drawerOpsForm" class="manual-form">
+        <label>Fecha inicio<input type="date" id="opsFechaInicio" required></label>
+        <label>Fecha fin<input type="date" id="opsFechaFin" required></label>
+        <label>Horas operadas<input type="number" step="1" min="0" id="opsHoras" required></label>
+        <button type="submit" class="btn-plant-secondary">Registrar horas</button>
+      </form>
+      <p class="feedback-msg" id="drawerOpsMsg" hidden></p>
+      <p class="section-hint">El MTTR y la disponibilidad se calculan solos: MTTR al cerrar una orden de mantenimiento, disponibilidad a partir de MTBF y MTTR.</p>
+    </div>
+
+    <div class="machine-drawer__section">
+      <h3>Reparación manual <span class="section-hint" title="Crea un reporte de falla ya resuelto y una orden ya cerrada con el tiempo de paro que pongas, sin mover el estado en vivo de la máquina.">(alimenta el MTTR)</span></h3>
+      <form id="drawerReparacionForm" class="manual-form">
+        <label>Horas de reparación<input type="number" step="1" min="0" id="reparacionHoras" required></label>
+        <button type="submit" class="btn-plant-secondary">Registrar reparación</button>
+      </form>
+      <p class="feedback-msg" id="drawerReparacionMsg" hidden></p>
+    </div>
+
+    <p class="machine-drawer__group-title">Salud y monitoreo de la máquina</p>
+
     <div class="machine-drawer__section">
       <h3>Modo de monitoreo</h3>
       <div class="modo-monitoreo">
@@ -129,17 +155,6 @@
     </div>
 
     <div class="machine-drawer__section">
-      <h3>Horas de operación <span class="section-hint">(alimenta el MTBF)</span></h3>
-      <form id="drawerOpsForm" class="manual-form">
-        <label>Fecha inicio<input type="date" id="opsFechaInicio" required></label>
-        <label>Fecha fin<input type="date" id="opsFechaFin" required></label>
-        <label>Horas operadas<input type="number" step="1" min="0" id="opsHoras" required></label>
-        <button type="submit" class="btn-plant-secondary">Registrar horas</button>
-      </form>
-      <p class="feedback-msg" id="drawerOpsMsg" hidden></p>
-    </div>
-
-    <div class="machine-drawer__section">
       <h3>Última lectura</h3>
       <dl class="machine-drawer__dl">
         <div><dt>Vibración</dt><dd id="drawerVibracion">—</dd></div>
@@ -155,7 +170,9 @@
       <p class="trend-chart__empty" id="trendEmpty" hidden>Sin lecturas suficientes todavía.</p>
     </div>
 
-<div class="machine-drawer__section" id="drawerAccionEstadoSection" hidden>
+    <p class="machine-drawer__group-title">Acciones</p>
+
+    <div class="machine-drawer__section" id="drawerAccionEstadoSection" hidden>
       <h3>Estado de la máquina</h3>
       <button type="button" class="btn-plant-new" id="drawerAccionEstadoBtn" style="width:100%;"></button>
       <p class="feedback-msg" id="drawerAccionEstadoMsg" hidden></p>

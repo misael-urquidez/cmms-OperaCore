@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
 from django.utils import timezone
 from rest_framework import status
@@ -14,7 +15,7 @@ from apps.usuarios.models import Trabajador
 from . import services
 from .models import Indicador, LecturaSensor
 from .serializers import (
-    CrearMaquinaSerializer, LecturaSensorSerializer, ModoMonitoreoSerializer,
+    CrearMaquinaSerializer, LecturaSensorSerializer, ModoMonitoreoSerializer, ReparacionManualSerializer,
     RegistroOpsSerializer, ReporteFallaManualSerializer,
 )
 
@@ -180,6 +181,27 @@ class SimularLecturaAPIView(APIView):
         data["requiere_revision_preventiva"] = requiere_revision
         return Response(data, status=status.HTTP_201_CREATED)
 
+class ReparacionManualAPIView(APIView):
+    """Registra una reparación con tiempoParo fijo a mano (alimenta MTTR).
+    No recibe ni escribe mttr -- eso lo calcula el trigger de MySQL en
+    cuanto se cierra la orden que crea internamente."""
+
+    def post(self, request, codigo):
+        try:
+            maquina = Maquina.objects.get(codigo=codigo)
+        except Maquina.DoesNotExist as exc:
+            raise NotFound("Máquina no encontrada.") from exc
+        serializer = ReparacionManualSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            reporte = services.registrar_reparacion_manual(maquina=maquina, **serializer.validated_data)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "numeroRegistro": reporte.numeroRegistro,
+            "maquina": maquina.codigo,
+            "tiempoParo": reporte.tiempoParo,
+        }, status=status.HTTP_201_CREATED)
 
 class RegistroOpsAPIView(APIView):
     """Registra un periodo de horas de operación de la máquina.

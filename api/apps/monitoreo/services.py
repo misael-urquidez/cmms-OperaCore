@@ -105,3 +105,49 @@ def registrar_horas_operacion(maquina, fechaInicio, fechaFin, horasOperacion):
         maquina=maquina, fechaInicio=fechaInicio, fechaFin=fechaFin,
         horasOperacion=horasOperacion,
     )
+
+
+
+def registrar_reparacion_manual(maquina, horas_reparacion):
+    """Equivalente de registrar_horas_operacion() pero para el MTTR: crea
+    un REPORTE_FALLA ya resuelto (con tiempoParo fijado a mano) y una
+    ORDEN_MANTENIMIENTO ya cerrada, y deja que tg_actualizar_mttr_orden haga
+    el cálculo -- el MTTR nunca se escribe a mano.
+
+    A propósito NO llama a cambiar_estado_maquina(): es un dato histórico
+    de prueba/demo, no debe mover el estado en vivo de la máquina ni
+    tropezar con el flujo automático de fallas/órdenes."""
+    from apps.mantenimiento.models import OrdenMantenimiento as OrdenMantenimientoCompleta
+
+    trabajador = Trabajador.objects.filter(actividad=True).order_by("numeroNomina").first()
+    severidad = TipoSeveridad.objects.filter(codigo="CRITI").first()
+    estado_reporte = EstadoReporte.objects.filter(codigo="RESUE").first()
+    tipo_mantenimiento = TipoMantenimiento.objects.filter(codigo="CORRE").first()
+    estado_orden = EstadoOrden.objects.filter(codigo="CERRA").first()
+    if not all((trabajador, severidad, estado_reporte, tipo_mantenimiento, estado_orden)):
+        raise ValidationError("Faltan catálogos o un trabajador activo para registrar la reparación manual.")
+
+    ahora = timezone.localtime()
+    reporte = ReporteFalla.objects.create(
+        asunto="Reparación registrada manualmente (demo/prueba)",
+        fechaCreacion=ahora.date(), horaCreacion=ahora.time(),
+        causaRaiz="Registro manual para pruebas o demostración.",
+        descripcion="Generado desde el panel de monitoreo para alimentar el MTTR sin esperar horas reales.",
+        maquina=maquina, trabajador=trabajador,
+        tipo_severidad=severidad, estado_reporte=estado_reporte,
+        tiempoParo=horas_reparacion,
+    )
+    folio = f"OM-M{reporte.numeroRegistro:010d}"
+    OrdenMantenimientoCompleta.objects.create(
+        folio=folio, descripcion="Reparación manual (alimenta MTTR).",
+        fechacreacion=ahora.date(), horacreacion=ahora.time(), maquina_id=maquina.codigo,
+        trabajador_id=trabajador.numeroNomina, reporte_falla_id=reporte.numeroRegistro,
+        tipo_mantenimiento_id=tipo_mantenimiento.codigo, estado_orden_id="EJECU",
+    )
+    # Se cierra con un UPDATE real y aparte del INSERT de arriba, porque
+    # tg_actualizar_mttr_orden es AFTER UPDATE (solo dispara cuando
+    # fechaCierre pasa de NULL a no-NULL).
+    OrdenMantenimientoCompleta.objects.filter(pk=folio).update(
+        fechacierre=ahora.date(), horacierre=ahora.time(), estado_orden_id="CERRA",
+    )
+    return reporte

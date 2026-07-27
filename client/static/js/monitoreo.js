@@ -15,6 +15,8 @@
   var LECTURA_MANUAL_URL = root.dataset.lecturaManualUrl;
   var SIMULAR_TPL = root.dataset.simularUrlBase;
   var REGISTRO_OPS_TPL = root.dataset.registroOpsUrlBase;
+  var REPARACION_MANUAL_TPL = root.dataset.reparacionManualUrlBase;
+
 
   var canvas = document.getElementById("plantCanvas");
   var linksSvg = document.getElementById("plantLinks");
@@ -269,6 +271,9 @@ refrescar();
   var drawerSimularMsg = document.getElementById("drawerSimularMsg");
   var drawerOpsForm = document.getElementById("drawerOpsForm");
   var drawerOpsMsg = document.getElementById("drawerOpsMsg");
+  var drawerReparacionForm = document.getElementById("drawerReparacionForm");
+  var drawerReparacionMsg = document.getElementById("drawerReparacionMsg");
+
 
   var drawerAccionEstadoSection = document.getElementById("drawerAccionEstadoSection");
   var drawerAccionEstadoBtn = document.getElementById("drawerAccionEstadoBtn");
@@ -319,7 +324,7 @@ refrescar();
     drawerUmbral.textContent = m.umbral_vibracion;
     drawerTemperatura.textContent = m.ultima_lectura && m.ultima_lectura.temperatura != null ? m.ultima_lectura.temperatura + " °C" : "—";
     drawerTimestamp.textContent = m.ultima_lectura ? m.ultima_lectura.timestamp.slice(0, 16).replace("T", " ") : "—";
-    drawerModoSelect.value = m.modo_monitoreo || "simulado";
+    drawerModoSelect.value = m.modo_monitoreo || "manual";
     actualizarSeccionesPorModo(m.modo_monitoreo);
     drawerModoMsg.hidden = true;
     drawerManualMsg.hidden = true;
@@ -460,6 +465,26 @@ refrescar();
         drawerOpsForm.reset();
         cargarDatosDrawer(estado.seleccionada, true);
       }).catch(function () { mostrarMsg(drawerOpsMsg, "No fue posible conectar con el servidor.", false); });
+  });
+
+drawerReparacionForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    if (!estado.seleccionada) return;
+    var payload = { horas_reparacion: parseInt(document.getElementById("reparacionHoras").value, 10) };
+    fetch(urlPara(REPARACION_MANUAL_TPL, estado.seleccionada), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify(payload),
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          mostrarMsg(drawerReparacionMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo registrar la reparación.", false);
+          return;
+        }
+        mostrarMsg(drawerReparacionMsg, "Reparación registrada (" + res.data.tiempoParo + " h). Indicadores actualizados.", true);
+        drawerReparacionForm.reset();
+        cargarDatosDrawer(estado.seleccionada, true);
+      }).catch(function () { mostrarMsg(drawerReparacionMsg, "No fue posible conectar con el servidor.", false); });
   });
 
   function cargarDatosDrawer(codigo, silencioso) {
