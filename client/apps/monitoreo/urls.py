@@ -12,6 +12,7 @@ urlpatterns = [
     path("maquinas/<str:codigo>/indicadores/", views.IndicadoresMaquinaAPIView.as_view(), name="indicadores"),
     path("maquinas/<str:codigo>/historial/", views.HistorialMaquinaAPIView.as_view(), name="historial"),
     path("maquinas/<str:codigo>/estado/", views.EstadoMaquinaAPIView.as_view(), name="estado"),
+    path("maquinas/<str:codigo>/estado/accion/", views.AccionEstadoMaquinaAPIView.as_view(), name="estado-accion"),
     path("maquinas/<str:codigo>/modo/", views.ModoMonitoreoAPIView.as_view(), name="modo"),
     path("lecturas/manual/", views.LecturaManualAPIView.as_view(), name="lectura-manual"),
     path("maquinas/<str:codigo>/simular/", views.SimularLecturaAPIView.as_view(), name="simular"),

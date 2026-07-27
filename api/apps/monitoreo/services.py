@@ -55,6 +55,10 @@ def _crear_falla_y_orden_por_golpe(maquina):
         trabajador=trabajador, reporte_falla=reporte,
         tipo_mantenimiento=tipo_mantenimiento, estado_orden=estado_orden,
     )
+
+    from apps.maquinaria.services import cambiar_estado_maquina
+    cambiar_estado_maquina(maquina.codigo, "FALLO", "reporte_falla", str(reporte.numeroRegistro))
+
     return reporte
 
 

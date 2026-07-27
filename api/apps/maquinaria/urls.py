@@ -75,4 +75,7 @@ urlpatterns = [
     # WIKI DE EQUIPOS SMT
     # =====================================================
     path("wiki/", views.WikiMaquinasView.as_view(), name="wiki_maquinas"),
+    path("v1/maquina/<str:codigo>/validar/", views.ValidarMaquinaAPIView.as_view(), name="validar_maquina"),
+    path("v1/maquina/<str:codigo>/deshabilitar/", views.DeshabilitarMaquinaAPIView.as_view(), name="deshabilitar_maquina"),
+    path("v1/maquina/<str:codigo>/reactivar/", views.ReactivarMaquinaAPIView.as_view(), name="reactivar_maquina"),
 ]

@@ -3,182 +3,275 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OPERACORE | Detalle de Máquina: {{ maquina.nombre|default:"Equipo" }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-main: #0f1115;
-            --bg-card: #161920;
-            --bg-info: #1f242e;
-            --border-color: #2a313e;
-            --accent: #00adb5;
-            --text-main: #e3e8f0;
-            --text-muted: #94a3b8;
-            --transition: all 0.25s ease-in-out;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background-color: var(--bg-main);
-            color: var(--text-main);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #0b111e;
+            color: #94a3b8;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
+        /* HEADER / NAVBAR */
         header {
-            background-color: var(--bg-card);
-            padding: 24px 40px;
-            border-bottom: 1px solid var(--border-color);
+            background-color: #0d1527;
+            padding: 18px 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid #1e293b;
         }
 
-        header h1 {
-            margin: 0;
+        .header-title-group .category-tag {
+            font-size: 11px;
+            font-weight: 700;
+            color: #2cd295;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .header-title-group h1 {
             color: #ffffff;
-            font-size: 24px;
+            font-size: 22px;
+            font-weight: 700;
         }
 
         .header-actions {
             display: flex;
             gap: 12px;
-        }
-
-        .container {
-            padding: 40px;
-            max-width: 1250px;
-            margin: 0 auto;
-        }
-
-        /* Layout en 3 columnas: Imagen a la izquierda, Información en el medio, Visor 3D a la derecha */
-        .content-grid {
-            display: grid;
-            grid-template-columns: 360px 1fr 360px;
-            gap: 25px;
-            align-items: start;
-        }
-
-        .detail-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-        }
-
-        .detail-card h2 {
-            color: #ffffff;
-            margin-top: 0;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 15px;
-        }
-
-        .info-group {
-            background-color: var(--bg-info);
-            padding: 12px 18px;
-            margin-bottom: 12px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            font-size: 14px;
-            color: var(--text-muted);
-            border: 1px solid transparent;
-        }
-
-        .info-group b {
-            color: var(--text-main);
-        }
-
-        /* Estilos para las tarjetas de Imagen y Visor 3D */
-        .viewer-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-            text-align: center;
-        }
-
-        .viewer-card h3 {
-            color: #ffffff;
-            font-size: 16px;
-            margin-top: 0;
-            margin-bottom: 15px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-
-        #canvas-container {
-            width: 100%;
-            height: 320px;
-            background-color: #0b0d10;
-            border-radius: 8px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* Contenedor de la imagen estática */
-        .image-container {
-            width: 100%;
-            height: 320px;
-            background-color: #0b0d10;
-            border-radius: 8px;
-            overflow: hidden;
-            display: flex;
             align-items: center;
-            justify-content: center;
         }
 
-        .image-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .btn-action {
-            display: inline-block;
-            background-color: var(--accent);
-            color: var(--bg-main);
-            padding: 10px 18px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 600;
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            border-radius: 8px;
             font-size: 14px;
-            transition: var(--transition);
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
         }
 
-        .btn-action:hover {
-            opacity: 0.9;
+        .btn-primary {
+            background-color: #2cd295;
+            color: #062a1e;
+        }
+
+        .btn-primary:hover {
+            background-color: #38e3a5;
+            transform: translateY(-1px);
         }
 
         .btn-secondary {
-            background-color: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
+            background-color: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
         }
 
         .btn-secondary:hover {
-            border-color: var(--accent);
-            background-color: var(--bg-info);
-            opacity: 1;
+            background-color: #334155;
+            color: #ffffff;
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: #162238;
+            padding: 6px 14px 6px 8px;
+            border-radius: 20px;
+            border: 1px solid #22334e;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .avatar {
+            width: 28px;
+            height: 28px;
+            background-color: #2cd295;
+            color: #062a1e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        /* CONTENEDOR PRINCIPAL */
+        .container {
+            padding: 35px 40px;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 440px;
+            gap: 24px;
+            align-items: start;
+        }
+
+        /* TARJETAS PRINCIPALES */
+        .card {
+            background-color: #131d31;
+            border: 1px solid #1e2d4a;
+            border-radius: 12px;
+            padding: 28px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #1e2d4a;
+        }
+
+        .card-title {
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        /* CONTENEDOR DE IMAGEN REGULAR */
+        .image-preview-container {
+            width: 100%;
+            max-height: 280px;
+            background-color: #090e18;
+            border: 1px solid #1d2b45;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .image-preview-container img {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .image-placeholder {
+            padding: 40px 20px;
+            text-align: center;
+            color: #475569;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        /* LISTA DE ATRIBUTOS */
+        .info-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background-color: #0f172a;
+            border-radius: 8px;
+            border: 1px solid #1b273e;
+            transition: border-color 0.2s ease;
+        }
+
+        .info-row:hover {
+            border-color: #2b3e63;
+        }
+
+        .info-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        /* BADGES */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background-color: rgba(44, 210, 149, 0.15);
+            color: #2cd295;
+            border: 1px solid rgba(44, 210, 149, 0.3);
+        }
+
+        /* VISOR 3D */
+        #canvas-container {
+            width: 100%;
+            height: 360px;
+            background-color: #090e18;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid #1d2b45;
+        }
+
+        .viewer-hint {
+            text-align: center;
+            font-size: 12px;
+            color: #475569;
+            margin-top: 14px;
         }
 
         .error-box {
             text-align: center;
-            padding: 60px 0;
-            color: var(--text-muted);
+            padding: 80px 20px;
+            background-color: #131d31;
+            border-radius: 12px;
+            border: 1px solid #1e2d4a;
             grid-column: 1 / -1;
         }
 
-        /* Responsividad para pantallas medianas/pequeñas */
-        @media (max-width: 1100px) {
+        .error-box h2 {
+            color: #f87171;
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 1024px) {
             .content-grid {
                 grid-template-columns: 1fr;
             }
         }
     </style>
 
-    <!-- Importmap con la subcarpeta 'controls/' corregida para OrbitControls en jsDelivr -->
     <script type="importmap">
         {
             "imports": {
@@ -188,79 +281,108 @@
         }
     </script>
 </head>
+
 <body>
 
     <header>
-        <h1>⚙ OPERACORE | Panel de Detalle Técnico</h1>
+        <div class="header-title-group">
+            <div class="category-tag">Maquinaria</div>
+            <h1>Detalle del Equipo</h1>
+        </div>
         <div class="header-actions">
-            <!-- Botón para volver directamente al Index general usando el namespace correcto -->
-            <a class="btn-action btn-secondary" href="{% url 'maquinaria:index' %}">&larr; Menú Principal</a>
+            <a href="{% url 'maquinaria:index' %}" class="btn btn-primary">&larr; Menú Principal</a>
+            <div class="user-badge">
+                <div class="avatar">A</div>
+                <span>Alex</span>
+            </div>
         </div>
     </header>
 
     <div class="container">
         {% if maquina %}
         <div class="content-grid">
-            <!-- Columna 1 (Izquierda): Imagen del equipo -->
-            <div class="viewer-card">
-                <h3>Fotografía del Equipo</h3>
-                <div class="image-container">
-                    {% if maquina.modelo_3d and maquina.modelo_3d != "None" %}
-                        <!-- Esto toma 'images/YamahaYS12.glb', corta la extensión y le pone .png con la ruta estática correcta -->
-                        <img src="{% get_static_prefix %}maquinaria/{{ maquina.modelo_3d|slice:":-4" }}.png" alt="{{ maquina.nombre }}">
+            
+            <!-- TARJETA IZQUIERDA: INFORMACIÓN -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">{{ maquina.nombre }}</h2>
+                    <span class="status-badge">
+                        {{ maquina.estado_maquina|default:"ÓPERA" }}
+                    </span>
+                </div>
+
+                <div class="info-group">
+                    <div class="info-row">
+                        <span class="info-label">Código</span>
+                        <span class="info-value">{{ maquina.codigo }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Línea SMT</span>
+                        <span class="info-value">{{ maquina.linea|default:"Sin asignación" }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Marca</span>
+                        <span class="info-value">{{ maquina.marca|default:"N/D" }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Modelo</span>
+                        <span class="info-value">{{ maquina.modelo|default:"N/D" }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Tipo de Máquina</span>
+                        <span class="info-value">{{ maquina.tipo_maquina|default:"N/D" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TARJETA DERECHA: VISUALIZADOR 3D + IMAGEN FOTOGRÁFICA -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title" style="font-size: 16px;">Visualizador 3D</h3>
+                </div>
+                
+                <div id="canvas-container"></div>
+                <p class="viewer-hint">Mantén presionado el clic para rotar el modelo 3D</p>
+
+                <!-- IMAGEN MOVIDA ABAJO DEL VISUALIZADOR 3D -->
+                <div class="image-preview-container">
+                    {% if maquina.imagen and maquina.imagen != "None" %}
+                        <img src="{% static 'maquinaria/images/' %}{{ maquina.imagen|cut:'images/' }}" 
+                             alt="{{ maquina.nombre }}"
+                             onerror="this.style.display='none'; document.getElementById('image-fallback').style.display='flex';">
+                        <div id="image-fallback" class="image-placeholder" style="display: none;">
+                            <span>📷 Fotografía no encontrada en el servidor</span>
+                        </div>
+
+                    {% elif maquina.modelo_3d and maquina.modelo_3d != "None" %}
+                        <img src="{% static 'maquinaria/images/' %}{{ maquina.modelo_3d|cut:'images/'|slice:':-4' }}.png" 
+                             alt="{{ maquina.nombre }}"
+                             onerror="this.style.display='none'; document.getElementById('image-fallback').style.display='flex';">
+                        <div id="image-fallback" class="image-placeholder" style="display: none;">
+                            <span>📷 Fotografía no encontrada</span>
+                        </div>
+
                     {% else %}
-                        <div style="color: var(--text-muted); font-size: 13px; padding: 20px;">Sin imagen disponible</div>
+                        <div class="image-placeholder">
+                            <span>📷 Sin imagen fotográfica registrada</span>
+                        </div>
                     {% endif %}
                 </div>
-                <p style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Vista previa del equipo físico</p>
             </div>
 
-            <!-- Columna 2 (Medio): Información técnica -->
-            <div class="detail-card">
-                <h2>{{ maquina.nombre }}</h2>
-                
-                <div class="info-group">
-                    <span>Código del Equipo:</span>
-                    <b>{{ maquina.codigo }}</b>
-                </div>
-                <div class="info-group">
-                    <span>Línea SMT:</span>
-                    <b>{{ maquina.linea|default:"Sin línea asignada" }}</b>
-                </div>
-                <div class="info-group">
-                    <span>Marca:</span>
-                    <b>{{ maquina.marca|default:"N/D" }}</b>
-                </div>
-                <div class="info-group">
-                    <span>Modelo:</span>
-                    <b>{{ maquina.modelo|default:"N/D" }}</b>
-                </div>
-                <div class="info-group">
-                    <span>Tipo de Máquina:</span>
-                    <b>{{ maquina.tipo_maquina|default:"N/D" }}</b>
-                </div>
-                <div class="info-group">
-                    <span>Estado Operativo:</span>
-                    <b style="color: var(--accent);">{{ maquina.estado_maquina|default:"Sin estado" }}</b>
-                </div>
-            </div>
-
-            <!-- Columna 3 (Derecha): Cuadrito con el visor 3D -->
-            <div class="viewer-card">
-                <h3>Visualizador 3D</h3>
-                <div id="canvas-container"></div>
-                <p style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Arrastra para rotar el modelo</p>
-            </div>
         </div>
         {% else %}
         <div class="error-box">
-            <h3>No se pudo cargar la información de esta máquina o el equipo no existe.</h3>
-            <p>Verifica que el código sea correcto o que el servicio API esté activo.</p>
+            <h2>No se pudo cargar la información de esta máquina.</h2>
+            <p>Verifica que el código sea correcto o que el registro exista en la base de datos.</p>
         </div>
         {% endif %}
     </div>
 
-    <!-- Script con iluminación dinámica equilibrada (sin quemar/blanquear la escena) -->
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -270,8 +392,9 @@
         const modelPath = "{{ maquina.modelo_3d }}";
 
         if (container && modelPath && modelPath !== "None" && modelPath.trim() !== "") {
-            // 1. Escena, Cámara y Renderizador
             const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x090e18);
+
             const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
             
             const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -279,43 +402,39 @@
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.outputColorSpace = THREE.SRGBColorSpace;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.0; // Exposición equilibrada para evitar el efecto "muy blanco"
+            renderer.toneMappingExposure = 1.2;
             container.appendChild(renderer.domElement);
 
-            // 2. Controles de órbita
             const controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
 
-            // 3. Iluminación profesional y balanceada (con tonos cálidos y fríos para dar relieve sin blanquear)
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Luz ambiente moderada para conservar sombras suaves
+            // Iluminación balanceada
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
             scene.add(ambientLight);
 
-            const frontLight = new THREE.DirectionalLight(0xffffff, 1.2); // Luz principal frontal
-            frontLight.position.set(5, 8, 5);
-            scene.add(frontLight);
+            const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.5);
+            dirLight1.position.set(5, 10, 7);
+            scene.add(dirLight1);
 
-            const fillLight = new THREE.DirectionalLight(0x90b0ff, 0.6); // Luz de relleno lateral azulada suave
-            fillLight.position.set(-6, 3, -4);
-            scene.add(fillLight);
+            const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight2.position.set(-5, -5, -5);
+            scene.add(dirLight2);
 
-            const topLight = new THREE.DirectionalLight(0xffffff, 0.8); // Luz cenital superior para los detalles del panel
-            topLight.position.set(0, 10, 0);
-            scene.add(topLight);
-
-            // 4. Carga segura del archivo .glb apuntando a static/maquinaria/images/...
             const loader = new GLTFLoader();
             const staticUrl = "{% get_static_prefix %}";
-            const fullUrl = staticUrl + 'maquinaria/' + modelPath;
+            
+            let cleanModelPath = modelPath.startsWith('images/') ? modelPath.replace('images/', '') : modelPath;
+            const fullUrl = staticUrl + 'maquinaria/images/' + cleanModelPath;
 
             loader.load(fullUrl, function (gltf) {
                 const model = gltf.scene;
                 
-                // Ajuste sutil de materiales para mantener colores naturales y evitar brillos excesivos
                 model.traverse((node) => {
                     if (node.isMesh && node.material) {
-                        node.material.roughness = Math.max(node.material.roughness || 0.4, 0.3);
-                        node.material.metalness = Math.min(node.material.metalness || 0.5, 0.4);
-                        node.material.needsUpdate = true;
+                        node.material.side = THREE.DoubleSide;
+                        if (node.material.map) {
+                            node.material.map.colorSpace = THREE.SRGBColorSpace;
+                        }
                     }
                 });
 
@@ -334,10 +453,9 @@
                 controls.update();
 
             }, undefined, function (error) {
-                console.error("Error al cargar el modelo 3D:", error);
+                console.error("Error al cargar el modelo 3D desde " + fullUrl + ":", error);
             });
 
-            // 5. Animación continua
             function animate() {
                 requestAnimationFrame(animate);
                 controls.update();
@@ -345,7 +463,6 @@
             }
             animate();
 
-            // Responsividad
             window.addEventListener('resize', () => {
                 camera.aspect = container.clientWidth / container.clientHeight;
                 camera.updateProjectionMatrix();
