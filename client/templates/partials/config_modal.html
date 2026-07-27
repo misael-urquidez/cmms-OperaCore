@@ -42,33 +42,13 @@
                 </div>
             </div>
 
-            <form id="configForm" class="config-form-grid">
-                <div class="config-field">
-                    <label for="cfgNombre">Nombre completo</label>
-                    <input type="text" id="cfgNombre" name="nombre" value="{{ request.session.usuario.nombre|default:'' }}" placeholder="Ej. Juan Pérez">
-                </div>
-                <div class="config-field">
-                    <label for="cfgUsuario">Nombre de usuario</label>
-                    <input type="text" id="cfgUsuario" name="usuario" value="{{ request.session.usuario.usuario|default:'' }}" disabled title="El usuario no se puede modificar">
-                </div>
-                <div class="config-field">
-                    <label for="cfgCorreo">Correo electrónico</label>
-                    <input type="email" id="cfgCorreo" name="correo" value="{{ request.session.usuario.correo|default:'' }}" placeholder="usuario@dominio.com">
-                </div>
-                <div class="config-field">
-                    <label for="cfgTelefono">Teléfono de contacto</label>
-                    <input type="tel" id="cfgTelefono" name="telefono" value="{{ request.session.usuario.telefono|default:'' }}" placeholder="10 dígitos">
-                </div>
-
-                <div class="config-modal__note col-span-full">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-                    <span>Los cambios realizados en tu perfil se actualizarán de forma inmediata en el servidor.</span>
-            <form id="configForm" novalidate>
+            <form id="configForm" class="config-form-grid" novalidate>
                 <div class="config-field">
                     <label for="cfgNombre">Nombre</label>
                     <input type="text" id="cfgNombre" name="nombre" maxlength="50" value="{{ request.session.usuario.nombre|default:'' }}" placeholder="Tu nombre">
                     <span class="config-field__error" id="cfgNombre-error"></span>
                 </div>
+
                 <div class="config-field-row">
                     <div class="config-field">
                         <label for="cfgApellidoPat">Apellido paterno</label>
@@ -81,16 +61,19 @@
                         <span class="config-field__error" id="cfgApellidoMat-error"></span>
                     </div>
                 </div>
+
                 <div class="config-field">
                     <label for="cfgUsuario">Usuario</label>
                     <input type="text" id="cfgUsuario" name="usuario" maxlength="30" value="{{ request.session.usuario.usuario|default:'' }}" placeholder="Tu usuario">
                     <span class="config-field__error" id="cfgUsuario-error"></span>
                 </div>
+
                 <div class="config-field">
                     <label for="cfgCorreo">Correo</label>
                     <input type="email" id="cfgCorreo" name="correo" maxlength="100" value="{{ request.session.usuario.correo|default:'' }}" placeholder="tu@correo.com">
                     <span class="config-field__error" id="cfgCorreo-error"></span>
                 </div>
+
                 <div class="config-field">
                     <label for="cfgTelefono">Teléfono</label>
                     <input type="tel" id="cfgTelefono" name="telefono" maxlength="10" inputmode="numeric" value="{{ request.session.usuario.telefono|default:'' }}" placeholder="10 dígitos">
@@ -99,21 +82,24 @@
 
                 <div class="config-form__divider">Cambiar contraseña</div>
                 <p class="config-form__hint">Déjalo en blanco si no quieres cambiar tu contraseña.</p>
+
                 <div class="config-field">
                     <label for="cfgPasswordNueva">Nueva contraseña</label>
                     <input type="password" id="cfgPasswordNueva" name="passwordNueva" autocomplete="new-password" placeholder="Mín. 8 caracteres">
                     <span class="config-field__error" id="cfgPasswordNueva-error"></span>
                 </div>
+
                 <div class="config-field">
                     <label for="cfgPasswordConfirmar">Confirmar contraseña</label>
                     <input type="password" id="cfgPasswordConfirmar" name="passwordConfirmar" autocomplete="new-password" placeholder="Repite la contraseña">
                     <span class="config-field__error" id="cfgPasswordConfirmar-error"></span>
                 </div>
 
-                <div class="config-modal__note">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                <div class="config-modal__note col-span-full">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
                     <span>Como administrador puedes modificar todos tus datos, incluyendo usuario y contraseña.</span>
                 </div>
+
                 <div class="config-form__error-general" id="configFormError"></div>
 
                 <div class="config-modal__actions col-span-full">
@@ -223,3 +209,4 @@
 </div>
 
 <div class="config-toast" id="configToast"></div>
+{% endif %}
