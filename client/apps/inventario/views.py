@@ -1,9 +1,12 @@
 import requests
+from collections import defaultdict
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
 from django.shortcuts import redirect, render
 from django.views import generic
+
+from apps.gestion.registry import get_tabla
 
 API_URL = f"{settings.API_BASE_URL}/inventario"
 
@@ -14,6 +17,30 @@ SESSION = requests.Session()
 PING_TTL = 30
 CATALOGOS_TTL = 60 * 5   # 5 minutos para catálogos estáticos
 INVENTARIO_TTL = 15      # 15 segundos para listas operativas
+
+
+def _base_template(request):
+    usuario = request.session.get("usuario", {})
+    return "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html"
+
+
+MAX_COLUMNAS = 7
+
+
+def _columnas_visibles(config):
+    """Replica la lógica de GestionListView:选取 columnas visibles y si necesita modal."""
+    todas_las = [c for c in config["campos"] if c.get("tipo") not in ("password", "file")]
+    todas_las_con_archivos = [c for c in config["campos"] if c.get("tipo") != "password"]
+
+    requeridos = [c for c in todas_las if c.get("requerido")]
+    opcionales = [c for c in todas_las if not c.get("requerido")]
+    restantes = MAX_COLUMNAS - len(requeridos[:MAX_COLUMNAS])
+    visibles = requeridos[:MAX_COLUMNAS] + opcionales[:restantes]
+
+    tiene_imagen = any(c.get("tipo") == "file" for c in config["campos"])
+    necesita_modal = len(todas_las) > MAX_COLUMNAS or tiene_imagen
+
+    return todas_las_con_archivos, visibles, necesita_modal
 
 
 def _cargar_catalogos():
@@ -35,19 +62,10 @@ def _cargar_catalogos():
 
 # ------------ INDEX / PING -------------------------------------------------
 class Index(generic.View):
-    """Pantalla principal del módulo Inventario. Consume el api/ por HTTP."""
-
-    template_name = "inventario/index.html"
+    """Redirige al listado de piezas."""
 
     def get(self, request):
-        response = cache.get("inventario_ping")
-        if response is None:
-            try:
-                response = SESSION.get(f"{API_URL}/ping/", timeout=5).json()
-            except requests.exceptions.RequestException:
-                response = {"status": "sin conexion con el api"}
-            cache.set("inventario_ping", response, PING_TTL)
-        return render(request, self.template_name, {"modulo": "Inventario", "api_status": response})
+        return redirect("inventario:lista_piezas")
 
 
 # ------------ REFACCIONES --------------------------------------------------
@@ -55,20 +73,29 @@ class ListaRefacciones(generic.View):
     template_name = "inventario/lista_refacciones.html"
 
     def get(self, request):
-        refacciones = cache.get("inventario_refacciones_list")
-        if refacciones is None:
+        config = get_tabla("refaccion")
+
+        registros = cache.get("inventario_refacciones_list")
+        if registros is None:
             try:
                 res = SESSION.get(f"{API_URL}/v1/refacciones/list/", timeout=5)
-                refacciones = res.json() if res.status_code == 200 else []
-                cache.set("inventario_refacciones_list", refacciones, INVENTARIO_TTL)
+                registros = res.json() if res.status_code == 200 else []
+                cache.set("inventario_refacciones_list", registros, INVENTARIO_TTL)
             except requests.exceptions.RequestException:
-                refacciones = []
+                registros = []
                 messages.warning(request, "Error de conexión con la API al cargar refacciones.")
 
+        todas_las, visibles, necesita_modal = _columnas_visibles(config)
+
         context = {
-            "refacciones": refacciones,
+            "config": config,
+            "registros": registros,
+            "columnas": visibles,
+            "todas_las_columnas": todas_las,
+            "necesita_modal": necesita_modal,
             "seccion": "inventario",
             "subseccion": "refacciones",
+            "base_template": _base_template(request),
         }
         return render(request, self.template_name, context)
 
@@ -85,6 +112,7 @@ class CrearRefaccion(generic.View):
             "catalogos": catalogos,
             "seccion": "inventario",
             "subseccion": "crear_refaccion",
+            "base_template": _base_template(request),
         }
         return render(request, self.template_name, context)
 
@@ -120,23 +148,89 @@ class CrearRefaccion(generic.View):
 
 # ------------ PIEZAS -------------------------------------------------------
 class ListaPiezas(generic.View):
-    template_name = "inventario/lista_piezas.html"
+    template_name = "inventario/lista_pieza.html"
 
     def get(self, request):
-        piezas = cache.get("inventario_piezas_list")
-        if piezas is None:
+        config = get_tabla("pieza")
+
+        registros = cache.get("inventario_piezas_list")
+        if registros is None:
             try:
                 res = SESSION.get(f"{API_URL}/v1/piezas/list/", timeout=5)
-                piezas = res.json() if res.status_code == 200 else []
-                cache.set("inventario_piezas_list", piezas, INVENTARIO_TTL)
+                registros = res.json() if res.status_code == 200 else []
+                cache.set("inventario_piezas_list", registros, INVENTARIO_TTL)
             except requests.exceptions.RequestException:
-                piezas = []
+                registros = []
                 messages.warning(request, "Error de conexión con la API al cargar piezas.")
 
+        todas_las, visibles, necesita_modal = _columnas_visibles(config)
+
+        maquinas = cache.get("inventario_maquinas_list")
+        if maquinas is None:
+            try:
+                res_maq = SESSION.get(
+                    f"{settings.API_BASE_URL}/maquinaria/v1/maquina/list/",
+                    timeout=5,
+                )
+                maquinas = res_maq.json() if res_maq.status_code == 200 else []
+                cache.set("inventario_maquinas_list", maquinas, INVENTARIO_TTL)
+            except requests.exceptions.RequestException:
+                maquinas = []
+
+        maquinas_con_piezas = defaultdict(list)
+        for reg in registros:
+            maq_codigo = reg.get("maquina")
+            if maq_codigo:
+                maquinas_con_piezas[maq_codigo].append(reg)
+
+        for codigo_maq, piezas in maquinas_con_piezas.items():
+            for p in piezas:
+                fecha_inst = p.get("fechainstalacion", "")
+                try:
+                    res_wear = SESSION.get(
+                        f"{API_URL}/v1/piezas/wear/",
+                        params={"maquina": codigo_maq, "fecha_instalacion": fecha_inst},
+                        timeout=5,
+                    )
+                    wear_data = res_wear.json() if res_wear.status_code == 200 else {}
+                except requests.exceptions.RequestException:
+                    wear_data = {}
+
+                horas_op = wear_data.get("horas_operacion", 0)
+                vida = p.get("tiempovidautil") or 1
+                p["porcentaje_desgaste"] = round(min(horas_op / vida * 100, 100), 1) if vida else 0
+
+                costo = p.get("costoinicial") or 0
+                residual = p.get("valorresidual") or 0
+                vida_horas = p.get("tiempovidautil") or 1
+                vida_anios = vida_horas / (22 * 8 * 12)
+                p["depreciacion_anual"] = round((costo - residual) / vida_anios, 2) if vida_anios else 0
+
+        from datetime import date as _date
+        _hoy = _date.today()
+        activas = sum(1 for p in registros if p.get("edo_pieza") == "OPERA")
+        desgaste_alto = sum(1 for p in registros if p.get("porcentaje_desgaste", 0) > 85)
+        garantia = sum(
+            1 for p in registros
+            if p.get("fechagarantia") and p["fechagarantia"] >= _hoy.isoformat()
+        )
+        rehabilitacion = sum(1 for p in registros if p.get("edo_pieza") == "ENREH")
+
         context = {
-            "piezas": piezas,
+            "config": config,
+            "registros": registros,
+            "columnas": visibles,
+            "todas_las_columnas": todas_las,
+            "necesita_modal": necesita_modal,
             "seccion": "inventario",
             "subseccion": "piezas",
+            "base_template": _base_template(request),
+            "maquinas": maquinas,
+            "maquinas_con_piezas": dict(maquinas_con_piezas),
+            "kpi_activas": activas,
+            "kpi_desgaste_alto": desgaste_alto,
+            "kpi_garantia": garantia,
+            "kpi_rehabilitacion": rehabilitacion,
         }
         return render(request, self.template_name, context)
 
@@ -153,6 +247,7 @@ class CrearPieza(generic.View):
             "catalogos": catalogos,
             "seccion": "inventario",
             "subseccion": "crear_pieza",
+            "base_template": _base_template(request),
         }
         return render(request, self.template_name, context)
 
@@ -206,6 +301,7 @@ class ListaHerramientas(generic.View):
             "herramientas": herramientas,
             "seccion": "inventario",
             "subseccion": "herramientas",
+            "base_template": _base_template(request),
         }
         return render(request, self.template_name, context)
 
@@ -222,6 +318,7 @@ class CrearHerramienta(generic.View):
             "catalogos": catalogos,
             "seccion": "inventario",
             "subseccion": "crear_herramienta",
+            "base_template": _base_template(request),
         }
         return render(request, self.template_name, context)
 
@@ -268,6 +365,7 @@ class ListaProveedores(generic.View):
             "proveedores": proveedores,
             "seccion": "inventario",
             "subseccion": "proveedores",
+            "base_template": _base_template(request),
         }
         return render(request, self.template_name, context)
 
@@ -279,6 +377,7 @@ class CrearProveedor(generic.View):
         context = {
             "seccion": "inventario",
             "subseccion": "crear_proveedor",
+            "base_template": _base_template(request),
         }
         return render(request, self.template_name, context)
 
@@ -325,6 +424,7 @@ class ListaClasificaciones(generic.View):
             "clasificaciones": clasificaciones,
             "seccion": "inventario",
             "subseccion": "clasificaciones",
+            "base_template": _base_template(request),
         }
         return render(request, self.template_name, context)
 
@@ -336,6 +436,7 @@ class CrearClasificacion(generic.View):
         context = {
             "seccion": "inventario",
             "subseccion": "crear_clasificacion",
+            "base_template": _base_template(request),
         }
         return render(request, self.template_name, context)
 
@@ -376,14 +477,14 @@ class ListaEstadosHerramienta(generic.View):
                 estados = []
                 messages.warning(request, "Error al cargar estados de herramienta.")
 
-        return render(request, self.template_name, {"estados": estados, "seccion": "inventario", "subseccion": "estados_herramienta"})
+        return render(request, self.template_name, {"estados": estados, "seccion": "inventario", "subseccion": "estados_herramienta", "base_template": _base_template(request)})
 
 
 class CrearEstadoHerramienta(generic.View):
     template_name = "inventario/crear_estado_herramienta.html"
 
     def get(self, request):
-        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_estado_herramienta"})
+        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_estado_herramienta", "base_template": _base_template(request)})
 
     def post(self, request):
         payload = {"clave": request.POST.get("clave"), "nombre": request.POST.get("nombre")}
@@ -413,14 +514,14 @@ class ListaEstadosPieza(generic.View):
                 estados = []
                 messages.warning(request, "Error al cargar estados de pieza.")
 
-        return render(request, self.template_name, {"estados": estados, "seccion": "inventario", "subseccion": "estados_pieza"})
+        return render(request, self.template_name, {"estados": estados, "seccion": "inventario", "subseccion": "estados_pieza", "base_template": _base_template(request)})
 
 
 class CrearEstadoPieza(generic.View):
     template_name = "inventario/crear_estado_pieza.html"
 
     def get(self, request):
-        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_estado_pieza"})
+        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_estado_pieza", "base_template": _base_template(request)})
 
     def post(self, request):
         payload = {"clave": request.POST.get("clave"), "nombre": request.POST.get("nombre")}
@@ -450,14 +551,14 @@ class ListaEstadosRefaccion(generic.View):
                 estados = []
                 messages.warning(request, "Error al cargar estados de refacción.")
 
-        return render(request, self.template_name, {"estados": estados, "seccion": "inventario", "subseccion": "estados_refaccion"})
+        return render(request, self.template_name, {"estados": estados, "seccion": "inventario", "subseccion": "estados_refaccion", "base_template": _base_template(request)})
 
 
 class CrearEstadoRefaccion(generic.View):
     template_name = "inventario/crear_estado_refaccion.html"
 
     def get(self, request):
-        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_estado_refaccion"})
+        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_estado_refaccion", "base_template": _base_template(request)})
 
     def post(self, request):
         payload = {"clave": request.POST.get("clave"), "nombre": request.POST.get("nombre")}
@@ -488,14 +589,14 @@ class ListaTiposHerramienta(generic.View):
                 tipos = []
                 messages.warning(request, "Error al cargar tipos de herramienta.")
 
-        return render(request, self.template_name, {"tipos": tipos, "seccion": "inventario", "subseccion": "tipos_herramienta"})
+        return render(request, self.template_name, {"tipos": tipos, "seccion": "inventario", "subseccion": "tipos_herramienta", "base_template": _base_template(request)})
 
 
 class CrearTipoHerramienta(generic.View):
     template_name = "inventario/crear_tipo_herramienta.html"
 
     def get(self, request):
-        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_tipo_herramienta"})
+        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_tipo_herramienta", "base_template": _base_template(request)})
 
     def post(self, request):
         payload = {"nombre": request.POST.get("nombre"), "descripcion": request.POST.get("descripcion")}
@@ -525,14 +626,14 @@ class ListaTiposPieza(generic.View):
                 tipos = []
                 messages.warning(request, "Error al cargar tipos de pieza.")
 
-        return render(request, self.template_name, {"tipos": tipos, "seccion": "inventario", "subseccion": "tipos_pieza"})
+        return render(request, self.template_name, {"tipos": tipos, "seccion": "inventario", "subseccion": "tipos_pieza", "base_template": _base_template(request)})
 
 
 class CrearTipoPieza(generic.View):
     template_name = "inventario/crear_tipo_pieza.html"
 
     def get(self, request):
-        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_tipo_pieza"})
+        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_tipo_pieza", "base_template": _base_template(request)})
 
     def post(self, request):
         payload = {"nombre": request.POST.get("nombre"), "descripcion": request.POST.get("descripcion")}
@@ -562,14 +663,14 @@ class ListaTiposRefaccion(generic.View):
                 tipos = []
                 messages.warning(request, "Error al cargar tipos de refacción.")
 
-        return render(request, self.template_name, {"tipos": tipos, "seccion": "inventario", "subseccion": "tipos_refaccion"})
+        return render(request, self.template_name, {"tipos": tipos, "seccion": "inventario", "subseccion": "tipos_refaccion", "base_template": _base_template(request)})
 
 
 class CrearTipoRefaccion(generic.View):
     template_name = "inventario/crear_tipo_refaccion.html"
 
     def get(self, request):
-        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_tipo_refaccion"})
+        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_tipo_refaccion", "base_template": _base_template(request)})
 
     def post(self, request):
         payload = {"nombre": request.POST.get("nombre"), "descripcion": request.POST.get("descripcion")}

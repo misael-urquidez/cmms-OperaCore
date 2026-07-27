@@ -17,6 +17,7 @@ urlpatterns = [
 
     # ------------ PIEZAS ------------
     path("v1/piezas/list/", views.PiezaListAPIView.as_view(), name="piezas-list"),
+    path("v1/piezas/wear/", views.PiezaWearAPIView.as_view(), name="piezas-wear"),
     path("v1/piezas/<str:pk>/", views.PiezaDetailAPIView.as_view(), name="piezas-detail"),
     path("v2/piezas/create/", views.PiezaCreateAPIView.as_view(), name="piezas-create"),
 

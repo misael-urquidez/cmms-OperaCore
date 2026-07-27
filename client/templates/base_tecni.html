@@ -10,8 +10,10 @@
     <link rel="icon" href="{% static 'img/pre_logo.png' %}">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
+    <link rel="stylesheet" href="{% static 'css/admin.css' %}">
     <link rel="stylesheet" href="{% static 'css/tecni.css' %}">
     <link rel="stylesheet" href="{% static 'css/tecni-themes.css' %}">
+    <link rel="stylesheet" href="{% static 'css/tecni-inventario.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body class="tecni-body">
@@ -60,6 +62,18 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                 <span>Maquinaria</span>
             </a>
+
+            <div class="tecni-sidebar__group {% if seccion == 'inventario' %}is-open{% endif %}">
+                <button type="button" class="tecni-sidebar__link tecni-sidebar__group-toggle" aria-expanded="{% if seccion == 'inventario' %}true{% else %}false{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></svg>
+                    <span>Inventario</span>
+                    <svg class="tecni-sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="tecni-sidebar__submenu">
+                    <a href="{% url 'inventario:lista_piezas' %}" class="{% if seccion == 'inventario' and subseccion == 'piezas' %}is-active{% endif %}">Piezas</a>
+                    <a href="{% url 'inventario:lista_refacciones' %}" class="{% if seccion == 'inventario' and subseccion == 'refacciones' %}is-active{% endif %}">Refacciones</a>
+                </div>
+            </div>
             {# Nota: a proposito NO se incluye "Registrar nueva" maquina ni Elipse ni Gestion #}
         </nav>
 
