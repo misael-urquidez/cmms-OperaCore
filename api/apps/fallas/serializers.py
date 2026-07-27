@@ -11,7 +11,7 @@ from . import models
 class TipoSeveridadSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoSeveridad
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 
 class TipoSeveridadCreateSerializer(serializers.ModelSerializer):
@@ -23,7 +23,7 @@ class TipoSeveridadCreateSerializer(serializers.ModelSerializer):
 class TipoFallaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoFalla
-        fields = ["numeroRegistro", "nombre"]
+        fields = "__all__"
 
 
 class TipoFallaCreateSerializer(serializers.ModelSerializer):
@@ -59,7 +59,7 @@ class MaquinaSerializer(serializers.ModelSerializer):
 class EstadoReporteSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EstadoReporte
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 
 class TrabajadorLightSerializer(serializers.ModelSerializer):

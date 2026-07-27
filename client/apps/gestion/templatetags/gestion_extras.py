@@ -28,3 +28,37 @@ def es_pk(nombre_campo, pk_field):
     if isinstance(pk_field, (list, tuple)):
         return nombre_campo in pk_field
     return nombre_campo == pk_field
+
+
+@register.filter
+def si_no(valor):
+    """Convierte 1/True a 'Sí' y 0/False a 'No'."""
+    if valor in (1, "1", True, "true", "True"):
+        return "Sí"
+    elif valor in (0, "0", False, "false", "False"):
+        return "No"
+    return valor
+
+
+@register.filter
+def get_file_url(valor):
+    """Si el valor parece una ruta de archivo, devuelve la URL de MEDIA."""
+    if not valor:
+        return ""
+    return f"/media/{valor}"
+
+
+@register.filter
+def default_sin(valor, label):
+    """Si el valor esta vacio, retorna 'Sin [label]'. Sino retorna el valor."""
+    if valor is None or valor == "" or valor == "None":
+        return f"Sin {label}"
+    return valor
+
+
+@register.filter
+def basename(value):
+    """Extrae el nombre de archivo de una ruta como 'carpeta/archivo.jpg'."""
+    if not value:
+        return ""
+    return value.split("/")[-1]

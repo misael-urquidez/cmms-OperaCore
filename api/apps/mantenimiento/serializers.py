@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.fallas.models import ReporteFalla
 from . import models
 
 # Mismo patron que maquinaria/inventario/fallas: List (columnas resumidas),
@@ -9,7 +10,7 @@ from . import models
 class ListEstadoOrdenSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EstadoOrden
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 
 class DetailEstadoOrdenSerializer(serializers.ModelSerializer):
@@ -28,7 +29,7 @@ class CreateEstadoOrdenSerializer(serializers.ModelSerializer):
 class ListTipoMantenimientoSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoMantenimiento
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 
 class DetailTipoMantenimientoSerializer(serializers.ModelSerializer):
@@ -47,7 +48,7 @@ class CreateTipoMantenimientoSerializer(serializers.ModelSerializer):
 class ListTareasSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Tareas
-        fields = ["numeroregistro", "instruccion", "actividad"]
+        fields = "__all__"
 
 
 class DetailTareasSerializer(serializers.ModelSerializer):
@@ -66,7 +67,7 @@ class CreateTareasSerializer(serializers.ModelSerializer):
 class ListTipoMovimientoSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TipoMovimiento
-        fields = ["codigo", "descripcion"]
+        fields = "__all__"
 
 
 class DetailTipoMovimientoSerializer(serializers.ModelSerializer):
@@ -85,7 +86,7 @@ class CreateTipoMovimientoSerializer(serializers.ModelSerializer):
 class ListTareaOrdenSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TareaOrden
-        fields = ["tarea", "orden_mantenimiento", "fechainicio", "verificacion"]
+        fields = "__all__"
 
 
 class DetailTareaOrdenSerializer(serializers.ModelSerializer):
@@ -113,7 +114,7 @@ class UpdateTareaOrdenSerializer(serializers.ModelSerializer):
 class ListHerraOrdenSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.HerraOrden
-        fields = ["herramienta", "orden_mantenimiento"]
+        fields = "__all__"
 
 
 class DetailHerraOrdenSerializer(serializers.ModelSerializer):
@@ -138,7 +139,7 @@ class UpdateHerraOrdenSerializer(serializers.ModelSerializer):
 class ListTrabaOrdePersonalSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TrabaOrdePersonal
-        fields = ["trabajador", "orden_mantenimiento"]
+        fields = "__all__"
 
 
 class DetailTrabaOrdePersonalSerializer(serializers.ModelSerializer):
@@ -165,15 +166,16 @@ class ListOrdenMantenimientoSerializer(serializers.ModelSerializer):
     trabajador_nombre = serializers.CharField(source="trabajador.nombre", read_only=True)
     tipo_mantenimiento_nombre = serializers.CharField(source="tipo_mantenimiento.nombre", read_only=True)
     estado_orden_nombre = serializers.CharField(source="estado_orden.nombre", read_only=True)
+    reporte_falla_asunto = serializers.CharField(source="reporte_falla.asunto", read_only=True)
 
     class Meta:
         model = models.OrdenMantenimiento
-        fields = ["folio", "descripcion", "fechacreacion", "horacreacion", "fechaprogramada", "fechacierre", "maquina", "maquina_nombre", "trabajador", "trabajador_nombre", "reporte_falla", "tipo_mantenimiento", "tipo_mantenimiento_nombre", "estado_orden", "estado_orden_nombre"]
+        fields = ["folio", "descripcion", "fechacreacion", "horacreacion", "fechaprogramada", "fechacierre", "maquina", "maquina_nombre", "trabajador", "trabajador_nombre", "reporte_falla", "reporte_falla_asunto", "tipo_mantenimiento", "tipo_mantenimiento_nombre", "estado_orden", "estado_orden_nombre"]
 
 
 class DetailOrdenMantenimientoSerializer(ListOrdenMantenimientoSerializer):
     class Meta(ListOrdenMantenimientoSerializer.Meta):
-        fields = ["folio", "descripcion", "diagnostico", "notas", "fechaprogramada", "fechacreacion", "horacreacion", "fechacierre", "horacierre", "horasintervenidas", "porcentaje", "maquina", "maquina_nombre", "trabajador", "trabajador_nombre", "reporte_falla", "tipo_mantenimiento", "tipo_mantenimiento_nombre", "estado_orden", "estado_orden_nombre"]
+        fields = ["folio", "descripcion", "diagnostico", "notas", "fechaprogramada", "fechacreacion", "horacreacion", "fechacierre", "horacierre", "horasintervenidas", "porcentaje", "maquina", "maquina_nombre", "trabajador", "trabajador_nombre", "reporte_falla", "reporte_falla_asunto", "tipo_mantenimiento", "tipo_mantenimiento_nombre", "estado_orden", "estado_orden_nombre"]
 
 
 class CreateOrdenMantenimientoSerializer(serializers.ModelSerializer):
@@ -182,12 +184,32 @@ class CreateOrdenMantenimientoSerializer(serializers.ModelSerializer):
         fields = ["descripcion", "fechaprogramada", "maquina", "trabajador", "reporte_falla", "tipo_mantenimiento", "notas"]
         extra_kwargs = {"trabajador": {"required": False, "allow_null": True}, "reporte_falla": {"required": False, "allow_null": True}, "notas": {"required": False, "allow_null": True}, "fechaprogramada": {"required": False, "allow_null": True}}
 
+    def validate(self, data):
+        reporte = data.get("reporte_falla")
+        if reporte is not None:
+            maquina = data.get("maquina")
+            if maquina and reporte.maquina_id != maquina.codigo:
+                raise serializers.ValidationError({"reporte_falla": "El reporte de falla no pertenece a la máquina seleccionada."})
+            if models.OrdenMantenimiento.objects.filter(reporte_falla=reporte).exists():
+                raise serializers.ValidationError({"reporte_falla": "Este reporte de falla ya está vinculado a otra orden."})
+        return data
+
     def create(self, validated_data):
         from django.utils import timezone
         ahora = timezone.localtime()
         folio = f"OMP{ahora:%y%m%d%H%M%S}"
         estado = models.EstadoOrden.objects.filter(codigo="PROGR" if validated_data.get("trabajador") else "SOLIC").first()
         return models.OrdenMantenimiento.objects.create(folio=folio, fechacreacion=ahora.date(), horacreacion=ahora.time(), estado_orden=estado, **validated_data)
+
+
+# ------------ REPORTE_FALLA (solo para el selector "adjuntar reporte") --
+class ReporteFallaDisponibleSerializer(serializers.ModelSerializer):
+    tipo_severidad_nombre = serializers.CharField(source="tipo_severidad.nombre", read_only=True)
+    estado_reporte_nombre = serializers.CharField(source="estado_reporte.nombre", read_only=True)
+
+    class Meta:
+        model = ReporteFalla
+        fields = ["numeroRegistro", "asunto", "fechaCreacion", "horaCreacion", "tipo_severidad_nombre", "estado_reporte_nombre", "maquina"]
 
 
 class AsignarTrabajadorOrdenSerializer(serializers.Serializer):

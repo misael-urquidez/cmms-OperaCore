@@ -1,4 +1,6 @@
 from rest_framework import serializers
+import os
+from django.conf import settings
 from .models import (
     Planta,
     Area,
@@ -18,7 +20,7 @@ from apps.fallas.models import ReporteFalla
 class ListPlantaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Planta
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 class DetailPlantaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -48,7 +50,7 @@ class UpdatePlantaSerializer(serializers.ModelSerializer):
 class ListAreaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Area
-        fields = ["codigo", "nombre", "planta"]
+        fields = "__all__"
 
 class DetailAreaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -72,7 +74,7 @@ class UpdateAreaSerializer(serializers.ModelSerializer):
 class ListEdoMaquinaSerializer(serializers.ModelSerializer):
     class Meta:
         model = EdoMaquina
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 class DetailEdoMaquinaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -96,7 +98,7 @@ class UpdateEdoMaquinaSerializer(serializers.ModelSerializer):
 class ListLineaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Linea
-        fields = ["codigo", "nombre"]
+        fields = "__all__"
 
 class DetailLineaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -106,12 +108,12 @@ class DetailLineaSerializer(serializers.ModelSerializer):
 class CreateLineaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Linea
-        fields = ["codigo", "nombre", "descripcion", "area"]
+        fields = ["codigo", "nombre", "descripcion", "telefono", "area"]
 
 class UpdateLineaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Linea
-        fields = ["codigo", "nombre", "descripcion", "area"]
+        fields = ["codigo", "nombre", "descripcion", "telefono", "area"]
 
 
 # ==========================================================
@@ -120,7 +122,7 @@ class UpdateLineaSerializer(serializers.ModelSerializer):
 class ListMarcaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Marca
-        fields = ["clave", "nombre"]
+        fields = "__all__"
 
 class DetailMarcaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -144,7 +146,7 @@ class UpdateMarcaSerializer(serializers.ModelSerializer):
 class ListModeloSerializer(serializers.ModelSerializer):
     class Meta:
         model = Modelo
-        fields = ["codigo", "nombre", "marca"]
+        fields = "__all__"
 
 class DetailModeloSerializer(serializers.ModelSerializer):
     class Meta:
@@ -168,7 +170,7 @@ class UpdateModeloSerializer(serializers.ModelSerializer):
 class ListTipoMaquinaSerializer(serializers.ModelSerializer):
     class Meta:
         model = TipoMaquina
-        fields = ["numeroregistro", "nombre"]
+        fields = "__all__"
 
 class DetailTipoMaquinaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -196,10 +198,7 @@ class ListMaquinaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Maquina
-        fields = [
-            "codigo", "numeroserie", "nombre", "imagen_url",
-            "modelo_3d", "marca", "modelo","linea", "estado_maquina", "tipo_maquina"
-        ]
+        fields = "__all__"
 
 class DetailMaquinaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -228,18 +227,46 @@ class CreateMaquinaSerializer(ValidarTipoMaquinaAreaMixin, serializers.ModelSeri
         model = Maquina
         fields = [
             "codigo", "numeroserie", "nombre", "descripcion", "imagen_url",
+            "imagen",
             "modelo_3d", "fechainstalacion", "linea", "marca", "modelo",
             "estado_maquina", "tipo_maquina"
         ]
 
-class UpdateMaquinaSerializer(ValidarTipoMaquinaAreaMixin, serializers.ModelSerializer):
+    def create(self, validated_data):
+        imagen_file = validated_data.pop("imagen", None)
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "maquinaria")
+            os.makedirs(carpeta, exist_ok=True)
+            ruta = os.path.join(carpeta, imagen_file.name)
+            with open(ruta, "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            validated_data["imagen_url"] = f"maquinaria/{imagen_file.name}"
+        return super().create(validated_data)
+
+class UpdateMaquinaSerializer(serializers.ModelSerializer):
+    imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
+
     class Meta:
         model = Maquina
         fields = [
             "codigo", "numeroserie", "nombre", "descripcion", "imagen_url",
+            "imagen",
             "modelo_3d", "fechainstalacion", "linea", "marca", "modelo",
             "estado_maquina", "tipo_maquina"
         ]
+
+    def update(self, instance, validated_data):
+        imagen_file = validated_data.pop("imagen", None)
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "maquinaria")
+            os.makedirs(carpeta, exist_ok=True)
+            ruta = os.path.join(carpeta, imagen_file.name)
+            with open(ruta, "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            validated_data["imagen_url"] = f"maquinaria/{imagen_file.name}"
+        return super().update(instance, validated_data)
 
 
 # ==========================================================

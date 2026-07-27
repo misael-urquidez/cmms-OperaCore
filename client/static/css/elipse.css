@@ -1,0 +1,484 @@
+/* ==========================================================================
+   Elipse — asistente de IA. Estilos y animaciones del modulo.
+   - Todo usa los tokens de themes.css (--color-primary, --color-surface...)
+     para que funcione igual en oscuro, claro y plano.
+   - Las animaciones son sutiles a proposito: 200-400ms, sin rebotes.
+     Ver el guard de prefers-reduced-motion al final del archivo.
+   ========================================================================== */
+
+/* ============ KEYFRAMES ============ */
+
+/* Entrada de burbuja: sube 8px mientras aparece. */
+@keyframes elipse-msg-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* Filas de tabla y chips: igual pero mas corto, se usa en cascada. */
+@keyframes elipse-row-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* Stat-cards: ademas escalan un poco. */
+@keyframes elipse-card-pop {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* Los 3 puntos de "pensando". Cada uno arranca con delay distinto. */
+@keyframes elipse-dot {
+    0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+    40%           { opacity: 1;    transform: translateY(-3px); }
+}
+
+/* Orbe de bienvenida: respiracion lenta, casi imperceptible. */
+@keyframes elipse-breathe {
+    0%, 100% { transform: scale(1);    opacity: 0.9; }
+    50%      { transform: scale(1.06); opacity: 1; }
+}
+
+/* Cursor del efecto de escritura. */
+@keyframes elipse-caret {
+    0%, 45%   { opacity: 1; }
+    50%, 100% { opacity: 0; }
+}
+
+/* Panel de memoria entrando desde la derecha. */
+@keyframes elipse-panel-in {
+    from { opacity: 0; transform: translateX(12px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* ============ BOTON DEL SIDEBAR ============ */
+.btn-elipse {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: calc(100% - 1.2rem);
+    margin: 0 0.6rem 0.6rem;
+    min-height: 46px;
+    border-radius: 0.7rem;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.btn-elipse:hover {
+    background: color-mix(in srgb, var(--color-primary) 20%, var(--color-surface));
+    box-shadow: 0 0 16px color-mix(in srgb, var(--color-primary) 35%, transparent);
+    transform: translateY(-1px);
+}
+.btn-elipse .elipse-bolt {
+    font-size: 1rem;
+    animation: elipse-breathe 4s ease-in-out infinite;
+}
+.admin-shell.is-collapsed .btn-elipse .elipse-label { display: none; }
+
+/* ============ LAYOUT DEL CHAT ============ */
+.elipse-chat {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 160px);
+    position: relative;
+}
+
+/* Cabecera: acciones de memoria / nueva conversacion. */
+.elipse-chat__head {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.2rem;
+    border-bottom: 1px solid var(--admin-border);
+}
+.elipse-headbtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--color-muted);
+    padding: 0.3rem 0.75rem;
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.elipse-headbtn:hover {
+    color: var(--color-primary);
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    background: var(--hover-soft);
+}
+.elipse-headbtn__count {
+    background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    color: var(--color-primary);
+    border-radius: 999px;
+    padding: 0 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.elipse-chat__messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0.2rem;
+    scroll-behavior: smooth;
+}
+
+/* ============ BIENVENIDA ============ */
+.elipse-welcome {
+    text-align: center;
+    margin-top: 3rem;
+    color: var(--color-muted);
+    animation: elipse-msg-in 0.4s ease both;
+}
+.elipse-welcome__orb {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    animation: elipse-breathe 4s ease-in-out infinite;
+}
+.elipse-welcome h2 em { color: var(--color-primary); font-style: normal; }
+
+/* ============ MENSAJES ============ */
+.elipse-msg {
+    margin-bottom: 1rem;
+    max-width: 720px;
+    animation: elipse-msg-in 0.32s cubic-bezier(.22,.61,.36,1) both;
+}
+/* Los mensajes rehidratados del historial ya estan "ahi", no entran. */
+.elipse-msg--restored { animation: none; }
+
+.elipse-msg--user { margin-left: auto; text-align: right; }
+.elipse-msg__name { font-size: 0.72rem; color: var(--color-muted); margin-bottom: 0.2rem; }
+.elipse-msg__bubble {
+    display: inline-block;
+    text-align: left;
+    background: var(--color-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: 0.7rem;
+    padding: 0.7rem 0.9rem;
+    color: var(--color-text);
+    max-width: 100%;
+    overflow-x: auto;
+}
+.elipse-msg--user .elipse-msg__bubble {
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
+}
+.elipse-error { color: #fb7185; }
+
+/* Separador "conversacion anterior". */
+.elipse-sep {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.4rem 0 1.2rem;
+    color: var(--color-muted);
+    font-size: 0.72rem;
+}
+.elipse-sep::before,
+.elipse-sep::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--admin-border);
+}
+
+/* ============ ESTADO DE CARGA ============ */
+.elipse-typing {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--color-muted);
+    font-size: 0.85rem;
+}
+.elipse-typing__dots { display: inline-flex; gap: 4px; }
+.elipse-typing__dots i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    animation: elipse-dot 1.2s ease-in-out infinite;
+}
+.elipse-typing__dots i:nth-child(2) { animation-delay: 0.16s; }
+.elipse-typing__dots i:nth-child(3) { animation-delay: 0.32s; }
+
+/* Cursor que sigue al texto mientras se escribe. */
+.elipse-caret {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    margin-left: 1px;
+    vertical-align: text-bottom;
+    background: var(--color-primary);
+    animation: elipse-caret 1s step-end infinite;
+}
+
+/* ============ CONTENIDO ANIMADO DE LAS RESPUESTAS ============ */
+/* --i lo pone elipse.js en cada fila para escalonar la cascada. */
+.elipse-msg__bubble tbody tr {
+    animation: elipse-row-in 0.26s ease both;
+    animation-delay: calc(var(--i, 0) * 40ms);
+}
+.elipse-msg__bubble .stat-card {
+    animation: elipse-card-pop 0.3s cubic-bezier(.22,.61,.36,1) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+}
+.elipse-msg__bubble table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.82rem;
+    margin-top: 0.4rem;
+}
+.elipse-msg__bubble th,
+.elipse-msg__bubble td {
+    text-align: left;
+    padding: 0.35rem 0.6rem;
+    border-bottom: 1px solid var(--admin-border);
+}
+.elipse-msg__bubble th {
+    color: var(--color-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.elipse-msg__bubble tbody tr:hover { background: var(--hover-soft); }
+
+/* ============ CHIPS DE SUGERENCIAS ============ */
+.elipse-chip-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0;
+}
+.elipse-chip-cat {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--color-muted);
+    margin-right: 2px;
+    white-space: nowrap;
+}
+.elipse-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--hover-soft);
+    border: 1px solid var(--line);
+    color: inherit;
+    border-radius: 999px;
+    padding: 4px 12px;
+    font: inherit;
+    font-size: 12.5px;
+    line-height: 1.6;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s ease, border-color .15s ease, transform .15s ease;
+    animation: elipse-row-in 0.24s ease both;
+    animation-delay: calc(var(--i, 0) * 30ms);
+}
+.elipse-chip:hover {
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+    transform: translateY(-1px);
+}
+.elipse-chips-wrap {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--admin-border);
+}
+.elipse-offline {
+    border-left: 3px solid #f59e0b;
+    padding: 10px 14px;
+    background: rgba(245, 158, 11, 0.08);
+    border-radius: 6px;
+}
+
+/* ============ TARJETAS Y BADGES ============ */
+.stat-cards { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.stat-card {
+    background: var(--hover-soft);
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    min-width: 120px;
+}
+.stat-card .s-label { font-size: 11px; opacity: .7; }
+.stat-card .s-val   { font-size: 20px; font-weight: 700; }
+.stat-card .s-sub   { font-size: 11px; opacity: .6; }
+
+.badge { padding: 2px 8px; border-radius: 999px; font-size: 11px; white-space: nowrap; }
+.badge.disponible { background: rgba(34, 197, 94, .15);  color: #16a34a; }
+.badge.ruta       { background: rgba(59, 130, 246, .15); color: #2563eb; }
+.badge.finalizado { background: rgba(148, 163, 184, .18); color: #64748b; }
+.badge.cancelado  { background: rgba(239, 68, 68, .15);  color: #dc2626; }
+.badge.retrasado  { background: rgba(245, 158, 11, .15); color: #d97706; }
+/* En oscuro los textos de badge necesitan mas luz para contrastar. */
+body:not([data-theme="light"]):not([data-theme="plain"]) .badge.disponible { color: #22c55e; }
+body:not([data-theme="light"]):not([data-theme="plain"]) .badge.ruta       { color: #3b82f6; }
+body:not([data-theme="light"]):not([data-theme="plain"]) .badge.finalizado { color: #94a3b8; }
+body:not([data-theme="light"]):not([data-theme="plain"]) .badge.cancelado  { color: #ef4444; }
+body:not([data-theme="light"]):not([data-theme="plain"]) .badge.retrasado  { color: #f59e0b; }
+
+/* ============ FORMULARIO ============ */
+.elipse-chat__form {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-end;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--admin-border);
+}
+.elipse-chat__form textarea {
+    flex: 1;
+    resize: none;
+    overflow-y: auto;
+    max-height: 9.5rem;      /* ~6 lineas, luego hace scroll */
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: 0.6rem;
+    color: var(--color-text);
+    padding: 0.6rem 0.8rem;
+    font: inherit;
+    line-height: 1.45;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.elipse-chat__form textarea:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+.elipse-chat__form button {
+    background: var(--color-primary);
+    color: var(--color-primary-contrast, #08131f);
+    border: none;
+    border-radius: 0.6rem;
+    padding: 0 1.2rem;
+    min-height: 2.6rem;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.elipse-chat__form button:hover:not(:disabled) { transform: translateY(-1px); }
+.elipse-chat__form button:disabled { opacity: 0.55; cursor: default; }
+
+/* ============ BOTON "BAJAR" ============ */
+/* Aparece solo si el usuario subio a leer y llego un mensaje nuevo. */
+.elipse-jump {
+    position: absolute;
+    bottom: 4.6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--color-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: 999px;
+    color: var(--color-text);
+    padding: 0.35rem 0.9rem;
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    z-index: 3;
+}
+.elipse-jump.is-visible { display: inline-flex; animation: elipse-msg-in 0.25s ease both; }
+
+/* ============ PANEL DE MEMORIA ============ */
+.elipse-mem {
+    position: absolute;
+    top: 2.6rem;
+    right: 0;
+    width: min(330px, 90%);
+    max-height: 60%;
+    overflow-y: auto;
+    background: var(--color-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: 0.7rem;
+    padding: 0.85rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    z-index: 5;
+    display: none;
+}
+.elipse-mem.is-open { display: block; animation: elipse-panel-in 0.22s ease both; }
+.elipse-mem__title { font-size: 0.8rem; font-weight: 700; margin-bottom: 0.15rem; }
+.elipse-mem__hint {
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    margin-bottom: 0.6rem;
+    line-height: 1.5;
+}
+.elipse-mem__hint code {
+    background: var(--hover-soft);
+    border-radius: 4px;
+    padding: 1px 4px;
+}
+.elipse-mem__list { list-style: none; margin: 0; padding: 0; }
+.elipse-mem__list li {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--admin-border);
+    animation: elipse-row-in 0.22s ease both;
+}
+.elipse-mem__list li:last-child { border-bottom: none; }
+.elipse-mem__del {
+    background: transparent;
+    border: none;
+    color: var(--color-muted);
+    cursor: pointer;
+    font: inherit;
+    line-height: 1;
+    padding: 0 0.2rem;
+    transition: color 0.15s ease;
+}
+.elipse-mem__del:hover { color: #ef4444; }
+.elipse-mem__empty { font-size: 0.78rem; color: var(--color-muted); font-style: italic; }
+
+/* ============ TOAST ============ */
+.elipse-toast {
+    position: fixed;
+    bottom: 1.4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+    border-radius: 999px;
+    color: var(--color-text);
+    padding: 0.5rem 1.1rem;
+    font-size: 0.82rem;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    z-index: 60;
+    animation: elipse-msg-in 0.25s ease both;
+}
+
+/* ============ ACCESIBILIDAD ============ */
+/* Si el sistema pide menos movimiento, se apaga todo: el chat sigue
+   funcionando igual, solo que sin transiciones ni efecto de escritura
+   (elipse.js tambien consulta este media query y pinta de golpe). */
+@media (prefers-reduced-motion: reduce) {
+    .elipse-chat *,
+    .elipse-chat *::before,
+    .elipse-chat *::after,
+    .btn-elipse .elipse-bolt {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    .elipse-chat__messages { scroll-behavior: auto; }
+}

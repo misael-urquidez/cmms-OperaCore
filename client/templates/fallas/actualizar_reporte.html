@@ -1,4 +1,4 @@
-{% extends "base_admin.html" %}
+{% extends base_template %}
 {% load static %}
 {% block title %}Actualizar Reporte #{{ reporte.numeroRegistro }} · OperaCore{% endblock %}
 {% block breadcrumb %}Fallas{% endblock %}
@@ -25,7 +25,7 @@
                value="{{ reporte.causaRaiz }}" />
 
         <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas) <span id="horas-error"></span></label>
-        <input type="number" name="tiempoParo" id="tiempoParo" min="0" data-error-id="horas-error"
+        <input type="number" name="tiempoParo" id="tiempoParo" min="0" step="any" data-error-id="horas-error"
                value="{{ reporte.tiempoParo }}" />
 
         <label for="fechaSolucion">Fecha de solucion</label>

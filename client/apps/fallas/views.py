@@ -66,6 +66,11 @@ class ReporteFalla(generic.View):
     payload = {}
 
     def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
         severidades, tipos_falla, maquinas, estados, trabajadores, ok = _cargar_catalogos()
         if not ok:
             messages.warning(request, "No se pudo conectar con la API para cargar los catálogos.")
@@ -77,10 +82,17 @@ class ReporteFalla(generic.View):
             "trabajadores": trabajadores,
             "seccion": "fallas",
             "subseccion": "reporte",
+            "usuario": usuario,
+            "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
         }
         return render(request, self.template_name, self.context)
 
     def post(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
         self.payload = {
             "asunto": request.POST.get("asunto"),
             "descripcion": request.POST.get("descripcion"),
@@ -142,6 +154,11 @@ class ListaReportes(generic.View):
     response = None
 
     def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
         # mismo cache key que usa el dashboard de usuarios: si alguien entro
         # a cualquiera de las dos pantallas hace menos de 15 seg, se reusa.
         reportes = cache.get("fallas_reportes_list")
@@ -156,6 +173,8 @@ class ListaReportes(generic.View):
             "reportes": reportes,
             "seccion": "fallas",
             "subseccion": "lista",
+            "usuario": usuario,
+            "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
         }
         return render(request, self.template_name, self.context)
     
@@ -186,6 +205,11 @@ class ActualizarReporte(generic.View):
     template_name = "fallas/actualizar_reporte.html"
 
     def get(self, request, pk):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
         cache_key = f"fallas_reporte_{pk}"
         reporte = cache.get(cache_key)
 
@@ -210,10 +234,17 @@ class ActualizarReporte(generic.View):
             "maquinas": maquinas,
             "estados": estados,
             "trabajadores": trabajadores,
+            "usuario": usuario,
+            "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
         }
         return render(request, self.template_name, context)
 
     def post(self, request, pk):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
         payload = {
             "asunto": request.POST.get("asunto"),
             "descripcion": request.POST.get("descripcion"),
@@ -265,5 +296,3 @@ class InvalidarCacheReportes(generic.View):
     def post(self, request):
         cache.delete("fallas_reportes_list")
         return JsonResponse({"ok": True})
-
-    

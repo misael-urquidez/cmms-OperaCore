@@ -30,7 +30,15 @@ $(function () {
     /* ---- cerrar modal ---- */
 
     function cerrar_modal() {
-        $("#detalle-falla").removeClass("is-open").empty();
+        var $modal = $("#detalle-falla");
+        // Escape se escucha siempre, tambien con el modal cerrado: sin este
+        // guard avisariamos "se cerro" sin que hubiera nada abierto, y quien
+        // escucha restauraria su contexto sin venir al caso.
+        if (!$modal.hasClass("is-open")) return;
+        $modal.removeClass("is-open").empty();
+        // Quien nos abrio (p.ej. el drawer de mantenimiento, que se cierra
+        // para no taparnos) puede escuchar esto y restaurar su contexto.
+        document.dispatchEvent(new CustomEvent("fallas:modal-cerrado"));
     }
 
     $(document).on("click", "[data-dismiss='modal']", cerrar_modal);

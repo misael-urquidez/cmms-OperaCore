@@ -12,6 +12,7 @@
 
   const username = root.dataset.username || "invitado";
   const perfilUrl = root.dataset.perfilUrl;
+  const esAdmin = root.dataset.rol === "ADMIN";
 
   function getCookie(nombre) {
     let valor = null;
@@ -194,22 +195,171 @@ function pintarAvatar(fotoUrl, nombreParaInicial) {
     return Array.isArray(detalle) ? detalle[0] : String(detalle);
   }
 
+  /* ---------- validaciones del formulario de cuenta ----------
+     Solo se validan los campos que en verdad se pueden editar en esta
+     pantalla (los deshabilitados -readonly para TECNI- ni se tocan).
+     Reglas:
+       nombre / apellidoPat        -> obligatorios, solo letras/espacios
+       apellidoMat                 -> opcional, solo letras/espacios
+       usuario                     -> obligatorio, 3-30, letras/numeros/./_/-
+       correo                     -> obligatorio, formato email (solo admin)
+       telefono                    -> obligatorio, 10 digitos (solo admin)
+       passwordNueva/Confirmar     -> opcionales; si se llena una, ambas
+                                       deben llenarse, coincidir y tener
+                                       minimo 8 caracteres.
+  */
+  const RE_SOLO_LETRAS = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+  const RE_USUARIO = /^[a-zA-Z0-9._-]+$/;
+  const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const RE_TELEFONO = /^\d{10}$/;
+
+  function limpiarErrores() {
+    form.querySelectorAll(".config-field__error").forEach((el) => (el.textContent = ""));
+    form.querySelectorAll("input.has-error").forEach((el) => el.classList.remove("has-error"));
+    const generalError = document.getElementById("configFormError");
+    if (generalError) {
+      generalError.textContent = "";
+      generalError.classList.remove("is-visible");
+    }
+  }
+
+  function marcarError(input, mensaje) {
+    if (!input) return;
+    input.classList.add("has-error");
+    const errorEl = document.getElementById(`${input.id}-error`);
+    if (errorEl) errorEl.textContent = mensaje;
+  }
+
+  function mostrarErrorGeneral(mensaje) {
+    const generalError = document.getElementById("configFormError");
+    if (!generalError) return;
+    generalError.textContent = mensaje;
+    generalError.classList.add("is-visible");
+  }
+
+  /* Devuelve { datos, cambioPassword } con solo los campos que en verdad
+     se van a mandar segun el rol, o null si hay errores (ya marcados en
+     el formulario). */
+  function validarFormulario() {
+    limpiarErrores();
+    let valido = true;
+    const datos = {};
+
+    // ---- nombre / apellidos / correo / telefono: solo ADMIN los edita
+    // (para TECNI estos inputs estan deshabilitados: no se tocan) ----
+    if (esAdmin) {
+      const nombre = form.nombre.value.trim();
+      if (!nombre) {
+        marcarError(form.nombre, "El nombre es obligatorio.");
+        valido = false;
+      } else if (!RE_SOLO_LETRAS.test(nombre)) {
+        marcarError(form.nombre, "Solo se permiten letras y espacios.");
+        valido = false;
+      } else {
+        datos.nombre = nombre;
+      }
+
+      const apellidoPat = form.apellidoPat.value.trim();
+      if (!apellidoPat) {
+        marcarError(form.apellidoPat, "El apellido paterno es obligatorio.");
+        valido = false;
+      } else if (!RE_SOLO_LETRAS.test(apellidoPat)) {
+        marcarError(form.apellidoPat, "Solo se permiten letras y espacios.");
+        valido = false;
+      } else {
+        datos.apellidoPat = apellidoPat;
+      }
+
+      const apellidoMat = form.apellidoMat.value.trim();
+      if (apellidoMat && !RE_SOLO_LETRAS.test(apellidoMat)) {
+        marcarError(form.apellidoMat, "Solo se permiten letras y espacios.");
+        valido = false;
+      } else {
+        datos.apellidoMat = apellidoMat;
+      }
+
+      const correo = form.correo.value.trim();
+      if (!correo) {
+        marcarError(form.correo, "El correo es obligatorio.");
+        valido = false;
+      } else if (!RE_EMAIL.test(correo)) {
+        marcarError(form.correo, "Ingresa un correo válido.");
+        valido = false;
+      } else {
+        datos.correo = correo;
+      }
+
+      const telefono = form.telefono.value.trim();
+      if (!telefono) {
+        marcarError(form.telefono, "El teléfono es obligatorio.");
+        valido = false;
+      } else if (!RE_TELEFONO.test(telefono)) {
+        marcarError(form.telefono, "Debe tener exactamente 10 dígitos.");
+        valido = false;
+      } else {
+        datos.telefono = telefono;
+      }
+    }
+
+    // ---- usuario: lo puede editar cualquier rol ----
+    const usuarioVal = form.usuario.value.trim();
+    if (!usuarioVal) {
+      marcarError(form.usuario, "El usuario es obligatorio.");
+      valido = false;
+    } else if (usuarioVal.length < 3) {
+      marcarError(form.usuario, "Debe tener al menos 3 caracteres.");
+      valido = false;
+    } else if (!RE_USUARIO.test(usuarioVal)) {
+      marcarError(form.usuario, "Solo letras, números, punto, guion y guion bajo.");
+      valido = false;
+    } else {
+      datos.usuario = usuarioVal;
+    }
+
+    // ---- contraseña: opcional, la puede cambiar cualquier rol ----
+    const passwordNueva = form.passwordNueva.value;
+    const passwordConfirmar = form.passwordConfirmar.value;
+    let cambioPassword = false;
+
+    if (passwordNueva || passwordConfirmar) {
+      if (passwordNueva.length < 8) {
+        marcarError(form.passwordNueva, "Debe tener al menos 8 caracteres.");
+        valido = false;
+      } else if (passwordNueva !== passwordConfirmar) {
+        marcarError(form.passwordConfirmar, "Las contraseñas no coinciden.");
+        valido = false;
+      } else {
+        datos.password = passwordNueva;
+        datos.password2 = passwordConfirmar;
+        cambioPassword = true;
+      }
+    }
+
+    if (!valido) {
+      mostrarErrorGeneral("Corrige los campos marcados antes de guardar.");
+      return null;
+    }
+    return { datos, cambioPassword };
+  }
+
   if (form) {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       if (!perfilUrl) return;
 
-      const nombre = form.nombre.value.trim() || nombreInicial;
+      const resultado = validarFormulario();
+      if (!resultado) return;
+
+      const { datos } = resultado;
       const submitBtn = form.querySelector('button[type="submit"]');
 
-      const datos = new FormData();
-      datos.append("nombre", nombre);
-      datos.append("correo", form.correo.value.trim());
-      datos.append("telefono", form.telefono.value.trim());
+      const envio = new FormData();
+      Object.keys(datos).forEach((clave) => envio.append(clave, datos[clave]));
+
       if (archivoFotoPendiente) {
-        datos.append("foto", archivoFotoPendiente);
+        envio.append("foto", archivoFotoPendiente);
       } else if (quitarFotoPendiente) {
-        datos.append("eliminar_foto", "1");
+        envio.append("eliminar_foto", "1");
       }
 
       if (submitBtn) submitBtn.disabled = true;
@@ -217,26 +367,34 @@ function pintarAvatar(fotoUrl, nombreParaInicial) {
       fetch(perfilUrl, {
         method: "POST",
         headers: { "X-CSRFToken": getCookie("csrftoken") },
-        body: datos,
+        body: envio,
       })
         .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
         .then(({ ok, data }) => {
           if (!ok || !data.ok) {
             mostrarToast(primerError(data.errores), true);
+            mostrarErrorGeneral(primerError(data.errores));
             return;
           }
 
           const usuario = data.usuario || {};
-          fotoGuardada = usuario.foto || null;
-          nombreActual = usuario.nombre || nombre;
+          fotoGuardada = usuario.foto || fotoGuardada;
+          nombreActual = usuario.nombre || nombreActual;
           archivoFotoPendiente = null;
           quitarFotoPendiente = false;
 
-          form.nombre.defaultValue = form.nombre.value;
-          form.correo.defaultValue = form.correo.value;
-          form.telefono.defaultValue = form.telefono.value;
+          if (esAdmin) {
+            form.nombre.defaultValue = form.nombre.value;
+            form.apellidoPat.defaultValue = form.apellidoPat.value;
+            form.apellidoMat.defaultValue = form.apellidoMat.value;
+            form.correo.defaultValue = form.correo.value;
+            form.telefono.defaultValue = form.telefono.value;
+          }
+          form.usuario.defaultValue = usuario.usuario || form.usuario.value;
+          form.passwordNueva.value = "";
+          form.passwordConfirmar.value = "";
 
-          pintarNombre(nombreActual, username);
+          pintarNombre(nombreActual, usuario.usuario || username);
           pintarAvatar(fotoGuardada, nombreActual);
 
           cerrarModal();
