@@ -21,10 +21,13 @@ class LecturaSensorSerializer(serializers.ModelSerializer):
         self.context["requiere_revision"] = requiere_revision
         return lectura
 
-    def validate_origen(self, origen):
-        if origen == LecturaSensor.ORIGEN_IOT:
-            raise serializers.ValidationError("El origen IoT se habilitará en una fase posterior.")
-        return origen
+    def validate(self, datos):
+        origen = datos.get("origen")
+        maquina = datos.get("maquina")
+        if origen == LecturaSensor.ORIGEN_IOT and maquina is not None:
+            if maquina.modo_monitoreo != LecturaSensor.ORIGEN_IOT:
+                raise serializers.ValidationError({"origen": "La máquina no está en modo IoT."})
+        return datos
 
 
 class CrearMaquinaSerializer(serializers.Serializer):
@@ -96,17 +99,13 @@ class ReporteFallaManualSerializer(serializers.Serializer):
 
 
 class ModoMonitoreoSerializer(serializers.Serializer):
-    """Cambia el modo de monitoreo de una máquina (manual/simulado/iot).
-    iot queda bloqueado hasta que el puente del Wiimote / app móvil exista."""
+    """Cambia el modo de monitoreo de una máquina (manual/simulado/iot)."""
     modo_monitoreo = serializers.ChoiceField(choices=LecturaSensor.ORIGENES)
 
-    def validate_modo_monitoreo(self, valor):
-        if valor == LecturaSensor.ORIGEN_IOT:
-            raise serializers.ValidationError(
-                "El modo IoT aún no está habilitado en este entorno."
-            )
-        return valor
-
+class ReparacionManualSerializer(serializers.Serializer):
+    """Alimenta el MTTR a mano (para pruebas/expo). No expone mttr:
+    lo calcula el trigger tg_actualizar_mttr_orden."""
+    horas_reparacion = serializers.IntegerField(min_value=0)
 
 class RegistroOpsSerializer(serializers.Serializer):
     """Registra un periodo de horas de operación de la máquina.

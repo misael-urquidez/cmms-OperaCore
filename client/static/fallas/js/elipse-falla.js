@@ -36,6 +36,28 @@
   var severidades = leerJson("elipseSeveridadesData");
   var tiposFalla = leerJson("elipseTiposFallaData");
   var historial = [];
+  var camposAcumulados = {};
+
+  function fusionarCampos(campos) {
+    campos = campos || {};
+    Object.keys(campos).forEach(function (k) {
+      var v = campos[k];
+      if (v !== null && v !== undefined && v !== "") camposAcumulados[k] = v;
+    });
+  }
+
+  var ETIQUETAS_CAMPO = {
+    asunto: "Asunto", descripcion: "Descripción", causaRaiz: "Causa raíz",
+    tiempoParo: "Tiempo de paro", fecha: "Fecha", maquina: "Máquina",
+    tipo_severidad: "Severidad", tipo_falla: "Tipo de falla",
+  };
+
+  function resumenCamposTexto() {
+    var partes = Object.keys(camposAcumulados).map(function (k) {
+      return (ETIQUETAS_CAMPO[k] || k) + "=" + camposAcumulados[k];
+    });
+    return partes.length ? "Datos ya confirmados hasta ahora: " + partes.join(", ") + "." : "";
+  }
 
   // ── rellenar un campo del formulario, con destello visual ──
   function set(id, val) {
@@ -142,6 +164,12 @@
     input.value = "";
     btnEnviar.disabled = true;
 
+    // Ventana de historial más amplia y recordatorio explícito de los
+    // datos confirmados, para conservar el contexto si se trunca el chat.
+    var historialParaEnviar = historial.slice(-20);
+    var resumen = resumenCamposTexto();
+    if (resumen) historialParaEnviar = historialParaEnviar.concat([{ role: "assistant", content: resumen }]);
+
     fetch(cfg.urlAutocompletar, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRFToken": cfg.csrf || "" },
@@ -150,7 +178,7 @@
         maquinas: maquinas,
         severidades: severidades,
         tipos_falla: tiposFalla,
-        historial: historial.slice(-6),
+        historial: historialParaEnviar,
       }),
     })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
@@ -159,10 +187,22 @@
           pintarMsg("ai", res.data.error || "No se pudo procesar la descripción.");
           return;
         }
-        var aplicados = aplicarCampos(res.data.campos);
-        var nota = aplicados.length
-          ? "<ul>" + aplicados.map(function (a) { return "<li>" + a + "</li>"; }).join("") + "</ul>"
+        aplicarCampos(res.data.campos);
+        fusionarCampos(res.data.campos);
+
+        var faltantes = ["asunto", "fecha", "maquina", "tipo_severidad", "tipo_falla"]
+          .filter(function (k) { return !camposAcumulados[k]; });
+
+        var nota = Object.keys(camposAcumulados).length
+          ? "<p style='margin:6px 0 2px;font-size:11px;color:var(--color-muted,#94a3b8)'>Confirmado:</p><ul>" +
+            Object.keys(camposAcumulados).map(function (k) { return "<li>" + (ETIQUETAS_CAMPO[k] || k) + "</li>"; }).join("") +
+            "</ul>" +
+            (faltantes.length
+              ? "<p style='margin:2px 0 0;font-size:11px;color:var(--color-muted,#94a3b8)'>Falta: " +
+                faltantes.map(function (k) { return ETIQUETAS_CAMPO[k] || k; }).join(", ") + "</p>"
+              : "")
           : "";
+
         pintarMsg("ai", res.data.mensaje || "Listo, revisa el formulario.", nota);
         historial.push({ role: "assistant", content: res.data.mensaje || "" });
       })

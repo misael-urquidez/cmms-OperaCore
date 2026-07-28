@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
 from django.utils import timezone
 from rest_framework import status
@@ -14,7 +15,7 @@ from apps.usuarios.models import Trabajador
 from . import services
 from .models import Indicador, LecturaSensor
 from .serializers import (
-    CrearMaquinaSerializer, LecturaSensorSerializer, ModoMonitoreoSerializer,
+    CrearMaquinaSerializer, LecturaSensorSerializer, ModoMonitoreoSerializer, ReparacionManualSerializer,
     RegistroOpsSerializer, ReporteFallaManualSerializer,
 )
 
@@ -23,7 +24,10 @@ class LecturaCreateAPIView(APIView):
     def post(self, request):
         serializer = LecturaSensorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        lectura = serializer.save()
+        try:
+            lectura = serializer.save()
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         data = LecturaSensorSerializer(lectura).data
         reporte = serializer.context.get("reporte_automatico")
         data["reporte_automatico"] = reporte.numeroRegistro if reporte else None
@@ -146,7 +150,13 @@ class ReportarFallaManualAPIView(APIView):
 
 
 class ModoMonitoreoAPIView(APIView):
-    """Cambia el modo de monitoreo (manual/simulado/iot) de una máquina."""
+    """Cambia el modo de monitoreo (manual/simulado/iot) de una máquina.
+
+    Solo puede haber UNA máquina "vinculada" en modo iot a la vez -- hay un
+    solo Wiimote físico, así que no tiene sentido que dos máquinas queden
+    en iot simultáneamente (generaría ambigüedad sobre a cuál está atado
+    el sensor). Al activar iot en una máquina, cualquier otra que ya
+    estuviera en iot se libera automáticamente a modo manual."""
 
     def patch(self, request, codigo):
         try:
@@ -155,9 +165,36 @@ class ModoMonitoreoAPIView(APIView):
             raise NotFound("Máquina no encontrada.") from exc
         serializer = ModoMonitoreoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        maquina.modo_monitoreo = serializer.validated_data["modo_monitoreo"]
+        nuevo_modo = serializer.validated_data["modo_monitoreo"]
+
+        maquina_liberada = None
+        if nuevo_modo == LecturaSensor.ORIGEN_IOT:
+            otra_en_iot = Maquina.objects.filter(
+                modo_monitoreo=LecturaSensor.ORIGEN_IOT
+            ).exclude(codigo=maquina.codigo).first()
+            if otra_en_iot:
+                otra_en_iot.modo_monitoreo = LecturaSensor.ORIGEN_MANUAL
+                otra_en_iot.save(update_fields=["modo_monitoreo"])
+                maquina_liberada = otra_en_iot.codigo
+
+        maquina.modo_monitoreo = nuevo_modo
         maquina.save(update_fields=["modo_monitoreo"])
-        return Response({"codigo": maquina.codigo, "modo_monitoreo": maquina.modo_monitoreo})
+        return Response({
+            "codigo": maquina.codigo,
+            "modo_monitoreo": maquina.modo_monitoreo,
+            "maquina_iot_liberada": maquina_liberada,
+        })
+
+
+class MaquinaIotActivaAPIView(APIView):
+    """Devuelve el código de la única máquina que está en modo iot ahora
+    mismo (o null si ninguna). Útil para que el script del Wiimote y el
+    front confirmen a cuál máquina está vinculado el sensor sin tener que
+    adivinar ni pasar el código a mano."""
+
+    def get(self, request):
+        maquina = Maquina.objects.filter(modo_monitoreo=LecturaSensor.ORIGEN_IOT).first()
+        return Response({"codigo": maquina.codigo if maquina else None})
 
 
 class SimularLecturaAPIView(APIView):
@@ -180,6 +217,27 @@ class SimularLecturaAPIView(APIView):
         data["requiere_revision_preventiva"] = requiere_revision
         return Response(data, status=status.HTTP_201_CREATED)
 
+class ReparacionManualAPIView(APIView):
+    """Registra una reparación con tiempoParo fijo a mano (alimenta MTTR).
+    No recibe ni escribe mttr -- eso lo calcula el trigger de MySQL en
+    cuanto se cierra la orden que crea internamente."""
+
+    def post(self, request, codigo):
+        try:
+            maquina = Maquina.objects.get(codigo=codigo)
+        except Maquina.DoesNotExist as exc:
+            raise NotFound("Máquina no encontrada.") from exc
+        serializer = ReparacionManualSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            reporte = services.registrar_reparacion_manual(maquina=maquina, **serializer.validated_data)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "numeroRegistro": reporte.numeroRegistro,
+            "maquina": maquina.codigo,
+            "tiempoParo": reporte.tiempoParo,
+        }, status=status.HTTP_201_CREATED)
 
 class RegistroOpsAPIView(APIView):
     """Registra un periodo de horas de operación de la máquina.
@@ -199,3 +257,20 @@ class RegistroOpsAPIView(APIView):
             "maquina": maquina.codigo,
             "horasOperacion": registro.horasOperacion,
         }, status=status.HTTP_201_CREATED)
+
+
+class ReparacionIotAPIView(APIView):
+    """Resuelve desde IoT la falla activa de una máquina."""
+
+    def post(self, request, codigo):
+        try:
+            maquina = Maquina.objects.get(codigo=codigo)
+        except Maquina.DoesNotExist as exc:
+            raise NotFound("Máquina no encontrada.") from exc
+        falla = services.reparar_via_iot(maquina)
+        if falla is None:
+            return Response({"resultado": "sin_falla", "maquina": maquina.codigo})
+        return Response({
+            "resultado": "reparado", "maquina": maquina.codigo,
+            "reporte_falla": falla.numeroRegistro,
+        })

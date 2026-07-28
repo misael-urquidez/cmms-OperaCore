@@ -7,6 +7,7 @@ app_name = "monitoreo"
 urlpatterns = [
     path("lecturas/", views.LecturaCreateAPIView.as_view(), name="lecturas"),
     path("maquinas/", views.MaquinaListAPIView.as_view(), name="maquinas"),
+    path("maquinas/iot-activa/", views.MaquinaIotActivaAPIView.as_view(), name="maquina-iot-activa"),
     path("maquinas/<str:codigo>/indicadores/", views.IndicadoresMaquinaAPIView.as_view(), name="indicadores"),
     path("maquinas/<str:codigo>/estado/", views.EstadoMaquinaAPIView.as_view(), name="estado"),
     path("maquinas/<str:codigo>/historial/", views.HistorialLecturasAPIView.as_view(), name="historial"),
@@ -16,4 +17,6 @@ urlpatterns = [
     path("maquinas/<str:codigo>/modo/", views.ModoMonitoreoAPIView.as_view(), name="modo-monitoreo"),
     path("maquinas/<str:codigo>/simular/", views.SimularLecturaAPIView.as_view(), name="simular-lectura"),
     path("maquinas/<str:codigo>/registro-ops/", views.RegistroOpsAPIView.as_view(), name="registro-ops"),
+    path("maquinas/<str:codigo>/reparacion-manual/", views.ReparacionManualAPIView.as_view(), name="reparacion-manual"),
+    path("maquinas/<str:codigo>/reparar-iot/", views.ReparacionIotAPIView.as_view(), name="reparar-iot"),
 ]
