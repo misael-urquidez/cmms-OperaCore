@@ -59,6 +59,7 @@
 .machine-node__vib-fill.is-high { background:#ef4444; }
 .machine-node__vib-val { font-size:.68rem; color:var(--color-muted); white-space:nowrap; }
 .machine-node__flag { display:inline-flex; align-items:center; gap:.25rem; margin-top:.4rem; font-size:.68rem; color:#fbbf24; font-weight:700; }
+.machine-node__flag--falla { color:#ef4444; }
 
 .plant-link { stroke:var(--line); stroke-width:2; fill:none; }
 .plant-link--anim { stroke-width:2; stroke-dasharray:6 6; fill:none; opacity:.6; animation:dash-flow 1.4s linear infinite; }

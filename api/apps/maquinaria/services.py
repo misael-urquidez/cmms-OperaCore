@@ -61,6 +61,11 @@ def cambiar_estado_maquina(maquina_codigo, nuevo_estado, referencia_tipo=None, r
     )
     maquina.estado_maquina_id = nuevo_estado
     maquina.save(update_fields=["estado_maquina"])
+
+    if nuevo_estado == "OPERA" and maquina.requiere_revision_preventiva:
+        maquina.requiere_revision_preventiva = False
+        maquina.save(update_fields=["requiere_revision_preventiva"])
+
     return maquina
 
 

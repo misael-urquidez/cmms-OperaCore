@@ -123,12 +123,22 @@ function render(maquinas) {
     node.style.top = pos.y + "px";
 
     var estadoClase = estadoValido(m.estado_maquina);
-    var ledClase = m.requiere_revision_preventiva ? "ALERT" : estadoClase;
+    var ESTADOS_PRIORITARIOS = ["FALLO", "MANTE", "ESPER", "DESHA"];
+    var ledClase = (m.requiere_revision_preventiva && ESTADOS_PRIORITARIOS.indexOf(estadoClase) === -1)
+      ? "ALERT"
+      : estadoClase;
 
     var vibracion = m.ultima_lectura ? m.ultima_lectura.vibracion : null;
     var umbral = m.umbral_vibracion || 4.0;
     var pct = vibracion !== null ? Math.min(100, Math.round((vibracion / umbral) * 100)) : 0;
     var esAlta = vibracion !== null && vibracion > umbral;
+
+    var flagHtml = "";
+    if (estadoClase === "FALLO") {
+      flagHtml = '<span class="machine-node__flag machine-node__flag--falla">⛔ Máquina en falla</span>';
+    } else if (m.requiere_revision_preventiva) {
+      flagHtml = '<span class="machine-node__flag">⚠ Revisar preventivo</span>';
+    }
 
     node.innerHTML =
       '<div class="machine-node__card">' +
@@ -140,7 +150,7 @@ function render(maquinas) {
           '<div class="machine-node__vib-track"><div class="machine-node__vib-fill' + (esAlta ? " is-high" : "") + '" style="width:' + pct + '%"></div></div>' +
           '<span class="machine-node__vib-val">' + (vibracion !== null ? vibracion : "—") + '</span>' +
         '</div>' +
-        (m.requiere_revision_preventiva ? '<span class="machine-node__flag">⚠ Revisar preventivo</span>' : '') +
+        flagHtml +
       '</div>';
 
     hacerArrastrable(node);
@@ -214,7 +224,11 @@ function render(maquinas) {
       if (data.error) { refreshStatus.textContent = data.error; return; }
       render(data.maquinas || []);
       refreshStatus.textContent = "Actualizado " + new Date().toLocaleTimeString();
-      if (estado.seleccionada) cargarDatosDrawer(estado.seleccionada, true);
+      if (estado.seleccionada) {
+        cargarDatosDrawer(estado.seleccionada, true);
+        var mActual = estado.maquinas.find(function (mm) { return mm.codigo === estado.seleccionada; });
+        manejarPollingIot(mActual ? mActual.modo_monitoreo : null);
+      }
     }).catch(function () { refreshStatus.textContent = "Sin conexión"; });
   }
 
@@ -298,6 +312,41 @@ refrescar();
   function cerrarDrawer() {
     drawer.setAttribute("aria-hidden", "true");
     estado.seleccionada = null;
+    detenerPollingIot();
+  }
+
+  // ---------------------------------------------------- lecturas en vivo (IoT)
+  // Mientras el drawer está abierto y la máquina está en modo "iot", refrescamos
+  // la última lectura y la tendencia cada 1.5s (en vez de esperar los 5s del
+  // refresco general del mapa), para que se vea la telemetría del Wiimote
+  // llegando casi en tiempo real.
+  var IOT_POLL_MS = 1500;
+  var iotPollTimer = null;
+
+  function manejarPollingIot(modo) {
+    if (modo === "iot") {
+      if (iotPollTimer) return;
+      actualizarLecturaEnVivo(estado.seleccionada);
+      iotPollTimer = setInterval(function () {
+        if (estado.seleccionada) actualizarLecturaEnVivo(estado.seleccionada);
+        else detenerPollingIot();
+      }, IOT_POLL_MS);
+    } else {
+      detenerPollingIot();
+    }
+  }
+  function detenerPollingIot() {
+    if (iotPollTimer) { clearInterval(iotPollTimer); iotPollTimer = null; }
+  }
+  function actualizarLecturaEnVivo(codigo) {
+    fetch(urlPara(HISTORIAL_TPL, codigo) + "?limite=20")
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || estado.seleccionada !== codigo) return;
+        pintarUltimaLectura(data);
+        pintarTendencia(data);
+      })
+      .catch(function () {});
   }
   document.getElementById("drawerClose").addEventListener("click", cerrarDrawer);
   document.getElementById("drawerBackdrop").addEventListener("click", cerrarDrawer);
@@ -325,6 +374,7 @@ refrescar();
     drawerTemperatura.textContent = m.ultima_lectura && m.ultima_lectura.temperatura != null ? m.ultima_lectura.temperatura + " °C" : "—";
     drawerTimestamp.textContent = m.ultima_lectura ? m.ultima_lectura.timestamp.slice(0, 16).replace("T", " ") : "—";
     drawerModoSelect.value = m.modo_monitoreo || "manual";
+    manejarPollingIot(m.modo_monitoreo);
     actualizarSeccionesPorModo(m.modo_monitoreo);
     drawerModoMsg.hidden = true;
     drawerManualMsg.hidden = true;
@@ -361,8 +411,13 @@ refrescar();
           mostrarMsg(drawerModoMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo actualizar el modo.", false);
           return;
         }
-        mostrarMsg(drawerModoMsg, "Modo actualizado a " + res.data.modo_monitoreo + ".", true);
+        var msg = "Modo actualizado a " + res.data.modo_monitoreo + ".";
+        if (res.data.maquina_iot_liberada) {
+          msg += " Se liberó " + res.data.maquina_iot_liberada + " (pasó a manual) porque solo una máquina puede estar en IoT a la vez.";
+        }
+        mostrarMsg(drawerModoMsg, msg, true);
         actualizarSeccionesPorModo(res.data.modo_monitoreo);
+        manejarPollingIot(res.data.modo_monitoreo);
         refrescar();
       }).catch(function () { mostrarMsg(drawerModoMsg, "No fue posible conectar con el servidor.", false); });
   });
@@ -494,7 +549,19 @@ drawerReparacionForm.addEventListener("submit", function (ev) {
     ]).then(function (res) {
       pintarIndicadores(res[0]);
       pintarTendencia(res[1]);
+      if (res[1]) pintarUltimaLectura(res[1]);
     });
+  }
+
+  // Repinta Vibración/Umbral/Temperatura/Hora a partir de la respuesta del
+  // historial (última lectura = último elemento, ya viene en orden cronológico).
+  function pintarUltimaLectura(data) {
+    var lecturas = data.lecturas || [];
+    var ultima = lecturas.length ? lecturas[lecturas.length - 1] : null;
+    drawerVibracion.textContent = ultima ? ultima.vibracion : "Sin datos";
+    drawerUmbral.textContent = data.umbral_vibracion != null ? data.umbral_vibracion : "—";
+    drawerTemperatura.textContent = ultima && ultima.temperatura != null ? ultima.temperatura + " °C" : "—";
+    drawerTimestamp.textContent = ultima ? ultima.timestamp.slice(0, 16).replace("T", " ") : "—";
   }
 
   function pintarIndicadores(data) {

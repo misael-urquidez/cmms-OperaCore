@@ -120,6 +120,7 @@ class Maquina(models.Model):
     modelo = models.ForeignKey(Modelo, models.DO_NOTHING, db_column='modelo', blank=True, null=True)
     estado_maquina = models.ForeignKey(EdoMaquina, models.DO_NOTHING, db_column='estado_maquina', blank=True, null=True)
     tipo_maquina = models.ForeignKey(TipoMaquina, models.DO_NOTHING, db_column='tipo_maquina', blank=True, null=True)
+    requiere_revision_preventiva = models.BooleanField(default=False)
 
     class Meta:
         managed = False

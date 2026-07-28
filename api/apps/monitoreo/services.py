@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from apps.fallas.models import EstadoReporte, ReporteFalla, TipoFalla, TipoSeveridad
+from apps.fallas.models import EstadoReporte, ReporteFalla, TipoSeveridad
 from apps.usuarios.models import Trabajador
 
 from .models import EstadoOrden, LecturaSensor, OrdenMantenimiento, RegistroOps, TipoMantenimiento
@@ -12,68 +12,84 @@ from .models import EstadoOrden, LecturaSensor, OrdenMantenimiento, RegistroOps,
 
 LECTURAS_TENDENCIA = 5
 MINIMO_FUERA_UMBRAL = 3
+GOLPES_PARA_FALLO = 3
 
 
 def evaluar_tendencia(maquina):
-    """Actualiza y devuelve la bandera preventiva; no crea reportes ni órdenes."""
+    """Actualiza y devuelve la bandera preventiva. Es "sticky": esta función
+    solo puede ENCENDERLA. Apagarla requiere una acción explícita de
+    reparación/validación (ver limpiar_revision_preventiva)."""
     lecturas = list(
         LecturaSensor.objects.filter(maquina=maquina)
         .order_by("-timestamp")[:LECTURAS_TENDENCIA]
     )
     fuera_de_rango = sum(lectura.vibracion > maquina.umbral_vibracion for lectura in lecturas)
     requiere_revision = len(lecturas) == LECTURAS_TENDENCIA and fuera_de_rango >= MINIMO_FUERA_UMBRAL
-    if maquina.requiere_revision_preventiva != requiere_revision:
-        maquina.requiere_revision_preventiva = requiere_revision
+
+    if requiere_revision and not maquina.requiere_revision_preventiva:
+        maquina.requiere_revision_preventiva = True
         maquina.save(update_fields=["requiere_revision_preventiva"])
-    return requiere_revision
+
+    return maquina.requiere_revision_preventiva
 
 
-def _crear_falla_y_orden_por_golpe(maquina):
-    """Crea una alerta correctiva con catálogos estándar de OperaCore."""
-    trabajador = Trabajador.objects.filter(actividad=True).order_by("numeroNomina").first()
-    tipo_falla = TipoFalla.objects.order_by("numeroRegistro").first()
-    severidad = TipoSeveridad.objects.filter(codigo="CRITI").first()
-    estado_reporte = EstadoReporte.objects.filter(codigo="ABIER").first()
-    tipo_mantenimiento = TipoMantenimiento.objects.filter(codigo="CORRE").first()
-    estado_orden = EstadoOrden.objects.filter(codigo="SOLIC").first()
-    if not all((trabajador, tipo_falla, severidad, estado_reporte, tipo_mantenimiento, estado_orden)):
-        raise ValidationError("Faltan catálogos o un trabajador activo para crear la alerta automática.")
+def limpiar_revision_preventiva(maquina):
+    """Apaga la bandera preventiva a propósito (reparación/validación)."""
+    if maquina.requiere_revision_preventiva:
+        maquina.requiere_revision_preventiva = False
+        maquina.save(update_fields=["requiere_revision_preventiva"])
 
-    ahora = timezone.localtime()
-    reporte = ReporteFalla.objects.create(
-        asunto="Golpe detectado por monitoreo",
-        fechaCreacion=ahora.date(), horaCreacion=ahora.time(),
-        causaRaiz="Pendiente de diagnóstico: golpe detectado por sensor.",
-        descripcion="Reporte generado automáticamente por el módulo de monitoreo.",
-        maquina=maquina, trabajador=trabajador, tipo_falla=tipo_falla,
-        tipo_severidad=severidad, estado_reporte=estado_reporte,
-    )
-    folio = f"OM-A{reporte.numeroRegistro:010d}"  # 15 caracteres, único por reporte.
-    OrdenMantenimiento.objects.create(
-        folio=folio, descripcion="Inspección correctiva por golpe detectado.",
-        fechaCreacion=ahora.date(), horaCreacion=ahora.time(), maquina=maquina,
-        trabajador=trabajador, reporte_falla=reporte,
-        tipo_mantenimiento=tipo_mantenimiento, estado_orden=estado_orden,
-    )
 
+def _procesar_golpe(maquina):
+    """Golpe detectado por el sensor (manual/simulado/iot). A propósito NO
+    crea ReporteFalla ni OrdenMantenimiento -- eso requeriría catálogos
+    completos y para un golpe crudo del sensor no hay diagnóstico real
+    todavía. Solo: (1) prende la alerta de revisión, y (2) si ya se
+    acumularon GOLPES_PARA_FALLO golpes desde que la máquina quedó
+    operativa por última vez, la pasa a FALLO."""
+    from apps.maquinaria.models import HistorialEstadoMaquina
     from apps.maquinaria.services import cambiar_estado_maquina
-    cambiar_estado_maquina(maquina.codigo, "FALLO", "reporte_falla", str(reporte.numeroRegistro))
 
-    return reporte
+    if not maquina.requiere_revision_preventiva:
+        maquina.requiere_revision_preventiva = True
+        maquina.save(update_fields=["requiere_revision_preventiva"])
+
+    if maquina.estado_maquina != "OPERA":
+        return  # ya no está operando; no tiene caso seguir contando golpes
+
+    desde = (
+        HistorialEstadoMaquina.objects.filter(maquina_id=maquina.codigo, estado_nuevo_id="OPERA")
+        .order_by("-fecha")
+        .values_list("fecha", flat=True)
+        .first()
+    )
+    golpes = LecturaSensor.objects.filter(maquina=maquina, golpe=True)
+    if desde:
+        golpes = golpes.filter(timestamp__gte=desde)
+    total_golpes = golpes.count()
+
+    if total_golpes >= GOLPES_PARA_FALLO:
+        try:
+            cambiar_estado_maquina(maquina.codigo, "FALLO", "golpe_sensor", None)
+        except ValidationError:
+            pass  # transición no permitida justo ahora; la alerta ya quedó activa
 
 
 @transaction.atomic
 def registrar_lectura(maquina, origen, vibracion, golpe=False, temperatura=None):
-    """Punto único para lecturas manuales, simuladas y futuras lecturas IoT."""
+    """Punto único para lecturas manuales, simuladas y IoT."""
     if origen not in dict(LecturaSensor.ORIGENES):
         raise ValidationError({"origen": "Origen no válido."})
     lectura = LecturaSensor.objects.create(
         maquina=maquina, timestamp=timezone.now(), origen=origen,
         vibracion=vibracion, golpe=golpe, temperatura=temperatura,
     )
-    reporte = _crear_falla_y_orden_por_golpe(maquina) if golpe else None
-    requiere_revision = evaluar_tendencia(maquina) if not golpe else maquina.requiere_revision_preventiva
-    return lectura, reporte, requiere_revision
+    if golpe:
+        _procesar_golpe(maquina)
+        requiere_revision = True
+    else:
+        requiere_revision = evaluar_tendencia(maquina)
+    return lectura, None, requiere_revision
 
 
 def generar_lectura_simulada(maquina, golpe_probabilidad=0.02):
@@ -150,4 +166,30 @@ def registrar_reparacion_manual(maquina, horas_reparacion):
     OrdenMantenimientoCompleta.objects.filter(pk=folio).update(
         fechacierre=ahora.date(), horacierre=ahora.time(), estado_orden_id="CERRA",
     )
+    limpiar_revision_preventiva(maquina)
     return reporte
+
+
+def reparar_via_iot(maquina):
+    """Resuelve de un toque la falla activa de esta máquina desde IoT."""
+    falla = ReporteFalla.objects.filter(maquina=maquina).exclude(
+        estado_reporte_id__in=["RESUE", "CERRA", "CANCE"]
+    ).order_by("-fechaCreacion", "-horaCreacion").first()
+    if falla is None:
+        return None
+
+    estado_resuelto = EstadoReporte.objects.filter(codigo="RESUE").first()
+    if not estado_resuelto:
+        raise ValidationError("Falta el catálogo de estado de reporte RESUE.")
+    falla.estado_reporte = estado_resuelto
+    falla.fechaResolucion = timezone.localdate()
+    falla.save(update_fields=["estado_reporte", "fechaResolucion"])
+
+    estado_cerrado = EstadoOrden.objects.filter(codigo="CERRA").first()
+    if estado_cerrado:
+        OrdenMantenimiento.objects.filter(reporte_falla=falla).update(estado_orden=estado_cerrado)
+
+    from apps.maquinaria.services import cambiar_estado_maquina
+    cambiar_estado_maquina(maquina.codigo, "OPERA", "reporte_falla", str(falla.numeroRegistro), forzar=True)
+    limpiar_revision_preventiva(maquina)
+    return falla
