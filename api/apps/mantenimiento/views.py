@@ -97,6 +97,25 @@ class TipoMovimientoDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         return serializers.DetailTipoMovimientoSerializer
 
 
+# ------------ MOVIMIENTO ---------------------------------------------------
+class MovimientoListAPIView(generics.ListAPIView):
+    queryset = models.Movimiento.objects.select_related(
+        "orden_mantenimiento", "refaccion", "pieza",
+    ).order_by("-fecha", "-hora")
+    serializer_class = serializers.ListMovimientoSerializer
+
+
+class MovimientoCreateAPIView(generics.CreateAPIView):
+    serializer_class = serializers.CreateMovimientoSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        movimiento = serializer.save()
+        data = serializers.ListMovimientoSerializer(movimiento).data
+        return Response(data, status=status.HTTP_201_CREATED)
+
+
 # ------------ TAREA_ORDEN (llave compuesta) ------------------------------
 class TareaOrdenListAPIView(generics.ListAPIView):
     queryset = models.TareaOrden.objects.all()

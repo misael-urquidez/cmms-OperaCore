@@ -87,6 +87,20 @@ class ListaRefacciones(generic.View):
 
         todas_las, visibles, necesita_modal = _columnas_visibles(config)
 
+        reorden = sum(
+            1 for r in registros
+            if r.get("puntoreorden") and (r.get("stock") or 0) <= r["puntoreorden"]
+        )
+        stock_bajo = sum(
+            1 for r in registros
+            if (r.get("stock") or 0) < (r.get("stockminimo") or 0)
+        )
+        buen_stock = sum(
+            1 for r in registros
+            if (r.get("stock") or 0) >= (r.get("stockminimo") or 0)
+        )
+        total_unidades = sum(r.get("stock") or 0 for r in registros)
+
         context = {
             "config": config,
             "registros": registros,
@@ -96,6 +110,10 @@ class ListaRefacciones(generic.View):
             "seccion": "inventario",
             "subseccion": "refacciones",
             "base_template": _base_template(request),
+            "kpi_reorden": reorden,
+            "kpi_stock_bajo": stock_bajo,
+            "kpi_buen_stock": buen_stock,
+            "kpi_total_unidades": total_unidades,
         }
         return render(request, self.template_name, context)
 
@@ -344,6 +362,33 @@ class CrearHerramienta(generic.View):
             messages.warning(request, "No se pudo establecer comunicación con el servicio.")
 
         return redirect("inventario:crear_herramienta")
+
+
+# ------------ MOVIMIENTOS --------------------------------------------------
+class ListaMovimientos(generic.View):
+    template_name = "inventario/lista_movimientos.html"
+
+    def get(self, request):
+        registros = cache.get("inventario_movimientos_list")
+        if registros is None:
+            try:
+                res = SESSION.get(
+                    f"{settings.API_BASE_URL}/mantenimiento/v1/movimientos/list/",
+                    timeout=5,
+                )
+                registros = res.json() if res.status_code == 200 else []
+                cache.set("inventario_movimientos_list", registros, INVENTARIO_TTL)
+            except requests.exceptions.RequestException:
+                registros = []
+                messages.warning(request, "Error de conexión con la API al cargar movimientos.")
+
+        context = {
+            "registros": registros,
+            "seccion": "inventario",
+            "subseccion": "movimientos",
+            "base_template": _base_template(request),
+        }
+        return render(request, self.template_name, context)
 
 
 # ------------ PROVEEDORES --------------------------------------------------
@@ -684,3 +729,48 @@ class CrearTipoRefaccion(generic.View):
         except requests.exceptions.RequestException:
             messages.warning(request, "Error de conexión con la API.")
         return redirect("inventario:crear_tipo_refaccion")
+
+
+# ------------ MODALES (fragmentos HTML) ------------------------------------
+
+class ProveedorModalView(generic.View):
+    """Devuelve fragmento HTML con el detalle del proveedor para el modal."""
+
+    def get(self, request, pk):
+        proveedor = None
+        try:
+            res = SESSION.get(f"{API_URL}/v1/proveedores/{pk}/", timeout=5)
+            if res.status_code == 200:
+                proveedor = res.json()
+        except requests.exceptions.RequestException:
+            pass
+        return render(request, "inventario/modal-proveedor.html", {"proveedor": proveedor})
+
+
+class ExistenciaModalView(generic.View):
+    """Devuelve fragmento HTML con la existencia de una refacción por estado."""
+
+    def get(self, request, refaccion_id):
+        existencias = []
+        try:
+            res = SESSION.get(f"{API_URL}/v1/existencia-refaccion/list/", timeout=5)
+            if res.status_code == 200:
+                existencias = [
+                    e for e in res.json()
+                    if e.get("refaccion") == int(refaccion_id)
+                ]
+        except requests.exceptions.RequestException:
+            pass
+
+        estados_map = {}
+        try:
+            res_edo = SESSION.get(f"{API_URL}/v1/estados-refaccion/list/", timeout=5)
+            if res_edo.status_code == 200:
+                estados_map = {e["codigo"]: e["nombre"] for e in res_edo.json()}
+        except requests.exceptions.RequestException:
+            pass
+
+        return render(request, "inventario/modal-existencia.html", {
+            "existencias": existencias,
+            "estados_map": estados_map,
+        })

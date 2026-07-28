@@ -1,0 +1,57 @@
+<div class="fallas-modal__dialog" role="document">
+  <div class="fallas-modal__content">
+    <div class="fallas-modal__header">
+      <h2 class="fallas-modal__title">Proveedor — {{ proveedor.nombrecomercial }}</h2>
+      <button class="fallas-modal__close" type="button" data-dismiss="modal" aria-label="Cerrar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="fallas-modal__body">
+      {% if proveedor %}
+        <div class="fallas-modal__grid">
+          <div class="fallas-modal__field">
+            <span class="fallas-modal__label">Código</span>
+            <span class="fallas-modal__value">{{ proveedor.codigo }}</span>
+          </div>
+          <div class="fallas-modal__field">
+            <span class="fallas-modal__label">RFC</span>
+            <span class="fallas-modal__value">{{ proveedor.rfc }}</span>
+          </div>
+          <div class="fallas-modal__field">
+            <span class="fallas-modal__label">Razón Social</span>
+            <span class="fallas-modal__value">{{ proveedor.razonsocial }}</span>
+          </div>
+          <div class="fallas-modal__field">
+            <span class="fallas-modal__label">Nombre Comercial</span>
+            <span class="fallas-modal__value">{{ proveedor.nombrecomercial }}</span>
+          </div>
+          <div class="fallas-modal__field">
+            <span class="fallas-modal__label">Teléfono</span>
+            <a class="fallas-modal__value" href="tel:{{ proveedor.telefono }}">{{ proveedor.telefono }}</a>
+          </div>
+          <div class="fallas-modal__field">
+            <span class="fallas-modal__label">Email</span>
+            <a class="fallas-modal__value" href="mailto:{{ proveedor.email }}">{{ proveedor.email }}</a>
+          </div>
+        </div>
+
+        <div class="fallas-modal__section">
+          <span class="fallas-modal__label">Dirección</span>
+          <p class="fallas-modal__text">{{ proveedor.dircalle }} {{ proveedor.dirnumero }}, CP {{ proveedor.dircodigopostal }}</p>
+        </div>
+
+        <div class="fallas-modal__section">
+          <span class="fallas-modal__label">Contacto</span>
+          <p class="fallas-modal__text">{{ proveedor.contnombre }} {{ proveedor.contapellpat }}{% if proveedor.contapellmat %} {{ proveedor.contapellmat }}{% endif %}</p>
+        </div>
+      {% else %}
+        <p class="fallas-modal__text">No se pudo cargar la información del proveedor.</p>
+      {% endif %}
+    </div>
+
+    <div class="fallas-modal__footer">
+      <button type="button" class="fallas-modal__btn fallas-modal__btn--close" data-dismiss="modal">Cerrar</button>
+    </div>
+  </div>
+</div>
