@@ -11,6 +11,7 @@
     <a href="{% url 'inventario:lista_piezas' %}">← Inventario</a>
     <h1>Movimientos</h1>
   </div>
+  <a class="btn-primary-sm" href="{% url 'inventario:crear_movimiento' %}">+ Registrar</a>
 </div>
 
 <div class="inv-search">
@@ -18,6 +19,12 @@
     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
   </svg>
   <input type="text" id="buscador" placeholder="Buscar en la tabla...">
+  <select class="inv-search__select" data-filter="tipo">
+    <option value="">Todos los tipos</option>
+    {% for tipo in tipos_movimiento %}
+      <option value="{{ tipo.codigo }}">{{ tipo.descripcion }}</option>
+    {% endfor %}
+  </select>
 </div>
 
 <div class="gestion-table-wrap"><table class="data-table" id="data-table">
@@ -35,7 +42,7 @@
   </thead>
   <tbody>
     {% for r in registros %}
-    <tr>
+    <tr data-tipo="{{ r.tipomovimiento }}">
       <td>{{ r.numeroregistro }}</td>
       <td>{{ r.fecha }}</td>
       <td>{{ r.hora }}</td>

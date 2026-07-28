@@ -21,6 +21,7 @@ urlpatterns = [
 
     # ------------ MOVIMIENTOS --------------------------------------------------
     path("movimientos/", views.ListaMovimientos.as_view(), name="lista_movimientos"),
+    path("movimientos/crear/", views.CrearMovimiento.as_view(), name="crear_movimiento"),
 
     # ------------ PROVEEDORES --------------------------------------------------
     path("proveedores/", views.ListaProveedores.as_view(), name="lista_proveedores"),

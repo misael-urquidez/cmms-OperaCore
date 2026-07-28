@@ -65,6 +65,18 @@
     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
   </svg>
   <input type="text" id="buscador" placeholder="Buscar en la tabla...">
+  <select class="inv-search__select" data-filter="tipo">
+    <option value="">Todos los tipos</option>
+    {% for tipo in tipos_refaccion %}
+      <option value="{{ tipo.numeroregistro }}">{{ tipo.nombre }}</option>
+    {% endfor %}
+  </select>
+  <select class="inv-search__select" data-filter="clasificacion">
+    <option value="">Todas las clasificaciones</option>
+    {% for clas in clasificaciones %}
+      <option value="{{ clas.codigo }}">{{ clas.nombre }}</option>
+    {% endfor %}
+  </select>
 </div>
 
 <div class="gestion-table-wrap"><table class="data-table" id="data-table">
@@ -82,7 +94,7 @@
   <tbody>
     {% for registro in registros %}
       {% with pk_val=registro|pk_valor:config.pk_field %}
-      <tr>
+      <tr data-tipo="{{ registro.tipo_refaccion|default:'' }}" data-clasificacion="{{ registro.clasificacion|default:'' }}">
         <td>{{ pk_val }}</td>
         {% for col in columnas %}
           {% if not col.name|es_pk:config.pk_field %}

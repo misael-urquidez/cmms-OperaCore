@@ -101,6 +101,10 @@ class ListaRefacciones(generic.View):
         )
         total_unidades = sum(r.get("stock") or 0 for r in registros)
 
+        catalogos, _ = _cargar_catalogos()
+        tipos_refaccion = catalogos.get("tipos_refaccion", [])
+        clasificaciones = catalogos.get("clasificaciones", [])
+
         context = {
             "config": config,
             "registros": registros,
@@ -114,6 +118,8 @@ class ListaRefacciones(generic.View):
             "kpi_stock_bajo": stock_bajo,
             "kpi_buen_stock": buen_stock,
             "kpi_total_unidades": total_unidades,
+            "tipos_refaccion": tipos_refaccion,
+            "clasificaciones": clasificaciones,
         }
         return render(request, self.template_name, context)
 
@@ -234,6 +240,10 @@ class ListaPiezas(generic.View):
         )
         rehabilitacion = sum(1 for p in registros if p.get("edo_pieza") == "ENREH")
 
+        catalogos, _ = _cargar_catalogos()
+        estados_pieza = catalogos.get("estados_pieza", [])
+        tipos_pieza = catalogos.get("tipos_pieza", [])
+
         context = {
             "config": config,
             "registros": registros,
@@ -249,6 +259,8 @@ class ListaPiezas(generic.View):
             "kpi_desgaste_alto": desgaste_alto,
             "kpi_garantia": garantia,
             "kpi_rehabilitacion": rehabilitacion,
+            "estados_pieza": estados_pieza,
+            "tipos_pieza": tipos_pieza,
         }
         return render(request, self.template_name, context)
 
@@ -382,13 +394,82 @@ class ListaMovimientos(generic.View):
                 registros = []
                 messages.warning(request, "Error de conexión con la API al cargar movimientos.")
 
+        tipos_movimiento = cache.get("inventario_tipos_movimiento_list")
+        if tipos_movimiento is None:
+            try:
+                res_tipo = SESSION.get(
+                    f"{settings.API_BASE_URL}/mantenimiento/v1/tipo-movimiento/list/",
+                    timeout=5,
+                )
+                tipos_movimiento = res_tipo.json() if res_tipo.status_code == 200 else []
+                cache.set("inventario_tipos_movimiento_list", tipos_movimiento, CATALOGOS_TTL)
+            except requests.exceptions.RequestException:
+                tipos_movimiento = []
+
         context = {
             "registros": registros,
+            "tipos_movimiento": tipos_movimiento,
             "seccion": "inventario",
             "subseccion": "movimientos",
             "base_template": _base_template(request),
         }
         return render(request, self.template_name, context)
+
+
+class CrearMovimiento(generic.View):
+    template_name = "inventario/crear_movimiento.html"
+
+    API_BASE = settings.API_BASE_URL
+
+    def _cargar_dropdowns(self):
+        dropdowns = {}
+        endpoints = {
+            "ordenes": "/mantenimiento/v1/ordenes/list/",
+            "piezas": "/inventario/v1/piezas/list/",
+            "refacciones": "/inventario/v1/refacciones/list/",
+            "tipos_movimiento": "/mantenimiento/v1/tipo-movimiento/list/",
+        }
+        for key, path in endpoints.items():
+            try:
+                res = SESSION.get(f"{self.API_BASE}{path}", timeout=5)
+                dropdowns[key] = res.json() if res.status_code == 200 else []
+            except requests.exceptions.RequestException:
+                dropdowns[key] = []
+        return dropdowns
+
+    def get(self, request):
+        dropdowns = self._cargar_dropdowns()
+        return render(request, self.template_name, {
+            **dropdowns,
+            "seccion": "inventario",
+            "subseccion": "movimientos",
+            "base_template": _base_template(request),
+        })
+
+    def post(self, request):
+        payload = {
+            "tipoMovimiento": request.POST["tipoMovimiento"],
+            "fecha": request.POST["fecha"],
+            "hora": request.POST["hora"],
+            "descripcion": request.POST.get("descripcion", ""),
+            "orden_mantenimiento": request.POST.get("orden_mantenimiento") or None,
+            "pieza": request.POST.get("pieza") or None,
+            "refaccion": request.POST.get("refaccion") or None,
+        }
+        try:
+            res = SESSION.post(
+                f"{self.API_BASE}/mantenimiento/v2/movimientos/create/",
+                data=payload, timeout=10,
+            )
+            if res.status_code == 201:
+                cache.delete("inventario_movimientos_list")
+                messages.success(request, "Movimiento registrado exitosamente.")
+                return redirect("inventario:lista_movimientos")
+            else:
+                messages.warning(request, "Error al registrar el movimiento.")
+        except requests.exceptions.RequestException:
+            messages.warning(request, "No se pudo establecer comunicación con la API.")
+        return redirect("inventario:crear_movimiento")
 
 
 # ------------ PROVEEDORES --------------------------------------------------

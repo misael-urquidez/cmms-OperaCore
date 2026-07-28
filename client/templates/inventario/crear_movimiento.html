@@ -1,0 +1,122 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Registrar Movimiento · Inventario{% endblock %}
+{% block breadcrumb %}Inventario{% endblock %}
+{% block page_title %}Registrar Movimiento{% endblock %}
+
+{% block content %}
+<div class="gestion-header">
+  <div>
+    <a href="{% url 'inventario:lista_movimientos' %}">← Movimientos</a>
+    <h1>Registrar Movimiento</h1>
+  </div>
+</div>
+
+<form method="post" id="form-movimiento">
+  {% csrf_token %}
+
+  {# ---- Tipo de movimiento ---- #}
+  <section class="tecni-stat-grid" style="margin-bottom:1.5rem;">
+    <div class="tecni-stat-card" style="cursor:pointer;" data-tipo="INSTA" onclick="seleccionarTipo(this)">
+      <div class="tecni-stat-card__icon tecni-stat-card__icon--green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <div>
+        <p class="tecni-stat-card__label">Instalación</p>
+        <p class="tecni-stat-card__hint">Refacción → Pieza en máquina</p>
+      </div>
+    </div>
+
+    <div class="tecni-stat-card" style="cursor:pointer;" data-tipo="DESMO" onclick="seleccionarTipo(this)">
+      <div class="tecni-stat-card__icon tecni-stat-card__icon--rose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <div>
+        <p class="tecni-stat-card__label">Desmontaje</p>
+        <p class="tecni-stat-card__hint">Pieza retirada de máquina</p>
+      </div>
+    </div>
+
+    <div class="tecni-stat-card" style="cursor:pointer;" data-tipo="REHA" onclick="seleccionarTipo(this)">
+      <div class="tecni-stat-card__icon tecni-stat-card__icon--amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <div>
+        <p class="tecni-stat-card__label">Rehabilitación</p>
+        <p class="tecni-stat-card__hint">Pieza → Refacción en almacén</p>
+      </div>
+    </div>
+  </section>
+
+  <input type="hidden" name="tipoMovimiento" id="tipoMovimiento" value="">
+
+  {# ---- Formulario dinámico ---- #}
+  <div id="formulario-movimiento" style="display:none; max-width:640px;">
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+      <div>
+        <label class="fallas-modal__label" for="mov-fecha">Fecha</label>
+        <input type="date" name="fecha" id="mov-fecha" required
+               style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem;">
+      </div>
+      <div>
+        <label class="fallas-modal__label" for="mov-hora">Hora</label>
+        <input type="time" name="hora" id="mov-hora" required
+               style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem;">
+      </div>
+    </div>
+
+    {# Orden de mantenimiento — INSTA y DESMO #}
+    <div id="campo-orden" style="margin-bottom:1rem;">
+      <label class="fallas-modal__label" for="mov-orden">Orden de mantenimiento</label>
+      <select name="orden_mantenimiento" id="mov-orden"
+              style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem;">
+        <option value="">— Ninguna —</option>
+        {% for o in ordenes %}
+          <option value="{{ o.folio }}">{{ o.folio }} — {{ o.descripcion|truncatechars:50 }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {# Pieza — todos los tipos #}
+    <div id="campo-pieza" style="margin-bottom:1rem;">
+      <label class="fallas-modal__label" for="mov-pieza">Pieza</label>
+      <select name="pieza" id="mov-pieza" required
+              style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem;">
+        <option value="">Seleccionar pieza...</option>
+        {% for p in piezas %}
+          <option value="{{ p.numeroeserie }}">{{ p.nombre }} — {{ p.numeroeserie }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {# Refacción — INSTA y REHA #}
+    <div id="campo-refaccion" style="margin-bottom:1rem;">
+      <label class="fallas-modal__label" for="mov-refaccion">Refacción</label>
+      <select name="refaccion" id="mov-refaccion"
+              style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem;">
+        <option value="">Seleccionar refacción...</option>
+        {% for r in refacciones %}
+          <option value="{{ r.numeroregistro }}">{{ r.nombre }} (stock: {{ r.stock }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {# Descripción — requerida en DESMO #}
+    <div id="campo-descripcion" style="margin-bottom:1.5rem;">
+      <label class="fallas-modal__label" for="mov-descripcion">Descripción</label>
+      <textarea name="descripcion" id="mov-descripcion" rows="3"
+                style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem; font-family:inherit; resize:vertical;"></textarea>
+    </div>
+
+    <div style="display:flex; gap:.75rem; justify-content:flex-end;">
+      <a href="{% url 'inventario:lista_movimientos' %}" class="btn-primary-sm" style="background:rgba(255,255,255,.08); color:var(--color-muted);">Cancelar</a>
+      <button type="submit" class="btn-primary-sm">Registrar</button>
+    </div>
+  </div>
+</form>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'inventario/js/movimiento.js' %}"></script>
+{% endblock %}
