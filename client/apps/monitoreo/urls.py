@@ -17,4 +17,5 @@ urlpatterns = [
     path("lecturas/manual/", views.LecturaManualAPIView.as_view(), name="lectura-manual"),
     path("maquinas/<str:codigo>/simular/", views.SimularLecturaAPIView.as_view(), name="simular"),
     path("maquinas/<str:codigo>/registro-ops/", views.RegistroOpsAPIView.as_view(), name="registro-ops"),
+    path("maquinas/<str:codigo>/reparacion-manual/", views.ReparacionManualAPIView.as_view(), name="reparacion-manual"),
 ]

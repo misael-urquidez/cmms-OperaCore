@@ -154,7 +154,7 @@ class Maquina(models.Model):
     modelo = models.CharField(max_length=10, null=True, blank=True)
     estado_maquina = models.CharField(max_length=5, null=True, blank=True)
     tipo_maquina = models.IntegerField(null=True, blank=True)
-    modo_monitoreo = models.CharField(max_length=10, default="simulado")
+    modo_monitoreo = models.CharField(max_length=10, default="manual")
     umbral_vibracion = models.FloatField(default=4.0)
     requiere_revision_preventiva = models.BooleanField(default=False)
 
