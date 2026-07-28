@@ -41,3 +41,4 @@ Thumbs.db
 htmlcov/
 # Caché de pytest
 .pytest_cache/
+*.zip
