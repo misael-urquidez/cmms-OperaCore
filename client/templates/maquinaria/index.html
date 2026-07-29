@@ -5,6 +5,7 @@
 {% block breadcrumb %}Maquinaria{% endblock %}
 {% block page_title %}Estado Actual por Equipo SMT{% endblock %}
 
+{% load static %}
 {% block extra_css %}
 <style>
     .dashboard-header-actions {
@@ -145,8 +146,29 @@
 
     <!-- Tabla Resumen de Estados -->
     <h2 class="section-title">Estado Actual por Equipo SMT</h2>
+    <div class="inv-search" data-buscador-target="#tabla-maquinas" style="margin-bottom:1rem;">
+      <svg class="inv-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" class="buscador-input" placeholder="Buscar en la tabla..."
+             style="background:var(--bg-card);border:1px solid var(--border-color);color:#fff;padding:.5rem .75rem;border-radius:6px;font-size:14px;width:300px;outline:none;">
+      <select class="filter-select" data-filter="linea"
+              style="background:var(--bg-card);border:1px solid var(--border-color);color:#fff;padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
+        <option value="">Todas las líneas</option>
+        {% for l in lineas %}
+          <option value="{{ l.nombre }}">{{ l.nombre }}</option>
+        {% endfor %}
+      </select>
+      <select class="filter-select" data-filter="estado_maquina"
+              style="background:var(--bg-card);border:1px solid var(--border-color);color:#fff;padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
+        <option value="">Todos los estados</option>
+        {% for e in edos_maquina %}
+          <option value="{{ e.nombre }}">{{ e.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
     <div class="status-table-container">
-        <table>
+        <table id="tabla-maquinas">
             <thead>
                 <tr>
                     <th>Código</th>
@@ -158,7 +180,7 @@
             </thead>
             <tbody>
                 {% for maquina in maquinas %}
-                <tr>
+                <tr data-linea="{{ maquina.linea|default:'' }}" data-estado_maquina="{{ maquina.estado_maquina|default:'' }}">
                     <td><b>{{ maquina.codigo }}</b></td>
                     <td>{{ maquina.nombre }}</td>
                     <td>{{ maquina.linea|default:"Sin línea" }}</td>
@@ -179,4 +201,8 @@
             </tbody>
         </table>
     </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/buscador.js' %}"></script>
 {% endblock %}

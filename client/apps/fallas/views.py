@@ -169,8 +169,13 @@ class ListaReportes(generic.View):
             except (requests.exceptions.RequestException, ValueError):
                 reportes = []
                 messages.warning(request, "No se pudo conectar con la API para cargar los reportes.")
+
+        severidades, tipos_falla, maquinas, estados, trabajadores, _ = _cargar_catalogos()
+
         self.context = {
             "reportes": reportes,
+            "severidades": severidades,
+            "maquinas": maquinas,
             "seccion": "fallas",
             "subseccion": "lista",
             "usuario": usuario,

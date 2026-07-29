@@ -51,10 +51,30 @@ class Index(generic.View):
         )
         en_mantenimiento = total_maquinas - operativas
 
+        lineas = cache.get("maquinaria_lineas_list")
+        if lineas is None:
+            try:
+                res_lin = SESSION.get(f"{API_URL}/v1/linea/list/", timeout=5)
+                lineas = res_lin.json() if res_lin.status_code == 200 else []
+                cache.set("maquinaria_lineas_list", lineas, 300)
+            except requests.exceptions.RequestException:
+                lineas = []
+
+        edos_maquina = cache.get("maquinaria_edos_list")
+        if edos_maquina is None:
+            try:
+                res_edo = SESSION.get(f"{API_URL}/v1/edo_maquina/list/", timeout=5)
+                edos_maquina = res_edo.json() if res_edo.status_code == 200 else []
+                cache.set("maquinaria_edos_list", edos_maquina, 300)
+            except requests.exceptions.RequestException:
+                edos_maquina = []
+
         context = {
             "modulo": "Maquinaria",
             "api_status": api_status,
             "maquinas": maquinas,
+            "lineas": lineas,
+            "edos_maquina": edos_maquina,
             "total_maquinas": total_maquinas,
             "operativas": operativas,
             "en_mantenimiento": en_mantenimiento,
