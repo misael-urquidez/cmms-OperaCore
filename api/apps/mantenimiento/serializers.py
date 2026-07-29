@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from apps.fallas.models import ReporteFalla
+from apps.inventario.models import Pieza, Refaccion
 from . import models
 
 # Mismo patron que maquinaria/inventario/fallas: List (columnas resumidas),
@@ -230,7 +231,27 @@ class AsignarTrabajadorOrdenSerializer(serializers.Serializer):
     trabajador = serializers.CharField()
 
 
+class MovimientoCierreItemSerializer(serializers.Serializer):
+    """Un renglon de 'refaccion instalada / pieza que reemplaza' capturado
+    en el drawer al cerrar la orden. refaccion es obligatoria (siempre se
+    instala algo); pieza es opcional (solo si habia una pieza fisica
+    previa que salio de la maquina). Se valida que ambas existan en el
+    catalogo para no reventar el INSERT."""
+    refaccion = serializers.PrimaryKeyRelatedField(queryset=Refaccion.objects.all())
+    pieza = serializers.PrimaryKeyRelatedField(
+        queryset=Pieza.objects.all(), required=False, allow_null=True
+    )
+
+
 class CerrarOrdenSerializer(serializers.Serializer):
     diagnostico = serializers.CharField(max_length=500, required=False, allow_blank=True)
     notas = serializers.CharField(max_length=500, required=False, allow_blank=True)
     horasIntervenidas = serializers.FloatField(required=False, allow_null=True)
+    # Lista opcional de refacciones/piezas registradas en el drawer de cierre.
+    # Por cada item se generan HASTA dos movimientos (ver views.py):
+    # un DESMO si vino "pieza" (la pieza fisica que salio de la maquina) y
+    # siempre un INSTA para la refaccion que entro. Antes esto se mandaba
+    # como peticiones sueltas desde el JS y solo se guardaba un INSTA
+    # mezclando ambos datos; ahora viaja en la misma peticion de cierre y
+    # se crea todo dentro de la misma transaccion atomica.
+    movimientos = MovimientoCierreItemSerializer(many=True, required=False)

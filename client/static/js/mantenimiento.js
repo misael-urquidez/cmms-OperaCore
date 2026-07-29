@@ -15,8 +15,12 @@
 
   var trabajadoresEl = document.getElementById("trabajadores-data");
   var maquinasEl = document.getElementById("maquinas-data");
+  var piezasEl = document.getElementById("piezas-data");
+  var refaccionesEl = document.getElementById("refacciones-data");
   var trabajadores = trabajadoresEl ? JSON.parse(trabajadoresEl.textContent || "[]") : [];
   var maquinas = maquinasEl ? JSON.parse(maquinasEl.textContent || "[]") : [];
+  var piezas = piezasEl ? JSON.parse(piezasEl.textContent || "[]") : [];
+  var refacciones = refaccionesEl ? JSON.parse(refaccionesEl.textContent || "[]") : [];
 
   var listEl = document.getElementById("ordenesList");
   var emptyEl = document.getElementById("ordenesEmpty");
@@ -27,9 +31,25 @@
   var _modalNuevaOrden = document.getElementById("newOrdenModal");
   var _drawerOrden = document.getElementById("ordenDrawer");
   var _modalReporteFalla = document.getElementById("reporteFallaPickerModal");
+  var _drawerScrim = document.getElementById("ordenDrawerScrim");
   if (_modalNuevaOrden) conBloqueoScroll(_modalNuevaOrden);
-  if (_drawerOrden) conBloqueoScroll(_drawerOrden);
   if (_modalReporteFalla) conBloqueoScroll(_modalReporteFalla);
+
+  // El drawer de orden ya NO usa .showModal(): un <dialog> abierto asi vive
+  // en el "top layer" del navegador y se pinta encima de TODO sin importar
+  // z-index, por eso antes había que cerrarlo para ver el modal de falla.
+  // Manejandolo como panel normal (open + estilos) sí respeta el z-index.
+  function abrirDrawerPanel() {
+    document.body.style.overflow = "hidden";
+    _drawerOrden.setAttribute("open", "");
+    if (_drawerScrim) _drawerScrim.hidden = false;
+  }
+  function cerrarDrawerPanel() {
+    document.body.style.overflow = "";
+    _drawerOrden.removeAttribute("open");
+    if (_drawerScrim) _drawerScrim.hidden = true;
+  }
+  if (_drawerScrim) _drawerScrim.addEventListener("click", cerrarDrawerPanel);
 
   // ------------------------------------------------- reporte de falla (crear orden)
   // Estado del reporte que el usuario eligio para adjuntar a la orden correctiva
@@ -323,36 +343,31 @@
     if (btnIniciar) btnIniciar.hidden = cerrada || orden.estado_orden !== "PROGR";
     if (formCerrar) formCerrar.hidden = cerrada || !(ES_TECNICO && (orden.estado_orden === "ENPRO" || orden.estado_orden === "PROGR"));
 
-    drawer.showModal();
+    // Piezas disponibles para "reemplaza" = solo las de esta maquina.
+    refrescarSelectPiezas(orden.maquina);
+    movPendientes = [];
+    pintarMovPendientes();
+
+    abrirDrawerPanel();
   }
 
   var btnCerrarDrawer = document.getElementById("ordenDrawerClose");
-  if (btnCerrarDrawer) btnCerrarDrawer.addEventListener("click", function () { drawer.close(); estado.seleccionada = null; });
+  if (btnCerrarDrawer) btnCerrarDrawer.addEventListener("click", function () { cerrarDrawerPanel(); estado.seleccionada = null; });
 
-  // Folio del drawer que cerramos para mostrar el reporte encima, y al que
-  // volvemos cuando el usuario cierra ese reporte.
-  var _volverAlDrawer = null;
-
+  // El drawer ya no se cierra para mostrar el reporte de falla: al ser un
+  // panel normal (no showModal), respeta el z-index frente al modal.
   var btnVerReporteDrawer = document.getElementById("ordenDrawerVerReporte");
   if (btnVerReporteDrawer) {
     btnVerReporteDrawer.addEventListener("click", function () {
       if (estado.seleccionada && estado.seleccionada.reporte_falla && window.abrir_modal_detalle) {
-        drawer.close();  // el <dialog> nativo pinta arriba de TODO; si no lo
-                         // cerramos, el modal de falla queda atrapado detras.
-        _volverAlDrawer = estado.seleccionada.folio;
+        document.getElementById("detalle-falla").classList.add("fallas-modal--junto-drawer");
         window.abrir_modal_detalle(estado.seleccionada.reporte_falla);
       }
     });
   }
 
-  // Al cerrar el reporte volvemos al drawer, que cerramos solo para no quedar
-  // tapados. Solo si fuimos nosotros quienes lo cerramos: el mismo modal se
-  // abre tambien desde "Nueva orden", y ahi no hay drawer al que regresar.
   document.addEventListener("fallas:modal-cerrado", function () {
-    if (!_volverAlDrawer) return;
-    var folio = _volverAlDrawer;
-    _volverAlDrawer = null;
-    abrirDrawer(folio);
+    document.getElementById("detalle-falla").classList.remove("fallas-modal--junto-drawer");
   });
 
   if (btnAsignar && asignarSelect) {
@@ -368,7 +383,7 @@
         .then(function (res) {
           if (!res.ok) { mostrarMsg("No se pudo asignar.", false); return; }
           mostrarMsg("Trabajador asignado.", true);
-          drawer.close();
+          cerrarDrawerPanel();
           cargarOrdenes();
         }).catch(function () { mostrarMsg("Sin conexión.", false); });
     });
@@ -384,9 +399,79 @@
         .then(function (res) {
           if (!res.ok) { mostrarMsg("No se pudo actualizar.", false); return; }
           mostrarMsg("Orden marcada en progreso.", true);
-          drawer.close();
+          cerrarDrawerPanel();
           cargarOrdenes();
         }).catch(function () { mostrarMsg("Sin conexión.", false); });
+    });
+  }
+
+  // -------------------------------------------------- movimientos (cierre)
+  var movPendientes = []; // [{refaccion, refaccionNombre, pieza, piezaNombre}]
+  var movList = document.getElementById("ordenMovList");
+  var movAddBtn = document.getElementById("ordenMovAddBtn");
+  var movForm = document.getElementById("ordenMovForm");
+  var movRefaccion = document.getElementById("ordenMovRefaccion");
+  var movPieza = document.getElementById("ordenMovPieza");
+  var movConfirmar = document.getElementById("ordenMovConfirmar");
+  var movCancelar = document.getElementById("ordenMovCancelar");
+
+  function llenarSelect(select, items, valueKey, labelFn) {
+    select.querySelectorAll("option:not(:first-child)").forEach(function (o) { o.remove(); });
+    items.forEach(function (it) {
+      var opt = document.createElement("option");
+      opt.value = it[valueKey];
+      opt.textContent = labelFn(it);
+      select.appendChild(opt);
+    });
+  }
+  if (movRefaccion) llenarSelect(movRefaccion, refacciones, "numeroregistro", function (r) { return r.nombre + " (stock: " + r.stock + ")"; });
+
+  // Las piezas SI se filtran por la maquina de la orden abierta (la
+  // refaccion se deja para despues, a proposito): refrescarSelectPiezas()
+  // se vuelve a llamar cada vez que se abre el drawer de una orden, en
+  // abrirDrawer(). "numeroserie" es el nombre real del campo en el modelo
+  // Pieza -- antes decia "numeroeserie" (typo) y el select siempre quedaba
+  // vacio de value.
+  function refrescarSelectPiezas(maquinaCodigo) {
+    if (!movPieza) return;
+    var piezasMaquina = maquinaCodigo
+      ? piezas.filter(function (p) { return p.maquina === maquinaCodigo; })
+      : [];
+    llenarSelect(movPieza, piezasMaquina, "numeroserie", function (p) { return p.nombre + " — " + p.numeroserie; });
+  }
+
+  function pintarMovPendientes() {
+    if (!movList) return;
+    movList.innerHTML = "";
+    movPendientes.forEach(function (m, idx) {
+      var row = document.createElement("div");
+      row.className = "orden-mov__item";
+      row.innerHTML = "<span>" + m.refaccionNombre + (m.piezaNombre ? " → reemplaza " + m.piezaNombre : "") + "</span>";
+      var del = document.createElement("button");
+      del.type = "button"; del.textContent = "×"; del.className = "orden-mov__item-del";
+      del.addEventListener("click", function () { movPendientes.splice(idx, 1); pintarMovPendientes(); });
+      row.appendChild(del);
+      movList.appendChild(row);
+    });
+  }
+
+  if (movAddBtn && movForm) {
+    movAddBtn.addEventListener("click", function () { movForm.hidden = false; movAddBtn.hidden = true; });
+  }
+  if (movCancelar) {
+    movCancelar.addEventListener("click", function () { movForm.hidden = true; movAddBtn.hidden = false; movRefaccion.value = ""; movPieza.value = ""; });
+  }
+  if (movConfirmar) {
+    movConfirmar.addEventListener("click", function () {
+      if (!movRefaccion.value) return;
+      movPendientes.push({
+        refaccion: movRefaccion.value,
+        refaccionNombre: movRefaccion.options[movRefaccion.selectedIndex].textContent,
+        pieza: movPieza.value || null,
+        piezaNombre: movPieza.value ? movPieza.options[movPieza.selectedIndex].textContent : null,
+      });
+      pintarMovPendientes();
+      movForm.hidden = true; movAddBtn.hidden = false; movRefaccion.value = ""; movPieza.value = "";
     });
   }
 
@@ -394,20 +479,32 @@
     formCerrar.addEventListener("submit", function (ev) {
       ev.preventDefault();
       if (!estado.seleccionada) return;
+      var folio = estado.seleccionada.folio;
       var payload = {
         diagnostico: document.getElementById("cDiagnostico").value,
         notas: document.getElementById("cNotas").value,
         horasIntervenidas: parseFloat(document.getElementById("cHoras").value),
+        // Cada renglon trae refaccion (obligatoria) y pieza (opcional, la
+        // que salio de la maquina). El backend, dentro de la misma
+        // transaccion que cierra la orden, emite un DESMO por cada pieza
+        // retirada y un INSTA por cada refaccion instalada.
+        movimientos: movPendientes.map(function (m) {
+          return { refaccion: m.refaccion, pieza: m.pieza || null };
+        }),
       };
-      fetch(urlPara(CERRAR_TPL, estado.seleccionada.folio), {
+      fetch(urlPara(CERRAR_TPL, folio), {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
         body: JSON.stringify(payload),
       }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
         .then(function (res) {
-          if (!res.ok) { mostrarMsg("No se pudo cerrar la orden.", false); return; }
+          if (!res.ok) {
+            mostrarMsg(typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo cerrar la orden.", false);
+            return;
+          }
           mostrarMsg("Orden cerrada. Indicadores actualizados.", true);
-          drawer.close();
+          movPendientes = []; pintarMovPendientes();
+          cerrarDrawerPanel();
           cargarOrdenes();
         }).catch(function () { mostrarMsg("Sin conexión.", false); });
     });
