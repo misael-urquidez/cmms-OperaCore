@@ -9,4 +9,5 @@ urlpatterns = [
     path("chat/", views.Chat.as_view(), name="chat"),
     path("sugerencias/", views.Sugerencias.as_view(), name="sugerencias"),
     path("autocompletar-falla/", views.AutocompletarFalla.as_view(), name="autocompletar_falla"),
+    path("autocompletar-orden/", views.AutocompletarOrden.as_view(), name="autocompletar_orden"),
 ]

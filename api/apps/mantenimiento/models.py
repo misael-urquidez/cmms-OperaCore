@@ -1,7 +1,7 @@
 from django.db import models
 
 from apps.fallas.models import ReporteFalla
-from apps.inventario.models import Herramienta, Refaccion
+from apps.inventario.models import Herramienta, Pieza, Refaccion
 from apps.maquinaria.models import Maquina
 from apps.usuarios.models import Trabajador
 
@@ -95,7 +95,7 @@ class Movimiento(models.Model):
     tipomovimiento = models.CharField(db_column='tipoMovimiento', max_length=20)  # Field name made lowercase.
     orden_mantenimiento = models.ForeignKey(OrdenMantenimiento, models.DO_NOTHING, db_column='orden_mantenimiento', blank=True, null=True)
     refaccion = models.ForeignKey(Refaccion, models.DO_NOTHING, db_column='refaccion', blank=True, null=True)
-    pieza = models.ForeignKey(Refaccion, models.DO_NOTHING, db_column='PIEZA', related_name='movimiento_pieza_set', blank=True, null=True)  # Field name made lowercase.
+    pieza = models.ForeignKey(Pieza, models.DO_NOTHING, db_column='PIEZA', related_name='movimiento_pieza_set', blank=True, null=True)  # Field name made lowercase.
 
     class Meta:
         managed = False

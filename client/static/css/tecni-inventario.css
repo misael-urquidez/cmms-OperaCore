@@ -54,5 +54,13 @@
 .inv-search input { flex:1; min-width:180px; padding:.5rem .75rem; border:1px solid var(--line); border-radius:.4rem; background:var(--color-surface); color:var(--color-text); font-size:.85rem; outline:none; }
 .inv-search input:focus { border-color:var(--color-primary); }
 .inv-search input::placeholder { color:var(--color-muted); }
-.inv-search__select, .filter-select { padding:.5rem .6rem; border:1px solid var(--line); border-radius:.4rem; background:var(--color-surface); color:var(--color-text); font-size:.85rem; outline:none; cursor:pointer; }
-.inv-search__select:focus, .filter-select:focus { border-color:var(--color-primary); }
+.inv-search__select { padding:.5rem .6rem; border:1px solid var(--line); border-radius:.4rem; background:var(--color-surface); color:var(--color-text); font-size:.85rem; outline:none; cursor:pointer; }
+.inv-search__select:focus { border-color:var(--color-primary); }
+
+/* -------- drawer de orden como panel (no <dialog> modal) -------- */
+.orden-drawer-scrim { position:fixed; inset:0; background:rgba(2,6,15,.55); z-index:35; }
+dialog#ordenDrawer { z-index:40; }
+
+@media (min-width: 980px) {
+  .fallas-modal--junto-drawer { right: min(420px, 92vw); justify-content: center; }
+}

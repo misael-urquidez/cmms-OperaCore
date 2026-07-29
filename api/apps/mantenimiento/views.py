@@ -292,5 +292,32 @@ class OrdenMantenimientoCerrarAPIView(APIView):
         orden.fechacierre, orden.horacierre, orden.estado_orden_id = ahora.date(), ahora.time(), "CERRA"
         orden.save(update_fields=["diagnostico", "notas", "horasintervenidas", "fechacierre", "horacierre", "estado_orden"])
 
+        # Movimientos de inventario capturados en el drawer de cierre. Por
+        # cada renglon: si trae "pieza" (la pieza fisica que salio de la
+        # maquina) se emite un DESMO para esa pieza, y SIEMPRE se emite un
+        # INSTA para la refaccion que entro. Antes se guardaba un solo INSTA
+        # mezclando refaccion nueva + pieza vieja, y la pieza retirada nunca
+        # quedaba registrada como "salida" en el rastro de Inventario.
+        for item in datos.get("movimientos") or []:
+            refaccion = item["refaccion"]
+            pieza = item.get("pieza")
+            if pieza is not None:
+                models.Movimiento.objects.create(
+                    descripcion=f"Pieza retirada al cerrar orden {orden.folio}",
+                    fecha=ahora.date(),
+                    hora=ahora.time(),
+                    tipomovimiento="DESMO",
+                    orden_mantenimiento=orden,
+                    pieza=pieza,
+                )
+            models.Movimiento.objects.create(
+                descripcion=f"Refacción instalada al cerrar orden {orden.folio}",
+                fecha=ahora.date(),
+                hora=ahora.time(),
+                tipomovimiento="INSTA",
+                orden_mantenimiento=orden,
+                refaccion=refaccion,
+            )
+
         cambiar_estado_maquina(orden.maquina_id, "ESPER", "orden_mantenimiento", orden.folio)
         return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)

@@ -236,8 +236,14 @@ class HerramientaCreateAPIView(generics.CreateAPIView):
 
 # ------------ PIEZAS -------------------------------------------------------
 class PiezaListAPIView(generics.ListAPIView):
-    queryset = models.Pieza.objects.select_related("maquina", "edo_pieza", "tipo_pieza").order_by("nombre")
     serializer_class = serializers.ListPiezaSerializer
+
+    def get_queryset(self):
+        qs = models.Pieza.objects.select_related("maquina", "edo_pieza", "tipo_pieza").order_by("nombre")
+        maquina = self.request.query_params.get("maquina")
+        if maquina:
+            qs = qs.filter(maquina_id=maquina)
+        return qs
 
 
 class PiezaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
