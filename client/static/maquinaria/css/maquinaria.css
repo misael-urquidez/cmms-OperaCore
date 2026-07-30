@@ -19,6 +19,7 @@ body {
     background-color: var(--bg-main);
     color: var(--text-main);
     line-height: 1.5;
+    color-scheme: dark;
 }
 
 header {
@@ -57,6 +58,7 @@ header p {
     border: 1px solid var(--accent);
     transition: var(--transition);
     box-sizing: border-box;
+    cursor: pointer;
 }
 
 .btn:hover {

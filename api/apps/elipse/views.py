@@ -332,11 +332,15 @@ def _catalogo_texto(items, campos):
     return '\n'.join(out) if out else '(sin datos disponibles)'
 
 
-def _parsear_json_autofill(crudo):
+def _parsear_json_autofill(crudo, claves=(
+        'asunto', 'descripcion', 'causaRaiz', 'tiempoParo', 'fecha',
+        'maquina', 'tipo_severidad', 'tipo_falla')):
     """El modelo deberia regresar JSON puro, pero a veces lo envuelve en
     ```json ... ``` pese a la instruccion, o le mete texto alrededor. Este
     parser es tolerante a eso; regresa (campos, mensaje), o (None, None) si
-    no logra sacar un dict."""
+    no logra sacar un dict. `claves` son los campos esperados ademas de
+    "mensaje" -- por default los del reporte de falla, pero se puede pasar
+    otro juego (p.ej. los de "crear orden de mantenimiento")."""
     if not crudo:
         return None, None
     s = crudo.strip()
@@ -357,8 +361,6 @@ def _parsear_json_autofill(crudo):
         return None, None
 
     mensaje = data.get('mensaje') or None
-    claves = ('asunto', 'descripcion', 'causaRaiz', 'tiempoParo', 'fecha',
-              'maquina', 'tipo_severidad', 'tipo_falla')
     campos = {k: data.get(k) for k in claves}
     return campos, mensaje
 
@@ -453,6 +455,15 @@ def _intent(q_orig):
     if has('reporta', 'reportar', 'levanta', 'levantar', 'registra', 'registrar',
            'abre', 'crea') and has('falla', 'reporte de falla'):
         return 'crear_reporte_falla'
+
+    # Levantar una orden de mantenimiento guiada. Mismo criterio que arriba:
+    # va antes del candado de escritura porque comparte verbos con el
+    # ("crea", "programa", "registra"), pero aqui tampoco se escribe en la
+    # BD -- solo se proponen los campos para que el tecnico/admin los revise
+    # y de "Crear" el mismo desde el formulario normal.
+    if has('crea', 'crear', 'programa', 'programar', 'levanta', 'levantar',
+           'registra', 'registrar', 'abre', 'genera') and has('orden'):
+        return 'crear_orden_mantenimiento'
 
     # Intento de modificar BD. Palabra completa, no substring: "registra" no
     # debe hacer match dentro de "maquinas registradas", que es solo consulta.
@@ -1311,6 +1322,145 @@ class ElipseAutocompletarFallaAPIView(APIView):
 
 
 # ─────────────────────────────────────────────────────────
+# Autocompletado de la orden de mantenimiento
+# ─────────────────────────────────────────────────────────
+
+AUTOFILL_ORDEN_SYSTEM_TPL = """Eres Elipse, el asistente conversacional de OperaCore (CMMS de
+mantenimiento industrial), ayudando a un tecnico/administrador a llenar el
+formulario de "Nueva orden de mantenimiento" mientras platican. En cada
+turno debes devolver SOLO un objeto JSON (nada de texto antes o despues,
+nada de markdown, nada de bloques de codigo) con estas claves exactas:
+
+{
+  "mensaje": string, tu respuesta conversacional breve (1-2 oraciones, tono
+    cercano). Si ya tienes lo esencial (maquina, descripcion) confirma y
+    pregunta por lo que falte, ej. "es preventivo o correctivo? y para
+    cuando la programamos?". No repitas literalmente lo que ya dijo el
+    usuario.
+  "descripcion": string de que se necesita hacer en la maquina (max 500
+    caracteres), o null si aun no hay info,
+  "maquina": "codigo" (string) de la maquina de la lista de abajo que mejor
+    corresponda, o null,
+  "tipo_mantenimiento": "codigo" (string) del tipo de mantenimiento de la
+    lista de abajo que mejor corresponda (ej. si el usuario dice "se
+    descompuso"/"fallo" es CORRE=Correctivo; si dice "programada"/"rutina"
+    es PREVE=Preventivo), o null,
+  "fechaprogramada": fecha en formato YYYY-MM-DD SOLO si el usuario
+    menciono una fecha explicita o relativa ("manana", "el lunes", "en dos
+    semanas"). Si no dijo nada de fechas, regresa null -- el formulario se
+    deja sin fecha programada por default, no la inventes tu
+}
+
+Reglas estrictas:
+- SOLO puedes usar codigos que aparezcan tal cual en las listas de abajo.
+  Si ninguno encaja, regresa null. NUNCA inventes uno.
+- No agregues claves extra ni comentarios. Responde unicamente con el JSON.
+- Si un campo ya se lleno en un turno anterior (viene en el historial) y el
+  usuario no lo contradice, sigue regresandolo con el mismo valor.
+- Nunca inventes datos que el usuario no haya dado o insinuado.
+- Esto NUNCA crea la orden en la base de datos, solo propone texto para el
+  formulario -- el usuario sigue siendo quien da "Crear".
+
+MAQUINAS DISPONIBLES (codigo | nombre):
+%s
+
+TIPOS DE MANTENIMIENTO DISPONIBLES (codigo | nombre):
+%s
+"""
+
+
+def _resolver_crear_orden_mantenimiento(pregunta, modelo_key, historial=None):
+    """Levanta una orden de mantenimiento guiada desde el chat general:
+    entiende que se necesita, propone los campos y devuelve un boton que
+    lleva al modulo de mantenimiento con el formulario "Nueva orden" ya
+    lleno. NUNCA escribe en la BD."""
+    modelo_id = MODELOS_IA.get(modelo_key, MODELOS_IA[MODELO_DEFAULT])['id']
+
+    _, maquinas = _q("SELECT codigo, nombre FROM MAQUINA")
+    _, tipos_mantenimiento = _q("SELECT codigo, nombre FROM TIPO_MANTENIMIENTO")
+
+    system = AUTOFILL_ORDEN_SYSTEM_TPL % (
+        _catalogo_texto(maquinas, ['codigo', 'nombre']),
+        _catalogo_texto(tipos_mantenimiento, ['codigo', 'nombre']),
+    )
+    crudo, err = _llamar_groq(system, pregunta, modelo_id, historial=historial, max_tokens=400, temperature=0.3)
+    if err:
+        if _es_error_conexion(err):
+            return _respuesta_sin_internet(pregunta)
+        return '<p class="msg-error">%s</p>' % _esc(err)
+
+    campos, mensaje = _parsear_json_autofill(
+        crudo, claves=('descripcion', 'maquina', 'tipo_mantenimiento', 'fechaprogramada')
+    )
+    if campos is None:
+        return '<p>No logre entender bien que orden necesitas, me das un poco mas de detalle?</p>'
+
+    campos_b64 = base64.urlsafe_b64encode(
+        json.dumps(campos, ensure_ascii=False).encode('utf-8')
+    ).decode('ascii')
+
+    resumen = ''.join(
+        '<li><strong>%s:</strong> %s</li>' % (_esc(k), _esc(v))
+        for k, v in campos.items() if v not in (None, '')
+    )
+    return (
+        '<p>%s</p>'
+        '<ul style="font-size:12px;color:var(--color-muted,#94a3b8);margin:6px 0 10px">%s</ul>'
+        '<button type="button" class="elipse-chip" '
+        "onclick=\"window.elipseIrAModulo('/mantenimiento/', '%s')\">"
+        '🛠️ Abrir formulario ya llenado</button>'
+        % (_esc(mensaje) if mensaje else 'Esto entendi, revisalo en el formulario:', resumen, campos_b64)
+    )
+
+
+class ElipseAutocompletarOrdenAPIView(APIView):
+    """Toma una descripcion libre de lo que necesita una orden de
+    mantenimiento ('hay que revisar la banda de MAQ003, esta rechinando')
+    y regresa un JSON con los campos sugeridos para el formulario "Nueva
+    orden". Mismo patron que ElipseAutocompletarFallaAPIView: esto NUNCA
+    escribe en la base de datos, solo propone texto para que el usuario lo
+    revise, ajuste y mande el mismo desde el formulario normal."""
+
+    def post(self, request):
+        texto = (request.data.get('texto') or '').strip()
+        if not texto:
+            return Response({'error': 'Describe la orden primero.'}, status=400)
+        texto = texto[:2000]
+
+        modelo_k = request.data.get('modelo', MODELO_DEFAULT)
+        if modelo_k not in MODELOS_IA:
+            modelo_k = MODELO_DEFAULT
+
+        historial = request.data.get('historial') or []
+
+        system = AUTOFILL_ORDEN_SYSTEM_TPL % (
+            _catalogo_texto(request.data.get('maquinas'), ['codigo', 'nombre']),
+            _catalogo_texto(request.data.get('tipos_mantenimiento'), ['codigo', 'nombre']),
+        )
+
+        modelo_id = MODELOS_IA[modelo_k]['id']
+        crudo, err = _llamar_groq(system, texto, modelo_id, historial=historial, max_tokens=400, temperature=0.3)
+        if err:
+            if _es_error_conexion(err):
+                return Response(
+                    {'error': 'Elipse no tiene conexion ahorita. Puedes llenar el formulario a mano mientras tanto.'},
+                    status=503,
+                )
+            return Response({'error': err}, status=502)
+
+        campos, mensaje = _parsear_json_autofill(
+            crudo, claves=('descripcion', 'maquina', 'tipo_mantenimiento', 'fechaprogramada')
+        )
+        if campos is None:
+            return Response(
+                {'error': 'No pude interpretar bien esa descripcion, intenta darle un poco mas de detalle.'},
+                status=502,
+            )
+
+        return Response({'campos': campos, 'mensaje': mensaje or ''})
+
+
+# ─────────────────────────────────────────────────────────
 # Vista principal
 # ─────────────────────────────────────────────────────────
 
@@ -1337,6 +1487,8 @@ class ElipseChatAPIView(APIView):
             html = _resolver_busqueda_web(pregunta, modelo_k, historial=historial)
         elif intent == 'crear_reporte_falla':
             html = _resolver_crear_reporte_falla(pregunta, modelo_k, historial=historial)
+        elif intent == 'crear_orden_mantenimiento':
+            html = _resolver_crear_orden_mantenimiento(pregunta, modelo_k, historial=historial)
         else:
             try:
                 html = _resolve(intent, pregunta)

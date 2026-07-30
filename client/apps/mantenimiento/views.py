@@ -20,7 +20,7 @@ class Index(View):
             try:
                 r = SESSION.get(url, timeout=5); r.raise_for_status(); return r.json()
             except requests.RequestException: return []
-        return render(request, self.template_name, {"seccion":"mantenimiento", "base_template":"base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html", "es_tecnico":usuario.get("rol") == "TECNI", "usuario":usuario, "trabajadores":obtener(f"{settings.API_BASE_URL}/fallas/v1/trabajadores/"), "maquinas":obtener(f"{settings.API_BASE_URL}/monitoreo/maquinas/"), "estados":obtener(f"{API_URL}/v1/estado-orden/list/")})
+        return render(request, self.template_name, {"seccion":"mantenimiento", "base_template":"base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html", "es_tecnico":usuario.get("rol") == "TECNI", "usuario":usuario, "trabajadores":obtener(f"{settings.API_BASE_URL}/fallas/v1/trabajadores/"), "maquinas":obtener(f"{settings.API_BASE_URL}/monitoreo/maquinas/"), "estados":obtener(f"{API_URL}/v1/estado-orden/list/"), "tipos_mantenimiento":obtener(f"{API_URL}/v1/tipo-mantenimiento/list/"), "piezas":obtener(f"{settings.API_BASE_URL}/inventario/v1/piezas/list/"), "refacciones":obtener(f"{settings.API_BASE_URL}/inventario/v1/refacciones/list/")})
 
 class ProxyOrden(View):
     action = None
@@ -56,3 +56,20 @@ class OrdenCrearAPIView(ProxyOrden): action = "create"
 class OrdenAsignarAPIView(ProxyOrden): action = "asignar"
 class OrdenIniciarAPIView(ProxyOrden): action = "iniciar"
 class OrdenCerrarAPIView(ProxyOrden): action = "cerrar"
+
+
+class MovimientoCrearAPIView(View):
+    """Proxy JSON hacia mantenimiento/v2/movimientos/create/, reusando el
+    modulo de inventario que ya construyo fix-sql. Se llama una vez por
+    cada pieza/refaccion agregada al cerrar una orden."""
+    def post(self, request):
+        try:
+            r = SESSION.post(
+                f"{API_URL}/v2/movimientos/create/",
+                json=json.loads(request.body.decode() or "{}"),
+                timeout=10,
+            )
+            cuerpo = r.json()
+        except (requests.RequestException, ValueError):
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        return JsonResponse(cuerpo, safe=False, status=r.status_code)

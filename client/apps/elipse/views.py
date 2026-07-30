@@ -76,6 +76,28 @@ class AutocompletarFalla(generic.View):
             return JsonResponse({"error": "No se pudo conectar con el servidor de Elipse."}, status=502)
 
 
+class AutocompletarOrden(generic.View):
+    """Reenvia al api/ la descripcion libre de una orden de mantenimiento
+    para que Elipse proponga los campos del formulario de nueva orden.
+    Mismo patron que AutocompletarFalla: solo reenvia, no toca la BD."""
+
+    def post(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            return JsonResponse({"error": "Sesión expirada, vuelve a iniciar sesión."}, status=401)
+
+        try:
+            body = json.loads(request.body)
+        except ValueError:
+            return JsonResponse({"error": "Petición inválida."}, status=400)
+
+        try:
+            resp = SESSION.post(f"{API_URL}/autocompletar-orden/", json=body, timeout=25)
+            return JsonResponse(resp.json(), status=resp.status_code)
+        except requests.exceptions.RequestException:
+            return JsonResponse({"error": "No se pudo conectar con el servidor de Elipse."}, status=502)
+
+
 class Sugerencias(generic.View):
     """Preguntas rapidas que se muestran como chips en la bienvenida.
 

@@ -143,3 +143,11 @@ dialog#ordenDrawer #ordenDrawerVerReporte {
 }
 dialog#ordenDrawer #ordenDrawerVerReporte:hover { filter:none !important; border-color:var(--color-primary) !important; }
 dialog#ordenDrawer #ordenMsg.error { color:#fca5a5; }
+
+/* -------- movimientos (cierre de orden) -------- */
+.orden-mov { border-top:1px solid var(--line); padding-top:.75rem; display:grid; gap:.5rem; }
+.orden-mov__label { font-size:.78rem; color:var(--color-muted); margin:0; }
+.orden-mov__item { display:flex; justify-content:space-between; align-items:center; font-size:.82rem; background:var(--input-bg); border:1px solid var(--line); border-radius:.4rem; padding:.4rem .6rem; }
+.orden-mov__item-del { background:transparent; border:none; color:var(--color-muted); cursor:pointer; width:auto; padding:0 .3rem; }
+.orden-mov__form { display:grid; gap:.5rem; }
+.orden-mov__form-actions { display:flex; gap:.5rem; justify-content:flex-end; }

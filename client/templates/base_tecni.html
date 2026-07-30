@@ -6,21 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff">
     
-    {% include 'favicon.html' %}
     <title>{% block title %}Panel Técnico · OperaCore{% endblock %}</title>
 
-    <link rel="icon" href="{% static 'img/pre_logo.png' %}">
+    <!-- Favicon e Iconografía -->
+    {% include 'favicon.html' %}
+    <link rel="icon" href="{% static 'img/pre_logo.png' %}" type="image/png">
     
-    <!-- Fuentes recomendadas para una UI más limpia (Opcional, puedes removerlo si ya usas una) -->
+    <!-- Fuentes (Inter) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Estilos base -->
+    <!-- Estilos base y del sistema -->
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
+    <link rel="stylesheet" href="{% static 'css/admin.css' %}">
     <link rel="stylesheet" href="{% static 'css/tecni.css' %}">
     <link rel="stylesheet" href="{% static 'css/tecni-themes.css' %}">
+    <link rel="stylesheet" href="{% static 'css/tecni-inventario.css' %}">
+    
     {% block extra_css %}{% endblock %}
 </head>
 <body class="tecni-body">
@@ -32,7 +36,7 @@
         
         <!-- Branding -->
         <div class="tecni-sidebar__brand">
-            <img src="{% static 'img/pre_logo.png' %}" alt="Logo OperaCore" width="32" height="32" class="tecni-sidebar__brand-logo">
+            <img src="{% static 'img/pre_logo.png' %}" alt="Logo OperaCore" width="32" height="32" class="tecni-sidebar__brand-logo" decoding="async">
             <div class="tecni-sidebar__brand-text">
                 <span class="tecni-sidebar__brand-name">OperaCore</span>
                 <span class="tecni-sidebar__brand-sub">Panel de Técnico</span>
@@ -105,7 +109,25 @@
                 </svg>
                 <span>Maquinaria</span>
             </a>
-            {# Nota: a propósito NO se incluye "Registrar nueva" máquina ni Elipse ni Gestión #}
+
+            <!-- Grupo Desplegable: Inventario -->
+            <div class="tecni-sidebar__group {% if seccion == 'inventario' %}is-open{% endif %}">
+                <button type="button" class="tecni-sidebar__link tecni-sidebar__group-toggle" aria-expanded="{% if seccion == 'inventario' %}true{% else %}false{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                        <path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/>
+                    </svg>
+                    <span>Inventario</span>
+                    <svg class="tecni-sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="tecni-sidebar__submenu">
+                    <a href="{% url 'inventario:lista_piezas' %}" class="{% if seccion == 'inventario' and subseccion == 'piezas' %}is-active{% endif %}">Piezas</a>
+                    <a href="{% url 'inventario:lista_refacciones' %}" class="{% if seccion == 'inventario' and subseccion == 'refacciones' %}is-active{% endif %}">Refacciones</a>
+                    <a href="{% url 'inventario:lista_movimientos' %}" class="{% if seccion == 'inventario' and subseccion == 'movimientos' %}is-active{% endif %}">Movimientos</a>
+                </div>
+            </div>
         </nav>
 
         <div class="tecni-sidebar__foot">
@@ -146,10 +168,11 @@
             
             <!-- Sistema de Notificaciones (Toasts) -->
             {% if messages %}
-                <div class="messages" aria-live="polite">
+                <div class="messages" aria-live="polite" aria-atomic="true">
                     {% for message in messages %}
                         <div class="messages__item messages__item--{{ message.tags }}" role="alert">
-                            {{ message }}
+                            <span class="messages__text">{{ message }}</span>
+                            <button type="button" class="messages__close" aria-label="Cerrar notificación" onclick="this.parentElement.remove();">&times;</button>
                         </div>
                     {% endfor %}
                 </div>
@@ -169,22 +192,23 @@
 <!-- Modales -->
 {% include 'partials/config_modal_tecni.html' %}
 
-<!-- Scripts Base -->
-<script src="{% static 'js/navbar.js' %}"></script>
-<script src="{% static 'js/tecni-theme.js' %}"></script>
-<script src="{% static 'js/tecni-sidebar.js' %}"></script>
+<!-- Scripts Base (con defer para mejor rendimiento) -->
+<script src="{% static 'js/navbar.js' %}" defer></script>
+<script src="{% static 'js/tecni-theme.js' %}" defer></script>
+<script src="{% static 'js/tecni-sidebar.js' %}" defer></script>
 
-<!-- Lógica de Notificaciones -->
+<!-- Lógica de Notificaciones Automatizadas -->
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const msgs = document.querySelectorAll('.messages__item');
         msgs.forEach(function(el) {
             setTimeout(function() {
+                if (!el) return;
                 el.classList.add('messages__item--hide');
                 el.addEventListener('transitionend', function() { 
                     el.remove(); 
-                });
-            }, 4000); // Ligeramente aumentado a 4s para mejorar la legibilidad
+                }, { once: true });
+            }, 5000);
         });
     });
 </script>

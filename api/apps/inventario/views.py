@@ -1,3 +1,6 @@
+from datetime import datetime
+
+from django.db.models import Sum
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import generics, status
@@ -233,8 +236,14 @@ class HerramientaCreateAPIView(generics.CreateAPIView):
 
 # ------------ PIEZAS -------------------------------------------------------
 class PiezaListAPIView(generics.ListAPIView):
-    queryset = models.Pieza.objects.select_related("maquina", "edo_pieza", "tipo_pieza").order_by("nombre")
     serializer_class = serializers.ListPiezaSerializer
+
+    def get_queryset(self):
+        qs = models.Pieza.objects.select_related("maquina", "edo_pieza", "tipo_pieza").order_by("nombre")
+        maquina = self.request.query_params.get("maquina")
+        if maquina:
+            qs = qs.filter(maquina_id=maquina)
+        return qs
 
 
 class PiezaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -256,6 +265,45 @@ class PiezaCreateAPIView(generics.CreateAPIView):
         pieza = serializer.save()
         data = serializers.DetailPiezaSerializer(pieza).data
         return Response(data, status=status.HTTP_201_CREATED)
+
+
+class PiezaWearAPIView(APIView):
+    """Calcula horas de operacion de una pieza sumando REGISTRO_OPS
+    de la maquina asociada, desde la fecha de instalacion."""
+
+    def get(self, request):
+        maquina = request.query_params.get("maquina")
+        fecha_str = request.query_params.get("fecha_instalacion")
+
+        if not maquina or not fecha_str:
+            return Response(
+                {"error": "Se requieren 'maquina' y 'fecha_instalacion'"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            fecha_instalacion = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+        except ValueError:
+            return Response(
+                {"error": "fecha_instalacion debe ser YYYY-MM-DD"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from apps.monitoreo.models import RegistroOps
+
+        total = (
+            RegistroOps.objects.filter(
+                maquina_id=maquina,
+                fechaInicio__gte=fecha_instalacion,
+            ).aggregate(total=Sum("horasOperacion"))["total"]
+            or 0
+        )
+
+        return Response({
+            "maquina": maquina,
+            "fecha_instalacion": fecha_str,
+            "horas_operacion": total,
+        })
 
 
 # ------------ REFACCIONES --------------------------------------------------

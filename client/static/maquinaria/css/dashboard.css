@@ -1,122 +1,83 @@
-body{
-
-margin:0;
-
-background:#0b1120;
-
-color:white;
-
-font-family:
-Arial, sans-serif;
-
+body {
+    margin: 0;
+    background: #0b1120;
+    color: white;
+    font-family: Arial, sans-serif;
+    color-scheme: dark;
 }
 
-
-header{
-
-padding:20px;
-
-background:#111827;
-
-border-bottom:
-2px solid #00ffc8;
-
+header {
+    padding: 20px;
+    background: #111827;
+    border-bottom: 2px solid #00ffc8;
 }
 
-
-
-h1{
-
-color:#00ffc8;
-
+h1 {
+    color: #00ffc8;
+    margin: 0;
 }
 
-
-
-.container{
-
-display:flex;
-
-height:90vh;
-
+.container {
+    display: flex;
+    height: 90vh;
 }
 
-
-
-.panel{
-
-width:300px;
-
-background:#111827;
-
-padding:20px;
-
-overflow:auto;
-
+.panel {
+    width: 300px;
+    background: #111827;
+    padding: 20px;
+    overflow-y: auto;
 }
 
-
-
-.maquina{
-
-background:#1f2937;
-
-padding:15px;
-
-margin-bottom:10px;
-
-border-radius:10px;
-
-cursor:pointer;
-
+/* Scrollbar moderno para el panel lateral */
+.panel::-webkit-scrollbar {
+    width: 6px;
+}
+.panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+.panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+.panel::-webkit-scrollbar-thumb:hover {
+    background: #00ffc8;
 }
 
-
-.maquina:hover{
-
-background:#00ffc8;
-
-color:black;
-
+.maquina {
+    background: #1f2937;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.25s ease, color 0.25s ease, transform 0.15s ease;
 }
 
-
-
-
-.visor{
-
-flex:1;
-
-position:relative;
-
+.maquina:hover {
+    background: #00ffc8;
+    color: black;
+    transform: translateX(4px);
 }
 
-
-#modelo3d{
-
-width:100%;
-
-height:100%;
-
+.visor {
+    flex: 1;
+    position: relative;
 }
 
+#modelo3d {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
 
-
-.info{
-
-position:absolute;
-
-right:20px;
-
-top:20px;
-
-background:
-rgba(0,0,0,.7);
-
-padding:20px;
-
-border-radius:15px;
-
-border:1px solid #00ffc8;
-
+.info {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid #00ffc8;
 }

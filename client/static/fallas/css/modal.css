@@ -1,5 +1,5 @@
 /* ================================================================== */
-/* Modal de detalle — reporte de falla                                 */
+/* Modal de detalle — reporte de falla                                */
 /* ================================================================== */
 
 .fallas-modal {
@@ -12,7 +12,7 @@
     padding: 1rem;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.18s ease;
+    transition: opacity 0.25s ease;
 }
 
 .fallas-modal.is-open {
@@ -23,8 +23,9 @@
 .fallas-modal__backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(2, 6, 16, 0.65);
-    backdrop-filter: blur(2px);
+    background: rgba(2, 6, 16, 0.75);
+    backdrop-filter: blur(4px);
+    transition: backdrop-filter 0.25s ease;
 }
 
 .fallas-modal__dialog {
@@ -38,12 +39,12 @@
 
 .fallas-modal__content {
     background: var(--color-surface);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 1rem;
     padding: 1.5rem;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
-    transform: scale(0.96) translateY(8px);
-    transition: transform 0.18s ease;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    transform: scale(0.95) translateY(12px);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .fallas-modal.is-open .fallas-modal__content {
@@ -63,6 +64,7 @@
     margin: 0;
     font-size: 1.15rem;
     font-weight: 600;
+    color: var(--color-text);
 }
 
 .fallas-modal__close {
@@ -70,15 +72,17 @@
     border: none;
     color: var(--color-muted);
     cursor: pointer;
-    padding: 0.25rem;
+    padding: 0.3rem;
     line-height: 0;
     border-radius: 0.4rem;
     flex-shrink: 0;
+    transition: all 0.2s ease;
 }
 
 .fallas-modal__close:hover {
     color: var(--color-text);
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.1);
+    transform: rotate(90deg);
 }
 
 /* --- body --- */
@@ -107,6 +111,11 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--color-muted);
+    transition: color 0.2s ease;
+}
+
+.fallas-modal__field:hover .fallas-modal__label {
+    color: var(--color-text);
 }
 
 .fallas-modal__value {
@@ -122,13 +131,21 @@
 .fallas-modal__section textarea,
 .fallas-modal__section input[type="file"] {
     width: 100%;
-    padding: 0.5rem 0.65rem;
+    padding: 0.6rem 0.75rem;
     background: var(--color-bg);
     color: var(--color-text);
     border: 1px solid var(--line);
     border-radius: 0.375rem;
     font-size: 0.9rem;
     font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.fallas-modal__field input:hover,
+.fallas-modal__field select:hover,
+.fallas-modal__section input:hover,
+.fallas-modal__section textarea:hover {
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .fallas-modal__field input:focus,
@@ -137,6 +154,8 @@
 .fallas-modal__section textarea:focus {
     outline: none;
     border-color: var(--color-primary);
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
 }
 
 .fallas-modal__section textarea {
@@ -159,6 +178,11 @@
     border: 1px solid var(--line);
     border-radius: 0.5rem;
     padding: 0.65rem 0.85rem;
+    transition: border-color 0.2s ease;
+}
+
+.fallas-modal__text:hover {
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .fallas-modal__img {
@@ -167,6 +191,12 @@
     object-fit: contain;
     border-radius: 0.5rem;
     border: 1px solid var(--line);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.fallas-modal__img:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 
 /* --- footer --- */
@@ -174,23 +204,21 @@
 .fallas-modal__footer {
     display: flex;
     justify-content: flex-end;
+    gap: 0.6rem;
     margin-top: 1rem;
     padding-top: 0.85rem;
     border-top: 1px solid var(--line);
 }
 
 .fallas-modal__btn {
-    padding: 0.5rem 1.25rem;
+    padding: 0.55rem 1.25rem;
     border: none;
     border-radius: 0.375rem;
     font-size: 0.85rem;
     font-weight: 600;
+    font-family: inherit;
     cursor: pointer;
-    transition: opacity 0.15s ease;
-}
-
-.fallas-modal__btn:hover {
-    opacity: 0.85;
+    transition: all 0.2s ease;
 }
 
 .fallas-modal__btn--close {
@@ -200,14 +228,21 @@
 
 .fallas-modal__btn--close:hover {
     color: var(--color-text);
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
 }
 
 .fallas-modal__btn--primary {
     background: var(--color-primary);
-    color: var(--color-bg);
+    color: #08131f;
 }
 
 .fallas-modal__btn--primary:hover {
     filter: brightness(1.1);
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+    transform: translateY(-1px);
+}
+
+.fallas-modal__btn:active {
+    transform: translateY(0) scale(0.97);
 }

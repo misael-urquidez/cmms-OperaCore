@@ -10,16 +10,16 @@ body.tecni-body {
     --color-surface: #1e293b;
     --color-text: #f8fafc;
     --color-muted: #94a3b8;
-    --color-primary: #34d399;          /* Acento verde esmeralda brillante */
+    --color-primary: #34d399;
 
     --line: rgba(255, 255, 255, 0.12);
     --hover-soft: rgba(255, 255, 255, 0.05);
     --input-bg: rgba(0, 0, 0, 0.25);
     
-    --sidebar-bg1: #111827;            /* Fondo más profundo y limpio */
+    --sidebar-bg1: #111827;
     --sidebar-bg2: #0f172a;
     --sidebar-text: #94a3b8;
-    --topbar-bg: rgba(15, 23, 42, 0.85);
+    --topbar-bg: rgba(15, 23, 42, 0.65); /* Ajuste de opacidad para mejor blur */
 }
 
 /* ---------------- TEMA CLARO ---------------- */
@@ -28,7 +28,7 @@ body.tecni-body[data-theme="light"] {
     --color-surface: #ffffff;
     --color-text: #0f172a;
     --color-muted: #64748b;
-    --color-primary: #059669;          /* Verde esmeralda con mejor contraste sobre blanco */
+    --color-primary: #059669;
 
     --line: rgba(15, 23, 42, 0.08);
     --hover-soft: rgba(15, 23, 42, 0.04);
@@ -37,7 +37,7 @@ body.tecni-body[data-theme="light"] {
     --sidebar-bg1: #ffffff;
     --sidebar-bg2: #f8fafc;
     --sidebar-text: #475569;
-    --topbar-bg: rgba(255, 255, 255, 0.85);
+    --topbar-bg: rgba(255, 255, 255, 0.65); /* Ajuste de opacidad para mejor blur */
 }
 
 /* ---------------- TEMA PLANO (Profesional/Estructural) ---------------- */
@@ -46,9 +46,9 @@ body.tecni-body[data-theme="plain"] {
     --color-surface: #ffffff;
     --color-text: #111827;
     --color-muted: #4b5563;
-    --color-primary: #0f766e;          /* Teal sobrio, muy corporativo */
+    --color-primary: #0f766e;
 
-    --line: #e5e7eb;                   /* Bordes sólidos sin opacidad */
+    --line: #e5e7eb;
     --hover-soft: #f3f4f6;
     --input-bg: #ffffff;
     
@@ -73,6 +73,14 @@ body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .user-menu__dropd
 body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .config-modal__panel { border-color: var(--line); box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
 body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .config-field input { background: var(--input-bg); border-color: var(--line); color: var(--color-text); }
 body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .messages__item { border: 1px solid var(--line); background: var(--color-surface); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+/* Anillos de foco profesionales para inputs de configuración */
+body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .config-field input:focus,
+.config-field input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+    outline: none;
+}
 
 /* ---------------- Pestañas (Segmented Control) y Control de Tema ---------------- */
 .config-tabs {
@@ -105,6 +113,7 @@ body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .messages__item {
 
 .config-tabs__btn svg { width: 16px; height: 16px; opacity: 0.8; }
 .config-tabs__btn:hover:not(.is-active) { color: var(--color-text); }
+.config-tabs__btn:active { transform: scale(0.97); transition: transform 0.1s ease; } /* Efecto táctil */
 
 .config-tabs__btn.is-active { 
     background: var(--color-surface); 
@@ -155,15 +164,15 @@ body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .messages__item {
 }
 
 .theme-toggle button:hover:not(.is-active) { color: var(--color-text); }
+.theme-toggle button:active { transform: scale(0.95); transition: transform 0.1s ease; } /* Efecto táctil */
 
 .theme-toggle button.is-active { 
     background: var(--color-primary); 
-    color: #ffffff; /* Contraste fuerte asegurado */
+    color: #ffffff;
     font-weight: 600; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* Específico para el botón activo en modo oscuro para evitar colores texto inaccesibles */
 body.tecni-body:not([data-theme="light"]):not([data-theme="plain"]) .theme-toggle button.is-active {
-    color: #022c22; /* Texto oscuro sobre el acento verde en tema oscuro */
+    color: #022c22;
 }

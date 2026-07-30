@@ -240,9 +240,11 @@
         <div>
             <p>Monitoreo en tiempo real del estado general de la planta</p>
         </div>
+        {% if request.user.is_authenticated and request.user.is_superuser %}
         <div class="nav-actions">
             <a href="{% url 'maquinaria:crear_maquina' %}">+ Registrar Nueva Máquina</a>
         </div>
+        {% endif %}
     </div>
 
     <!-- Panel de Métricas Generales -->

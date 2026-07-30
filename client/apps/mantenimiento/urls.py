@@ -9,4 +9,5 @@ urlpatterns = [
     path("ordenes/<str:folio>/asignar/", views.OrdenAsignarAPIView.as_view(), name="ordenes-asignar"),
     path("ordenes/<str:folio>/iniciar/", views.OrdenIniciarAPIView.as_view(), name="ordenes-iniciar"),
     path("ordenes/<str:folio>/cerrar/", views.OrdenCerrarAPIView.as_view(), name="ordenes-cerrar"),
+    path("movimientos/crear/", views.MovimientoCrearAPIView.as_view(), name="movimiento-crear"),
 ]

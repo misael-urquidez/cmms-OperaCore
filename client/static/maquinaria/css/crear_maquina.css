@@ -55,6 +55,7 @@
 .contenedor select:focus {
     outline: none;
     border-color: #38bdf8;
+    box-shadow: 0 0 0 3px color-mix(in srgb, #38bdf8 20%, transparent);
 }
 
 .contenedor textarea {
@@ -62,7 +63,6 @@
     resize: vertical;
 }
 
-/* Botón exclusivo de Guardar Máquina para asegurar su diseño */
 .btn-guardar-maquina {
     padding: 0.6rem 1.5rem !important;
     background-color: #38bdf8 !important;
@@ -73,13 +73,13 @@
     cursor: pointer !important;
     font-size: 0.9rem !important;
     display: inline-block !important;
+    transition: all 0.2s ease-in-out !important;
 }
 
 .btn-guardar-maquina:hover {
     background-color: #0ea5e9 !important;
 }
 
-/* Botón exclusivo de Cancelar */
 .btn-cancel-custom {
     background: transparent !important;
     color: var(--color-muted, #94a3b8) !important;
@@ -92,6 +92,7 @@
     display: inline-block !important;
     box-sizing: border-box !important;
     cursor: pointer !important;
+    transition: all 0.2s ease-in-out !important;
 }
 
 .btn-cancel-custom:hover {

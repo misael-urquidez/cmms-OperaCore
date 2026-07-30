@@ -19,6 +19,10 @@ urlpatterns = [
     path("herramientas/", views.ListaHerramientas.as_view(), name="lista_herramientas"),
     path("herramientas/crear/", views.CrearHerramienta.as_view(), name="crear_herramienta"),
 
+    # ------------ MOVIMIENTOS --------------------------------------------------
+    path("movimientos/", views.ListaMovimientos.as_view(), name="lista_movimientos"),
+    path("movimientos/crear/", views.CrearMovimiento.as_view(), name="crear_movimiento"),
+
     # ------------ PROVEEDORES --------------------------------------------------
     path("proveedores/", views.ListaProveedores.as_view(), name="lista_proveedores"),
     path("proveedores/crear/", views.CrearProveedor.as_view(), name="crear_proveedor"),
@@ -46,4 +50,8 @@ urlpatterns = [
 
     path("tipos-refaccion/", views.ListaTiposRefaccion.as_view(), name="lista_tipos_refaccion"),
     path("tipos-refaccion/crear/", views.CrearTipoRefaccion.as_view(), name="crear_tipo_refaccion"),
+
+    # ------------ MODALES (fragmentos HTML) --------------------------------
+    path("modal/proveedor/<str:pk>/", views.ProveedorModalView.as_view(), name="modal_proveedor"),
+    path("modal/existencia/<int:refaccion_id>/", views.ExistenciaModalView.as_view(), name="modal_existencia"),
 ]

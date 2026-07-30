@@ -26,6 +26,10 @@ urlpatterns = [
     path("v2/tipo-movimiento/create/", views.TipoMovimientoCreateAPIView.as_view(), name="tipo-movimiento-create"),
     path("v1/tipo-movimiento/<str:codigo>/", views.TipoMovimientoDetailAPIView.as_view(), name="tipo-movimiento-detail"),
 
+    # ------------ MOVIMIENTO ------------
+    path("v1/movimientos/list/", views.MovimientoListAPIView.as_view(), name="movimientos-list"),
+    path("v2/movimientos/create/", views.MovimientoCreateAPIView.as_view(), name="movimientos-create"),
+
     # ------------ TAREA_ORDEN (llave compuesta) ------------
     path("v1/tarea-orden/list/", views.TareaOrdenListAPIView.as_view(), name="tarea-orden-list"),
     path("v2/tarea-orden/create/", views.TareaOrdenCreateAPIView.as_view(), name="tarea-orden-create"),
