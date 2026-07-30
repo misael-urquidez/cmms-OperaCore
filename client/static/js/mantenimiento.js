@@ -212,6 +212,7 @@
     var card = document.createElement("div");
     card.className = "orden-card";
     card.dataset.folio = o.folio;
+    card.dataset.fechaprogramada = o.fechaprogramada || "";
     card.innerHTML =
       '<div class="orden-card__top">' +
         '<span class="orden-card__folio">' + o.folio + '</span>' +

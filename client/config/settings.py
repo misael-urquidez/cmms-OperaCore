@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.elipse",
     "apps.monitoreo",
     "apps.gestion",
+    "apps.notificaciones",
 ]
 
 MIDDLEWARE = [
