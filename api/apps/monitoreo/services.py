@@ -123,6 +123,45 @@ def registrar_horas_operacion(maquina, fechaInicio, fechaFin, horasOperacion):
     )
 
 
+def recalcular_mtbf_maquina(maquina_codigo):
+    """Recalcula el MTBF de una máquina desde cero (misma lógica que
+    tg_actualizar_mtbf_registroops) y actualiza el periodo vigente
+    de INDICADOR. Se usa después de editar/eliminar un REGISTRO_OPS
+    para que el indicador refleje el cambio."""
+    from django.db.models import Count, Sum
+    from apps.fallas.models import ReporteFalla
+    from .models import Indicador
+
+    total_horas = RegistroOps.objects.filter(
+        maquina_id=maquina_codigo
+    ).aggregate(total=Sum("horasOperacion"))["total"] or 0
+
+    total_fallas = ReporteFalla.objects.filter(
+        maquina_id=maquina_codigo
+    ).count()
+
+    if total_fallas > 0:
+        nuevo_mtbf = total_horas / total_fallas
+    else:
+        nuevo_mtbf = None
+
+    periodo = Indicador.objects.filter(
+        maquina_id=maquina_codigo, fechaFin__isnull=True
+    ).first()
+
+    if periodo:
+        periodo.mtbf = nuevo_mtbf
+        periodo.save(update_fields=["mtbf"])
+    else:
+        Indicador.objects.create(
+            maquina_id=maquina_codigo,
+            fechaInicio=timezone.localdate(),
+            mtbf=nuevo_mtbf,
+        )
+
+    return nuevo_mtbf
+
+
 
 def registrar_reparacion_manual(maquina, horas_reparacion):
     """Equivalente de registrar_horas_operacion() pero para el MTTR: crea

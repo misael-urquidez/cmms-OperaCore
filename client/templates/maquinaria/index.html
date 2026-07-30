@@ -6,6 +6,7 @@
 {% block page_title %}Estado Actual por Equipo SMT{% endblock %}
 
 {% load static %}
+{% load gestion_extras %}
 {% block extra_css %}
 <style>
     .dashboard-header-actions {
@@ -156,14 +157,21 @@
               style="background:var(--bg-card);border:1px solid var(--border-color);color:#fff;padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
         <option value="">Todas las líneas</option>
         {% for l in lineas %}
-          <option value="{{ l.nombre }}">{{ l.nombre }}</option>
+          <option value="{{ l.codigo }}">{{ l.nombre }}</option>
         {% endfor %}
       </select>
       <select class="filter-select" data-filter="estado_maquina"
               style="background:var(--bg-card);border:1px solid var(--border-color);color:#fff;padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
         <option value="">Todos los estados</option>
         {% for e in edos_maquina %}
-          <option value="{{ e.nombre }}">{{ e.nombre }}</option>
+          <option value="{{ e.codigo }}">{{ e.nombre }}</option>
+        {% endfor %}
+      </select>
+      <select class="filter-select" data-filter="tipo_maquina"
+              style="background:var(--bg-card);border:1px solid var(--border-color);color:#fff;padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
+        <option value="">Todos los tipos</option>
+        {% for t in tipos_maquina %}
+          <option value="{{ t.numeroregistro }}">{{ t.nombre }}</option>
         {% endfor %}
       </select>
     </div>
@@ -173,6 +181,7 @@
                 <tr>
                     <th>Código</th>
                     <th>Nombre del Equipo</th>
+                    <th>Tipo</th>
                     <th>Línea</th>
                     <th>Estado Operativo</th>
                     <th>Acción</th>
@@ -180,12 +189,13 @@
             </thead>
             <tbody>
                 {% for maquina in maquinas %}
-                <tr data-linea="{{ maquina.linea|default:'' }}" data-estado_maquina="{{ maquina.estado_maquina|default:'' }}">
+                <tr data-linea="{{ maquina.linea|default:'' }}" data-estado_maquina="{{ maquina.estado_maquina|default:'' }}" data-tipo_maquina="{{ maquina.tipo_maquina|default:'' }}">
                     <td><b>{{ maquina.codigo }}</b></td>
                     <td>{{ maquina.nombre }}</td>
-                    <td>{{ maquina.linea|default:"Sin línea" }}</td>
+                    <td>{{ tipo_dict|get_item:maquina.tipo_maquina|default:maquina.tipo_maquina|default:"-" }}</td>
+                    <td>{{ linea_dict|get_item:maquina.linea|default:maquina.linea|default:"Sin línea" }}</td>
                     <td>
-                        <span style="color: var(--accent, #00adb5);">{{ maquina.estado_maquina|default:"Sin estado" }}</span>
+                        <span style="color: var(--accent, #00adb5);">{{ edo_dict|get_item:maquina.estado_maquina|default:maquina.estado_maquina|default:"Sin estado" }}</span>
                     </td>
                     <td>
                         <a class="table-btn" href="{% url 'maquinaria:detail' maquina.codigo %}">Detalles de la máquina &rarr;</a>
@@ -193,7 +203,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-muted, #94a3b8); padding: 40px;">
+                    <td colspan="6" style="text-align: center; color: var(--text-muted, #94a3b8); padding: 40px;">
                         No hay información de maquinaria registrada.
                     </td>
                 </tr>

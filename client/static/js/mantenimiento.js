@@ -9,7 +9,11 @@
   var ASIGNAR_TPL = root.dataset.asignarUrlBase;
   var INICIAR_TPL = root.dataset.iniciarUrlBase;
   var CERRAR_TPL = root.dataset.cerrarUrlBase;
+  var ACTUALIZAR_TPL = root.dataset.actualizarUrlBase;
   var REPORTES_DISPONIBLES_URL = root.dataset.reportesDisponiblesUrl;
+  var EXPORTAR_CSV_TPL = root.dataset.exportarCsvBase;
+  var EXPORTAR_XLSX_TPL = root.dataset.exportarXlsxBase;
+  var EXPORTAR_PDF_TPL = root.dataset.exportarPdfBase;
   var ES_TECNICO = root.dataset.esTecnico === "1";
   var NUMERO_NOMINA = root.dataset.numeroNomina;
 
@@ -309,6 +313,13 @@
     estado.seleccionada = orden;
     limpiarMsg();
 
+    var editarBtn = document.getElementById("ordenEditarBtn");
+    var editDiv = document.getElementById("ordenDrawerEdit");
+
+    // Reset edit mode
+    if (editDiv) editDiv.hidden = true;
+    if (editarBtn) editarBtn.hidden = false;
+
     document.getElementById("ordenDrawerFolio").textContent = orden.folio;
     document.getElementById("ordenDrawerTitle").textContent = orden.tipo_mantenimiento_nombre || orden.tipo_mantenimiento;
     document.getElementById("ordenDrawerInfo").textContent =
@@ -316,6 +327,18 @@
       (orden.estado_orden_nombre || orden.estado_orden) + " · Asignada a: " +
       (orden.trabajador_nombre || "Sin asignar");
     document.getElementById("ordenDrawerDescripcion").textContent = orden.descripcion || "";
+
+    // Pre-fill edit inputs
+    var edDesc = document.getElementById("edDescripcion");
+    var edTipo = document.getElementById("edTipo");
+    var edFecha = document.getElementById("edFecha");
+    var edNotas = document.getElementById("edNotas");
+    var edDiag = document.getElementById("edDiagnostico");
+    if (edDesc) edDesc.value = orden.descripcion || "";
+    if (edTipo) edTipo.value = orden.tipo_mantenimiento || "";
+    if (edFecha) edFecha.value = orden.fechaprogramada || "";
+    if (edNotas) edNotas.value = orden.notas || "";
+    if (edDiag) edDiag.value = orden.diagnostico || "";
 
     var reporteWrap = document.getElementById("ordenDrawerReporte");
     if (reporteWrap) {
@@ -402,6 +425,50 @@
           cerrarDrawerPanel();
           cargarOrdenes();
         }).catch(function () { mostrarMsg("Sin conexión.", false); });
+    });
+  }
+
+  // ----------------------------------------------- editar orden
+  var editarBtn = document.getElementById("ordenEditarBtn");
+  var editDiv = document.getElementById("ordenDrawerEdit");
+  var guardarBtn = document.getElementById("ordenGuardarBtn");
+  var cancelarEditBtn = document.getElementById("ordenCancelarEditBtn");
+
+  if (editarBtn && editDiv) {
+    editarBtn.addEventListener("click", function () {
+      editDiv.hidden = false;
+      editarBtn.hidden = true;
+    });
+  }
+
+  if (guardarBtn && editDiv) {
+    guardarBtn.addEventListener("click", function () {
+      if (!estado.seleccionada) return;
+      var payload = {
+        descripcion: document.getElementById("edDescripcion").value,
+        tipo_mantenimiento: document.getElementById("edTipo").value,
+        fechaprogramada: document.getElementById("edFecha").value || null,
+        notas: document.getElementById("edNotas").value,
+        diagnostico: document.getElementById("edDiagnostico").value,
+      };
+      fetch(urlPara(ACTUALIZAR_TPL, estado.seleccionada.folio), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+        body: JSON.stringify(payload),
+      }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (res) {
+          if (!res.ok) { mostrarMsg(typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo actualizar.", false); return; }
+          mostrarMsg("Orden actualizada.", true);
+          cerrarDrawerPanel();
+          cargarOrdenes();
+        }).catch(function () { mostrarMsg("Sin conexión.", false); });
+    });
+  }
+
+  if (cancelarEditBtn && editDiv && editarBtn) {
+    cancelarEditBtn.addEventListener("click", function () {
+      editDiv.hidden = true;
+      editarBtn.hidden = false;
     });
   }
 
@@ -509,6 +576,35 @@
         }).catch(function () { mostrarMsg("Sin conexión.", false); });
     });
   }
+
+  // -------------------------------------------------- exportar orden (modal)
+  var exportBtn = document.getElementById("ordenExportarBtn");
+  var exportModal = document.getElementById("exportar-orden");
+
+  if (exportBtn && exportModal) {
+    exportBtn.addEventListener("click", function () {
+      if (!estado.seleccionada) return;
+      var folio = estado.seleccionada.folio;
+      document.getElementById("export-orden-folio").textContent = folio;
+      document.getElementById("export-orden-csv-link").href  = urlPara(EXPORTAR_CSV_TPL, folio);
+      document.getElementById("export-orden-xlsx-link").href = urlPara(EXPORTAR_XLSX_TPL, folio);
+      document.getElementById("export-orden-pdf-link").href  = urlPara(EXPORTAR_PDF_TPL, folio);
+      exportModal.classList.add("is-open");
+    });
+
+    $(document).on("click", "[data-dismiss='modal-export-orden']", function () {
+      exportModal.classList.remove("is-open");
+    });
+    $(document).on("keydown", function (e) {
+      if (e.key === "Escape") exportModal.classList.remove("is-open");
+    });
+  }
+
+  // Exponer drawer para la pagina de calendario
+  window.__estado = estado;
+  window.__abrirDrawer = abrirDrawer;
+  window.__cerrarDrawerPanel = cerrarDrawerPanel;
+  window.__cargarOrdenes = cargarOrdenes;
 
   cargarOrdenes();
 })();

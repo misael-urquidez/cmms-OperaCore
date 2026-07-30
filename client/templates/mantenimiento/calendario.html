@@ -1,0 +1,128 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Calendario · Mantenimiento · OperaCore{% endblock %}
+{% block breadcrumb %}Mantenimiento / Calendario{% endblock %}
+{% block page_title %}Calendario de mantenimiento{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'mantenimiento/css/mantenimiento.css' %}">
+<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">
+<link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/main.min.css">
+<style>
+  #calendar { max-width:1100px; margin:2rem auto; padding:0 1rem; }
+  .fc { --fc-border-color:var(--line); --fc-page-bg-color:var(--color-surface); --fc-neutral-bg-color:var(--color-bg); --fc-today-bg-color:rgba(59,130,246,0.08); --fc-event-border-color:transparent; --fc-event-text-color:#fff; }
+  .fc .fc-toolbar-title { color:var(--color-text); }
+  .fc .fc-button { background:var(--color-primary); border-color:var(--color-primary); color:var(--color-bg); }
+  .fc .fc-button:hover { filter:brightness(1.1); }
+  .fc .fc-button-primary:not(:disabled).fc-button-active { background:var(--color-primary); }
+  .fc .fc-daygrid-day-number { color:var(--color-text); }
+  .fc .fc-col-header-cell-cushion { color:var(--color-text); }
+  .fc .fc-daygrid-event { cursor:pointer; border-radius:0.3rem; padding:1px 4px; font-size:0.78rem; }
+  .fc .fc-more-popover { background:var(--color-surface); border:1px solid var(--line); }
+  .fc .fc-popover-header { background:var(--color-bg); color:var(--color-text); }
+  .calendario-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1rem; }
+  .calendario-head h2 { margin:0; font-size:1.1rem; font-weight:600; }
+  .calendario-head a { text-decoration:none; }
+  .is-hidden { display:none !important; }
+</style>
+{% endblock %}
+{% block content %}
+<section class="ordenes" data-datos-url="{% url 'mantenimiento:ordenes-datos' %}" data-crear-url="{% url 'mantenimiento:ordenes-crear' %}" data-asignar-url-base="{% url 'mantenimiento:ordenes-asignar' folio='__FOLIO__' %}" data-iniciar-url-base="{% url 'mantenimiento:ordenes-iniciar' folio='__FOLIO__' %}" data-cerrar-url-base="{% url 'mantenimiento:ordenes-cerrar' folio='__FOLIO__' %}" data-actualizar-url-base="{% url 'mantenimiento:ordenes-update' folio='__FOLIO__' %}" data-reportes-disponibles-url="{% url 'mantenimiento:reportes-disponibles' %}" data-es-tecnico="{{ es_tecnico|yesno:'1,0' }}" data-numero-nomina="{{ usuario.numeroNomina|default:'' }}" data-exportar-csv-base="{% url 'mantenimiento:exportar_csv' folio='__FOLIO__' %}" data-exportar-xlsx-base="{% url 'mantenimiento:exportar_xlsx' folio='__FOLIO__' %}" data-exportar-pdf-base="{% url 'mantenimiento:exportar_pdf' folio='__FOLIO__' %}">
+{{ trabajadores|json_script:"trabajadores-data" }}{{ maquinas|json_script:"maquinas-data" }}{{ tipos_mantenimiento|json_script:"elipseTiposMantenimientoData" }}
+<div class="calendario-head">
+  <h2>Órdenes con fecha programada</h2>
+  <a href="{% url 'mantenimiento:index' %}" class="btn-orden-secondary">← Volver al listado</a>
+</div>
+<div id="calendar"></div>
+<div class="ordenes-list is-hidden" id="ordenesList"><p id="ordenesEmpty" hidden></p></div>
+</section>
+<div class="fallas-modal" id="detalle-falla"></div>
+<div class="orden-drawer-scrim" id="ordenDrawerScrim" hidden></div>
+<dialog id="ordenDrawer"><section><button type="button" id="ordenDrawerClose">×</button><p id="ordenDrawerFolio"></p><h2 id="ordenDrawerTitle"></h2><p id="ordenDrawerInfo"></p><p id="ordenDrawerDescripcion"></p><div id="ordenDrawerEdit" hidden><label>Descripción <textarea id="edDescripcion"></textarea></label><label>Tipo <select id="edTipo">{% for t in tipos_mantenimiento %}<option value="{{ t.codigo }}">{{ t.nombre }}</option>{% endfor %}</select></label><label>Fecha programada <input id="edFecha" type="date"></label><label>Notas <textarea id="edNotas"></textarea></label><label>Diagnóstico <textarea id="edDiagnostico"></textarea></label><div style="margin-top:10px;text-align:center;"><button type="button" id="ordenGuardarBtn" class="btn-orden-new">Guardar</button> <button type="button" id="ordenCancelarEditBtn" class="btn-orden-secondary">Cancelar</button></div></div><div id="ordenDrawerReporte" hidden><button type="button" id="ordenDrawerVerReporte">📄 Ver reporte de falla adjunto</button></div>{% if not es_tecnico %}<button type="button" id="ordenEditarBtn" class="btn-orden-secondary">Editar</button><label>Asignar <select id="ordenAsignarSelect"></select></label><button id="ordenAsignarBtn" type="button">Asignar</button>{% endif %}<button id="ordenIniciarBtn" type="button" hidden>Marcar en progreso</button><form id="ordenCerrarForm" hidden><label>Diagnóstico <textarea id="cDiagnostico"></textarea></label><label>Notas <textarea id="cNotas"></textarea></label><label>Horas <input id="cHoras" type="number" min="0" step=".1" required></label><div class="orden-mov" id="ordenMovSection"><p class="orden-mov__label">Refacciones / piezas usadas</p><div class="orden-mov__list" id="ordenMovList"></div><button type="button" class="btn-orden-secondary" id="ordenMovAddBtn">+ Agregar pieza</button><div class="orden-mov__form" id="ordenMovForm" hidden><label>Refacción a instalar <select id="ordenMovRefaccion"><option value="">Seleccionar refacción...</option></select></label><label>Pieza que reemplaza (opcional) <select id="ordenMovPieza"><option value="">Sin pieza previa registrada...</option></select></label><div class="orden-mov__form-actions"><button type="button" id="ordenMovCancelar" class="btn-orden-secondary">Cancelar</button><button type="button" id="ordenMovConfirmar">Agregar</button></div></div></div><button>Cerrar orden</button></form><p id="ordenMsg"></p><div style="margin-top:1rem;text-align:center;"><button type="button" id="ordenExportarBtn" class="btn-orden-secondary">Exportar</button></div></section></dialog>
+<div class="fallas-modal" id="exportar-orden" role="dialog">
+  <div class="fallas-modal__backdrop" data-dismiss="modal-export-orden"></div>
+  <div class="fallas-modal__dialog">
+    <div class="fallas-modal__content">
+      <div class="fallas-modal__header">
+        <h3 class="fallas-modal__title">Exportar orden</h3>
+        <button class="fallas-modal__close" data-dismiss="modal-export-orden">&times;</button>
+      </div>
+      <div class="fallas-modal__body" style="text-align:center;padding:2rem;">
+        <p style="margin-bottom:1.5rem;color:var(--color-muted);">Orden <strong id="export-orden-folio"></strong> &mdash; Selecciona el formato</p>
+        <div class="export-options">
+          <a class="export-btn export-btn--csv" id="export-orden-csv-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> CSV</a>
+          <a class="export-btn export-btn--xlsx" id="export-orden-xlsx-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="6" y1="10" x2="18" y2="10"/><line x1="6" y1="14" x2="18" y2="14"/><line x1="6" y1="18" x2="12" y2="18"/></svg> Excel</a>
+          <a class="export-btn export-btn--pdf" id="export-orden-pdf-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h6"/><path d="M12 12v6"/></svg> PDF</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="{% static 'fallas/js/modal.js' %}"></script>
+<script src="{% static 'js/mantenimiento.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script>
+var MAPA_COLORES = {
+  SOLIC: '#6b7280',
+  PROGR: '#3b82f6',
+  ENPRO: '#f59e0b',
+  CERRA: '#10b981',
+  CANCE: '#ef4444',
+};
+
+$(function () {
+  var calendarEl = document.getElementById('calendar');
+  if (!calendarEl) return;
+
+  var DATOS_URL = '{{ datos_url }}';
+
+  $.get(DATOS_URL + '?tipo_mantenimiento=PREVE')
+    .done(function (ordenes) {
+      if (!Array.isArray(ordenes)) ordenes = [];
+      var events = ordenes
+        .filter(function (o) { return o.fechaprogramada; })
+        .map(function (o) {
+          return {
+            id: o.folio,
+            title: (o.maquina_nombre || '?') + ' — ' + (o.descripcion || '').substring(0, 50),
+            start: o.fechaprogramada,
+            allDay: true,
+            backgroundColor: MAPA_COLORES[o.estado_orden] || '#6b7280',
+            borderColor: 'transparent',
+            extendedProps: o,
+          };
+        });
+
+      var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'es',
+        firstDay: 1,
+        height: 'auto',
+        events: events,
+        eventClick: function (info) {
+          var orden = info.event.extendedProps;
+          if (window.__estado && window.__abrirDrawer) {
+            window.__estado.seleccionada = orden;
+            window.__abrirDrawer(orden.folio);
+          }
+        },
+        eventDidMount: function (info) {
+          var orden = info.event.extendedProps;
+          info.el.setAttribute('title',
+            orden.folio + ' | ' + (orden.maquina_nombre || '') +
+            ' | ' + (orden.estado_orden_nombre || '') +
+            ' | ' + (orden.descripcion || '').substring(0, 80)
+          );
+        },
+      });
+      calendar.render();
+    })
+    .fail(function () {
+      calendarEl.innerHTML = '<p style="color:var(--color-muted);text-align:center;">No se pudieron cargar las órdenes.</p>';
+    });
+});
+</script>
+{% endblock %}

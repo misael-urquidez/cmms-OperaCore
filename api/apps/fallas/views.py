@@ -1,6 +1,15 @@
+import csv
+import io
 import os
 
 from django.conf import settings
+from django.http import HttpResponse
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib import colors
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -239,3 +248,156 @@ class CatalogosReporteAPIView(APIView):
             ).data,
         }
         return Response(data, status=status.HTTP_200_OK)
+
+
+# ------------ EXPORTACIONES  -----------------------------------------
+def _get_reporte_data(pk):
+    qs = models.ReporteFalla.objects.select_related(
+        "maquina", "trabajador", "tipo_severidad", "estado_reporte"
+    )
+    reporte = generics.get_object_or_404(qs, pk=pk)
+    ser = serializers.ReporteFallaDetailSerializer(reporte)
+    return ser.data
+
+
+class ExportarReporteCSVAPIView(APIView):
+
+    def get(self, request, pk):
+        data = _get_reporte_data(pk)
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+
+        writer.writerow(["Campo", "Valor"])
+        writer.writerow(["# Reporte", data.get("numeroRegistro")])
+        writer.writerow(["Asunto", data.get("asunto")])
+        writer.writerow(["Maquina", data.get("maquina_nombre")])
+        writer.writerow(["Trabajador", data.get("trabajador_nombre")])
+        writer.writerow(["Severidad", data.get("tipo_severidad_nombre")])
+        writer.writerow(["Estado", data.get("estado_reporte_nombre")])
+        writer.writerow(["Fecha creacion", data.get("fechaCreacion")])
+        writer.writerow(["Hora creacion", data.get("horaCreacion")])
+        writer.writerow(["Fecha resolucion", data.get("fechaResolucion") or ""])
+        writer.writerow(["Tiempo paro (hrs)", data.get("tiempoParo") or ""])
+        writer.writerow(["Descripcion", data.get("descripcion") or ""])
+        writer.writerow(["Causa raiz", data.get("causaRaiz") or ""])
+
+        fallas = data.get("fallas_asociadas", [])
+        nombres_falla = ", ".join(f["nombre"] for f in fallas) if fallas else ""
+        writer.writerow(["Tipos de falla", nombres_falla])
+
+        response = HttpResponse(buffer.getvalue(), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="reporte_falla_{pk}.csv"'
+        return response
+
+
+class ExportarReporteXLSXAPIView(APIView):
+
+    def get(self, request, pk):
+        data = _get_reporte_data(pk)
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Reporte"
+
+        header_font = Font(bold=True)
+        labels = [
+            "# Reporte", "Asunto", "Maquina", "Trabajador", "Severidad",
+            "Estado", "Fecha creacion", "Hora creacion",
+            "Fecha resolucion", "Tiempo paro (hrs)",
+        ]
+        values = [
+            data.get("numeroRegistro"), data.get("asunto"),
+            data.get("maquina_nombre"), data.get("trabajador_nombre"),
+            data.get("tipo_severidad_nombre"), data.get("estado_reporte_nombre"),
+            data.get("fechaCreacion"), data.get("horaCreacion"),
+            data.get("fechaResolucion") or "", data.get("tiempoParo") or "",
+        ]
+        for row_idx, (label, value) in enumerate(zip(labels, values), 1):
+            ws.cell(row=row_idx, column=1, value=label).font = header_font
+            ws.cell(row=row_idx, column=2, value=str(value))
+
+        desc_row = len(labels) + 2
+        ws.cell(row=desc_row, column=1, value="Descripcion").font = header_font
+        ws.cell(row=desc_row, column=2, value=data.get("descripcion") or "")
+        ws.cell(row=desc_row + 1, column=1, value="Causa raiz").font = header_font
+        ws.cell(row=desc_row + 1, column=2, value=data.get("causaRaiz") or "")
+
+        fallas = data.get("fallas_asociadas", [])
+        nombres_falla = ", ".join(f["nombre"] for f in fallas) if fallas else ""
+        ws.cell(row=desc_row + 2, column=1, value="Tipos de falla").font = header_font
+        ws.cell(row=desc_row + 2, column=2, value=nombres_falla)
+
+        ws.column_dimensions["A"].width = 20
+        ws.column_dimensions["B"].width = 60
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = f'attachment; filename="reporte_falla_{pk}.xlsx"'
+        return response
+
+
+class ExportarReportePDFAPIView(APIView):
+
+    def get(self, request, pk):
+        data = _get_reporte_data(pk)
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        styles = getSampleStyleSheet()
+        elements = []
+
+        elements.append(Paragraph(f"Reporte de Falla #{data.get('numeroRegistro')}", styles["Title"]))
+        elements.append(Spacer(1, 12))
+
+        rows = [
+            ["Campo", "Valor"],
+            ["Asunto", data.get("asunto")],
+            ["Maquina", data.get("maquina_nombre")],
+            ["Trabajador", data.get("trabajador_nombre")],
+            ["Severidad", data.get("tipo_severidad_nombre")],
+            ["Estado", data.get("estado_reporte_nombre")],
+            ["Fecha creacion", f"{data.get('fechaCreacion')} {data.get('horaCreacion') or ''}"],
+            ["Fecha resolucion", data.get("fechaResolucion") or ""],
+            ["Tiempo paro (hrs)", str(data.get("tiempoParo") or "")],
+        ]
+
+        table = Table(rows, colWidths=[140, 340])
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 10),
+            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 1), (-1, -1), 9),
+            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d1d5db")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#ffffff"), colors.HexColor("#f9fafb")]),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 16))
+
+        if data.get("descripcion"):
+            elements.append(Paragraph("Descripcion", styles["Heading2"]))
+            elements.append(Paragraph(data["descripcion"], styles["Normal"]))
+            elements.append(Spacer(1, 12))
+
+        if data.get("causaRaiz"):
+            elements.append(Paragraph("Causa Raiz", styles["Heading2"]))
+            elements.append(Paragraph(data["causaRaiz"], styles["Normal"]))
+            elements.append(Spacer(1, 12))
+
+        fallas = data.get("fallas_asociadas", [])
+        if fallas:
+            elements.append(Paragraph("Tipos de Falla Asociados", styles["Heading2"]))
+            for f in fallas:
+                elements.append(Paragraph(f"- {f['nombre']}", styles["Normal"]))
+
+        doc.build(elements)
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="reporte_falla_{pk}.pdf"'
+        return response

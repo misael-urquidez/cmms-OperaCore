@@ -1,11 +1,21 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.exceptions import NotFound
-from django.db import transaction
+import csv
+import io
+
+from django.http import HttpResponse
 from django.utils import timezone
+from openpyxl import Workbook
+from openpyxl.styles import Font
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from rest_framework import generics, status
+from rest_framework.exceptions import NotFound
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from apps.usuarios.models import Trabajador
 from apps.maquinaria.services import cambiar_estado_maquina
-from rest_framework import generics, status
+from django.db import transaction
 from . import models
 from . import serializers
 
@@ -234,6 +244,8 @@ class OrdenMantenimientoListAPIView(generics.ListAPIView):
             qs = qs.filter(trabajador_id=self.request.query_params["trabajador"])
         if self.request.query_params.get("estado"):
             qs = qs.filter(estado_orden_id=self.request.query_params["estado"])
+        if self.request.query_params.get("tipo_mantenimiento"):
+            qs = qs.filter(tipo_mantenimiento_id=self.request.query_params["tipo_mantenimiento"])
         return qs
 
 class OrdenMantenimientoDetailAPIView(generics.RetrieveAPIView):
@@ -321,3 +333,155 @@ class OrdenMantenimientoCerrarAPIView(APIView):
 
         cambiar_estado_maquina(orden.maquina_id, "ESPER", "orden_mantenimiento", orden.folio)
         return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
+
+
+class OrdenMantenimientoUpdateAPIView(APIView):
+    def patch(self, request, folio):
+        try:
+            orden = models.OrdenMantenimiento.objects.get(pk=folio)
+        except models.OrdenMantenimiento.DoesNotExist as exc:
+            raise NotFound("Orden no encontrada.") from exc
+        serializer = serializers.UpdateOrdenMantenimientoSerializer(
+            orden, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
+
+
+# ------------ EXPORTACIONES  -----------------------------------------
+def _get_orden_data(folio):
+    qs = models.OrdenMantenimiento.objects.select_related(
+        "maquina", "trabajador", "tipo_mantenimiento", "estado_orden", "reporte_falla"
+    )
+    orden = generics.get_object_or_404(qs, pk=folio)
+    ser = serializers.DetailOrdenMantenimientoSerializer(orden)
+    return ser.data
+
+
+class ExportarOrdenCSVAPIView(APIView):
+
+    def get(self, request, folio):
+        data = _get_orden_data(folio)
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+
+        writer.writerow(["Campo", "Valor"])
+        writer.writerow(["Folio", data.get("folio")])
+        writer.writerow(["Descripcion", data.get("descripcion") or ""])
+        writer.writerow(["Diagnostico", data.get("diagnostico") or ""])
+        writer.writerow(["Notas", data.get("notas") or ""])
+        writer.writerow(["Maquina", data.get("maquina_nombre") or ""])
+        writer.writerow(["Trabajador", data.get("trabajador_nombre") or ""])
+        writer.writerow(["Tipo mantenimiento", data.get("tipo_mantenimiento_nombre") or ""])
+        writer.writerow(["Estado", data.get("estado_orden_nombre") or ""])
+        writer.writerow(["Fecha creacion", data.get("fechacreacion") or ""])
+        writer.writerow(["Hora creacion", data.get("horacreacion") or ""])
+        writer.writerow(["Fecha programada", data.get("fechaprogramada") or ""])
+        writer.writerow(["Fecha cierre", data.get("fechacierre") or ""])
+        writer.writerow(["Hora cierre", data.get("horacierre") or ""])
+        writer.writerow(["Horas intervenidas", data.get("horasintervenidas") or ""])
+        writer.writerow(["Reporte falla", data.get("reporte_falla_asunto") or ""])
+
+        response = HttpResponse(buffer.getvalue(), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="orden_mantenimiento_{folio}.csv"'
+        return response
+
+
+class ExportarOrdenXLSXAPIView(APIView):
+
+    def get(self, request, folio):
+        data = _get_orden_data(folio)
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Orden"
+
+        header_font = Font(bold=True)
+        labels = [
+            "Folio", "Descripcion", "Diagnostico", "Notas", "Maquina",
+            "Trabajador", "Tipo mantenimiento", "Estado", "Fecha creacion",
+            "Hora creacion", "Fecha programada", "Fecha cierre",
+            "Hora cierre", "Horas intervenidas", "Reporte falla",
+        ]
+        values = [
+            data.get("folio"), data.get("descripcion") or "",
+            data.get("diagnostico") or "", data.get("notas") or "",
+            data.get("maquina_nombre") or "", data.get("trabajador_nombre") or "",
+            data.get("tipo_mantenimiento_nombre") or "",
+            data.get("estado_orden_nombre") or "",
+            data.get("fechacreacion") or "", data.get("horacreacion") or "",
+            data.get("fechaprogramada") or "", data.get("fechacierre") or "",
+            data.get("horacierre") or "", data.get("horasintervenidas") or "",
+            data.get("reporte_falla_asunto") or "",
+        ]
+        for row_idx, (label, value) in enumerate(zip(labels, values), 1):
+            ws.cell(row=row_idx, column=1, value=label).font = header_font
+            ws.cell(row=row_idx, column=2, value=str(value))
+
+        ws.column_dimensions["A"].width = 22
+        ws.column_dimensions["B"].width = 60
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = f'attachment; filename="orden_mantenimiento_{folio}.xlsx"'
+        return response
+
+
+class ExportarOrdenPDFAPIView(APIView):
+
+    def get(self, request, folio):
+        data = _get_orden_data(folio)
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        styles = getSampleStyleSheet()
+        elements = []
+
+        elements.append(Paragraph(f"Orden de Mantenimiento {data.get('folio')}", styles["Title"]))
+        elements.append(Spacer(1, 12))
+
+        rows = [
+            ["Campo", "Valor"],
+            ["Descripcion", data.get("descripcion") or ""],
+            ["Diagnostico", data.get("diagnostico") or ""],
+            ["Notas", data.get("notas") or ""],
+            ["Maquina", data.get("maquina_nombre") or ""],
+            ["Trabajador", data.get("trabajador_nombre") or ""],
+            ["Tipo mantenimiento", data.get("tipo_mantenimiento_nombre") or ""],
+            ["Estado", data.get("estado_orden_nombre") or ""],
+            ["Fecha creacion", f"{data.get('fechacreacion') or ''} {data.get('horacreacion') or ''}"],
+            ["Fecha programada", data.get("fechaprogramada") or ""],
+            ["Fecha cierre", f"{data.get('fechacierre') or ''} {data.get('horacierre') or ''}"],
+            ["Horas intervenidas", str(data.get("horasintervenidas") or "")],
+            ["Reporte falla", data.get("reporte_falla_asunto") or ""],
+        ]
+
+        table = Table(rows, colWidths=[140, 340])
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 10),
+            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 1), (-1, -1), 9),
+            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d1d5db")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#ffffff"), colors.HexColor("#f9fafb")]),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 16))
+
+        if data.get("descripcion"):
+            elements.append(Paragraph("Descripcion", styles["Heading2"]))
+            elements.append(Paragraph(data["descripcion"], styles["Normal"]))
+
+        doc.build(elements)
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="orden_mantenimiento_{folio}.pdf"'
+        return response

@@ -629,3 +629,17 @@
 }
 
 .btn-detalles:hover { text-decoration: underline; }
+
+/* -------- buscador / tabla filter (shared) -------- */
+.inv-search { display:flex; align-items:center; gap:.5rem; margin-bottom:1rem; flex-wrap:wrap; }
+.inv-search__icon { color:var(--color-muted); flex:none; }
+.inv-search input,
+.buscador-input { flex:1; min-width:180px; padding:.5rem .75rem; border:1px solid var(--line); border-radius:.4rem; background:var(--color-surface); color:var(--color-text); font-size:.85rem; outline:none; }
+.inv-search input:focus,
+.buscador-input:focus { border-color:var(--color-primary); }
+.inv-search input::placeholder,
+.buscador-input::placeholder { color:var(--color-muted); }
+.inv-search__select,
+.filter-select { padding:.5rem .6rem; border:1px solid var(--line); border-radius:.4rem; background:var(--color-surface); color:var(--color-text); font-size:.85rem; outline:none; cursor:pointer; }
+.inv-search__select:focus,
+.filter-select:focus { border-color:var(--color-primary); }

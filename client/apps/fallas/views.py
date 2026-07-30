@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views import generic
 from django.contrib import messages
 import requests
@@ -301,3 +301,33 @@ class InvalidarCacheReportes(generic.View):
     def post(self, request):
         cache.delete("fallas_reportes_list")
         return JsonResponse({"ok": True})
+
+
+# ------------ EXPORTACIONES (proxy a la API) -------------------------
+class _ExportarBase(generic.View):
+    formato = None  # "csv", "xlsx", "pdf"
+
+    def get(self, request, pk):
+        try:
+            resp = SESSION.get(f"{API_URL}/v1/reportes/{pk}/export/{self.formato}/", timeout=15)
+        except requests.exceptions.RequestException:
+            return HttpResponse("Error de conexion con la API", status=502)
+
+        if resp.status_code != 200:
+            return HttpResponse("Error al generar el archivo", status=resp.status_code)
+
+        response = HttpResponse(resp.content, content_type=resp.headers.get("Content-Type", "application/octet-stream"))
+        response["Content-Disposition"] = resp.headers.get("Content-Disposition", f'attachment; filename="reporte_falla_{pk}.{self.formato}"')
+        return response
+
+
+class ExportarReporteCSV(_ExportarBase):
+    formato = "csv"
+
+
+class ExportarReporteXLSX(_ExportarBase):
+    formato = "xlsx"
+
+
+class ExportarReportePDF(_ExportarBase):
+    formato = "pdf"

@@ -2,7 +2,7 @@ import json
 import requests
 from django.conf import settings
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views import View
 
@@ -25,7 +25,7 @@ class Index(View):
 class ProxyOrden(View):
     action = None
     def responder(self, request, folio=None):
-        params = {k: request.GET[k] for k in ("trabajador", "estado") if request.GET.get(k)}
+        params = {k: request.GET[k] for k in ("trabajador", "estado", "tipo_mantenimiento") if request.GET.get(k)}
         endpoint = "v1/ordenes/list/" if self.action == "list" else f"v2/ordenes/{folio}/{self.action}/"
         if self.action == "create": endpoint = "v2/ordenes/create/"
         try:
@@ -58,6 +58,23 @@ class OrdenIniciarAPIView(ProxyOrden): action = "iniciar"
 class OrdenCerrarAPIView(ProxyOrden): action = "cerrar"
 
 
+class OrdenUpdateAPIView(View):
+    def patch(self, request, folio):
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except ValueError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+        try:
+            r = SESSION.patch(
+                f"{API_URL}/v2/ordenes/{folio}/update/",
+                json=payload, timeout=5,
+            )
+            cuerpo = r.json()
+        except (requests.RequestException, ValueError):
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        return JsonResponse(cuerpo, safe=False, status=r.status_code)
+
+
 class MovimientoCrearAPIView(View):
     """Proxy JSON hacia mantenimiento/v2/movimientos/create/, reusando el
     modulo de inventario que ya construyo fix-sql. Se llama una vez por
@@ -73,3 +90,61 @@ class MovimientoCrearAPIView(View):
         except (requests.RequestException, ValueError):
             return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
         return JsonResponse(cuerpo, safe=False, status=r.status_code)
+
+
+class _ExportarOrdenBase(View):
+    formato = None
+
+    def get(self, request, folio):
+        try:
+            resp = SESSION.get(f"{API_URL}/v1/ordenes/{folio}/export/{self.formato}/", timeout=15)
+        except requests.RequestException:
+            return HttpResponse("Error de conexion con la API", status=502)
+
+        if resp.status_code != 200:
+            return HttpResponse("Error al generar el archivo", status=resp.status_code)
+
+        response = HttpResponse(resp.content, content_type=resp.headers.get("Content-Type", "application/octet-stream"))
+        response["Content-Disposition"] = resp.headers.get("Content-Disposition", f'attachment; filename="orden_mantenimiento_{folio}.{self.formato}"')
+        return response
+
+
+class ExportarOrdenCSV(_ExportarOrdenBase):
+    formato = "csv"
+
+
+class ExportarOrdenXLSX(_ExportarOrdenBase):
+    formato = "xlsx"
+
+
+class ExportarOrdenPDF(_ExportarOrdenBase):
+    formato = "pdf"
+
+
+class CalendarioView(View):
+    template_name = "mantenimiento/calendario.html"
+
+    def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
+        def obtener(url):
+            try:
+                r = SESSION.get(url, timeout=5); r.raise_for_status(); return r.json()
+            except requests.RequestException:
+                return []
+
+        context = {
+            "seccion": "mantenimiento",
+            "subseccion": "calendario",
+            "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
+            "es_tecnico": usuario.get("rol") == "TECNI",
+            "usuario": usuario,
+            "trabajadores": obtener(f"{settings.API_BASE_URL}/fallas/v1/trabajadores/"),
+            "maquinas": obtener(f"{settings.API_BASE_URL}/monitoreo/maquinas/"),
+            "tipos_mantenimiento": obtener(f"{API_URL}/v1/tipo-mantenimiento/list/"),
+            "datos_url": f"{API_URL}/v1/ordenes/list/",
+        }
+        return render(request, self.template_name, context)

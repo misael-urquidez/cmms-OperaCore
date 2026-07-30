@@ -69,12 +69,29 @@ class Index(generic.View):
             except requests.exceptions.RequestException:
                 edos_maquina = []
 
+        tipos_maquina = cache.get("maquinaria_tipos_list")
+        if tipos_maquina is None:
+            try:
+                res_tip = SESSION.get(f"{API_URL}/v1/tipo_maquina/list/", timeout=5)
+                tipos_maquina = res_tip.json() if res_tip.status_code == 200 else []
+                cache.set("maquinaria_tipos_list", tipos_maquina, 300)
+            except requests.exceptions.RequestException:
+                tipos_maquina = []
+
+        linea_dict = {l["codigo"]: l["nombre"] for l in lineas if "codigo" in l}
+        edo_dict = {e["codigo"]: e["nombre"] for e in edos_maquina if "codigo" in e}
+        tipo_dict = {t.get("numeroregistro", t.get("codigo", "")): t["nombre"] for t in tipos_maquina if "nombre" in t}
+
         context = {
             "modulo": "Maquinaria",
             "api_status": api_status,
             "maquinas": maquinas,
             "lineas": lineas,
             "edos_maquina": edos_maquina,
+            "tipos_maquina": tipos_maquina,
+            "linea_dict": linea_dict,
+            "edo_dict": edo_dict,
+            "tipo_dict": tipo_dict,
             "total_maquinas": total_maquinas,
             "operativas": operativas,
             "en_mantenimiento": en_mantenimiento,
@@ -173,3 +190,33 @@ class WikiMaquinasView(TemplateView):
         context['seccion'] = 'maquinaria'
         context['subseccion'] = 'wiki'
         return context
+
+
+class RegistroOpsView(generic.View):
+    """Página de registro de horas de operación (editar/eliminar)."""
+
+    template_name = "maquinaria/registro_ops.html"
+
+    def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
+        maquinas = cache.get("maquinaria_registro_ops_list")
+        if maquinas is None:
+            try:
+                res = SESSION.get(f"{API_URL}/v1/maquina/list/", timeout=5)
+                maquinas = res.json() if res.status_code == 200 else []
+                cache.set("maquinaria_registro_ops_list", maquinas, 300)
+            except requests.exceptions.RequestException:
+                maquinas = []
+
+        context = {
+            "seccion": "maquinaria",
+            "subseccion": "registro-ops",
+            "maquinas": maquinas,
+            "usuario": usuario,
+            "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
+        }
+        return render(request, self.template_name, context)
