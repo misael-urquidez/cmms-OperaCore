@@ -1,0 +1,53 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Orden {{ orden.folio }} · OperaCore{% endblock %}
+{% block breadcrumb %}Mantenimiento{% endblock %}
+{% block page_title %}Orden {{ orden.folio }}{% endblock %}
+{% block extra_css %}
+<style>
+  .doc-orden { max-width: 900px; margin: 0 auto; position: relative; }
+  .doc-orden__close { position: absolute; top: 0; right: 0; width: 2.25rem; height: 2.25rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; line-height: 1; background: transparent; border: 1px solid var(--color-border, rgba(255,255,255,0.15)); border-radius: 0.5rem; color: inherit; cursor: pointer; text-decoration: none; }
+  .doc-orden__close:hover { background: rgba(255,255,255,0.08); }
+  .doc-orden__head { margin-bottom: 1.5rem; padding-right: 3rem; }
+  .doc-orden__estado { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; margin-left: 0.5rem; }
+  .doc-orden__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+  .doc-orden__field label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.65; margin-bottom: 0.25rem; }
+  .doc-orden__field p { margin: 0; font-size: 0.95rem; }
+  .doc-orden__section { margin-bottom: 1.75rem; }
+  .doc-orden__section h3 { font-size: 0.9rem; text-transform: uppercase; opacity: 0.7; margin-bottom: 0.5rem; }
+  .doc-orden__section p { white-space: pre-wrap; margin: 0; }
+  .doc-orden__actions { display: flex; gap: 0.75rem; flex-wrap: wrap; padding-top: 1.5rem; border-top: 1px solid var(--color-border, rgba(255,255,255,0.12)); }
+  .doc-orden__btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.9rem; text-decoration: none; cursor: pointer; border: none; }
+  .doc-orden__btn--editar { background: #3b82f6; color: #fff; }
+  .doc-orden__btn--csv { background: #10b981; color: #fff; }
+  .doc-orden__btn--xlsx { background: #22c55e; color: #fff; }
+  .doc-orden__btn--pdf { background: #ef4444; color: #fff; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="doc-orden">
+  <a class="doc-orden__close" href="{% url 'mantenimiento:index' %}" title="Cerrar">×</a>
+  <div class="doc-orden__head">
+    <h1>{{ orden.tipo_mantenimiento_nombre|default:orden.tipo_mantenimiento }} <span class="doc-orden__estado orden-card__estado--{{ orden.estado_orden }}">{{ orden.estado_orden_nombre|default:orden.estado_orden }}</span></h1>
+    <p>Folio {{ orden.folio }}</p>
+  </div>
+  <div class="doc-orden__grid">
+    <div class="doc-orden__field"><label>Máquina</label><p>{{ orden.maquina_nombre|default:orden.maquina|default:"—" }}</p></div>
+    <div class="doc-orden__field"><label>Asignada a</label><p>{{ orden.trabajador_nombre|default:"Sin asignar" }}</p></div>
+    <div class="doc-orden__field"><label>Fecha creación</label><p>{{ orden.fechacreacion|default:"—" }} {{ orden.horacreacion|default:"" }}</p></div>
+    <div class="doc-orden__field"><label>Fecha programada</label><p>{{ orden.fechaprogramada|default:"—" }}</p></div>
+    <div class="doc-orden__field"><label>Fecha cierre</label><p>{{ orden.fechacierre|default:"—" }} {{ orden.horacierre|default:"" }}</p></div>
+    <div class="doc-orden__field"><label>Horas intervenidas</label><p>{{ orden.horasintervenidas|default:"—" }}</p></div>
+  </div>
+  <div class="doc-orden__section"><h3>Descripción</h3><p>{{ orden.descripcion|default:"—" }}</p></div>
+  {% if orden.diagnostico %}<div class="doc-orden__section"><h3>Diagnóstico</h3><p>{{ orden.diagnostico }}</p></div>{% endif %}
+  {% if orden.notas %}<div class="doc-orden__section"><h3>Notas</h3><p>{{ orden.notas }}</p></div>{% endif %}
+  {% if orden.reporte_falla %}<div class="doc-orden__section"><h3>Reporte de falla asociado</h3><p>#{{ orden.reporte_falla }} {% if orden.reporte_falla_asunto %}· {{ orden.reporte_falla_asunto }}{% endif %}</p></div>{% endif %}
+  <div class="doc-orden__actions">
+    {% if puede_modificar %}<a class="doc-orden__btn doc-orden__btn--editar" href="{% url 'mantenimiento:index' %}?orden={{ orden.folio }}&editar=1">Editar</a>{% endif %}
+    <a class="doc-orden__btn doc-orden__btn--csv" href="{% url 'mantenimiento:exportar_csv' folio=orden.folio %}">Descargar CSV</a>
+    <a class="doc-orden__btn doc-orden__btn--xlsx" href="{% url 'mantenimiento:exportar_xlsx' folio=orden.folio %}">Descargar Excel</a>
+    <a class="doc-orden__btn doc-orden__btn--pdf" href="{% url 'mantenimiento:exportar_pdf' folio=orden.folio %}">Descargar PDF</a>
+  </div>
+</div>
+{% endblock %}

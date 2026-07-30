@@ -9,6 +9,17 @@ from django.views import View
 API_URL = f"{settings.API_BASE_URL}/mantenimiento"
 SESSION = requests.Session()
 
+def _obtener_orden(folio):
+    """Trae el detalle completo de una orden desde el API de mantenimiento."""
+    try:
+        resp = SESSION.get(f"{API_URL}/v1/ordenes/{folio}/", timeout=5)
+        if resp.status_code != 200:
+            return None
+        return resp.json()
+    except (requests.exceptions.RequestException, ValueError):
+        return None
+
+
 
 class Index(View):
     template_name = "mantenimiento/index.html"
@@ -22,6 +33,33 @@ class Index(View):
                 r = SESSION.get(url, timeout=5); r.raise_for_status(); return r.json()
             except requests.RequestException: return []
         return render(request, self.template_name, {"seccion":"mantenimiento", "base_template":"base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html", "es_tecnico":usuario.get("rol") == "TECNI", "usuario":usuario, "trabajadores":obtener(f"{settings.API_BASE_URL}/fallas/v1/trabajadores/"), "maquinas":obtener(f"{settings.API_BASE_URL}/monitoreo/maquinas/"), "estados":obtener(f"{API_URL}/v1/estado-orden/list/"), "tipos_mantenimiento":obtener(f"{API_URL}/v1/tipo-mantenimiento/list/"), "piezas":obtener(f"{settings.API_BASE_URL}/inventario/v1/piezas/list/"), "refacciones":obtener(f"{settings.API_BASE_URL}/inventario/v1/refacciones/list/")})
+
+
+class DocumentoOrden(View):
+    """Vista de solo lectura de una orden, con acceso a edición y exportación."""
+    template_name = "mantenimiento/documento_orden.html"
+
+    def get(self, request, folio):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
+        orden = _obtener_orden(folio)
+        if orden is None:
+            messages.warning(request, "No se pudo cargar la orden.")
+            return redirect("mantenimiento:index")
+
+        es_tecnico = usuario.get("rol") == "TECNI"
+        orden_cerrada = orden.get("estado_orden") in ("CERRA", "CANCE")
+        context = {
+            "orden": orden,
+            "usuario": usuario,
+            "es_tecnico": es_tecnico,
+            "puede_modificar": (not es_tecnico) or (not orden_cerrada),
+            "base_template": "base_tecni.html" if es_tecnico else "base_admin.html",
+        }
+        return render(request, self.template_name, context)
 
 
 class ProxyOrden(View):

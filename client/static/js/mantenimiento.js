@@ -14,6 +14,7 @@
   var EXPORTAR_CSV_TPL = root.dataset.exportarCsvBase;
   var EXPORTAR_XLSX_TPL = root.dataset.exportarXlsxBase;
   var EXPORTAR_PDF_TPL = root.dataset.exportarPdfBase;
+  var DOCUMENTO_TPL = root.dataset.documentoUrlBase;
   var ES_TECNICO = root.dataset.esTecnico === "1";
   var NUMERO_NOMINA = root.dataset.numeroNomina;
 
@@ -185,6 +186,7 @@
 
   // ------------------------------------------------------------- fetch
   var _folioParaAbrir = new URLSearchParams(window.location.search).get("orden");
+  var _autoEditar = new URLSearchParams(window.location.search).get("editar") === "1";
 
   function cargarOrdenes() {
     var params = new URLSearchParams();
@@ -197,6 +199,10 @@
         pintarLista();
         if (_folioParaAbrir) {
           abrirDrawer(_folioParaAbrir);
+          if (_autoEditar) {
+            var editarBtnAuto = document.getElementById("ordenEditarBtn");
+            if (editarBtnAuto) editarBtnAuto.click();
+          }
           _folioParaAbrir = null;
           window.history.replaceState({}, "", window.location.pathname);
         }
@@ -228,6 +234,11 @@
       '<span class="orden-card__meta">' + (o.maquina_nombre || o.maquina || "Sin máquina") + " · " + (o.tipo_mantenimiento_nombre || o.tipo_mantenimiento || "") + '</span>' +
       '<span class="orden-card__meta">Asignada a: ' + (o.trabajador_nombre || "Sin asignar") + '</span>';
     card.addEventListener("click", function () {
+      var cerrada = o.estado_orden === "CERRA" || o.estado_orden === "CANCE";
+      if (cerrada && DOCUMENTO_TPL) {
+        window.location.href = urlPara(DOCUMENTO_TPL, o.folio);
+        return;
+      }
       abrirDrawer(o.folio);
     });
     return card;
