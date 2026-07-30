@@ -1,6 +1,7 @@
 from datetime import date, datetime, time, timedelta
 
 from django.db.models import F
+from django.db.utils import ProgrammingError
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -8,7 +9,7 @@ from rest_framework.views import APIView
 from apps.fallas.models import ReporteFalla
 from apps.inventario.models import Refaccion
 from apps.mantenimiento.models import OrdenMantenimiento
-from apps.maquinaria.models import Maquina, HistorialEstadoMaquina
+from apps.maquinaria.models import Maquina
 
 
 NO_VIVOS_ORDEN = ["CERRA", "CANCE"]
@@ -103,7 +104,7 @@ class NotificacionesListAPIView(APIView):
                 "tipo": "REPORTE_URGENTE",
                 "mensaje": f"Reporte {rf.tipo_severidad_id}: {rf.asunto}",
                 "detalle": f"Máquina {rf.maquina.nombre if rf.maquina else '—'}",
-                "url": "/fallas/reportes/",
+                "url": "/fallas/",
                 "gravedad": "danger",
                 "fecha": rf.fechaCreacion.isoformat(),
             })
@@ -125,23 +126,27 @@ class NotificacionesListAPIView(APIView):
             })
 
         # 7. Máquinas caídas (FALLO/MANTE) por más de 24h
-        hace_24h = datetime.combine(hoy - timedelta(days=1), time.min)
-        maquinas_caidas = Maquina.objects.filter(estado_maquina__in=["FALLO", "MANTE"])
-        for m in maquinas_caidas:
-            ultimo = HistorialEstadoMaquina.objects.filter(
-                maquina=m,
-                estado_nuevo_id=m.estado_maquina,
-            ).order_by("-fecha").first()
-            if ultimo and ultimo.fecha < hace_24h:
-                notificaciones.append({
-                    "id": f"maquina_caida_{m.codigo}",
-                    "tipo": "MAQUINA_CAIDA",
-                    "mensaje": f"Máquina {m.nombre} en estado {m.estado_maquina}",
-                    "detalle": f"Desde {ultimo.fecha.strftime('%d/%m/%Y %H:%M')}",
-                    "url": "/maquinaria/",
-                    "gravedad": "danger",
-                    "fecha": ultimo.fecha.date().isoformat(),
-                })
+        try:
+            from apps.maquinaria.models import HistorialEstadoMaquina
+            hace_24h = datetime.combine(hoy - timedelta(days=1), time.min)
+            maquinas_caidas = Maquina.objects.filter(estado_maquina__in=["FALLO", "MANTE"])
+            for m in maquinas_caidas:
+                ultimo = HistorialEstadoMaquina.objects.filter(
+                    maquina=m,
+                    estado_nuevo_id=m.estado_maquina,
+                ).order_by("-fecha").first()
+                if ultimo and ultimo.fecha < hace_24h:
+                    notificaciones.append({
+                        "id": f"maquina_caida_{m.codigo}",
+                        "tipo": "MAQUINA_CAIDA",
+                        "mensaje": f"Máquina {m.nombre} en estado {m.estado_maquina}",
+                        "detalle": f"Desde {ultimo.fecha.strftime('%d/%m/%Y %H:%M')}",
+                        "url": "/maquinaria/",
+                        "gravedad": "danger",
+                        "fecha": ultimo.fecha.date().isoformat(),
+                    })
+        except ProgrammingError:
+            pass
 
         notificaciones.sort(key=lambda n: n["fecha"], reverse=True)
 
