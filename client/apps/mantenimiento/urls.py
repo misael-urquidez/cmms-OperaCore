@@ -3,6 +3,8 @@ from . import views
 app_name = "mantenimiento"
 urlpatterns = [
     path("", views.Index.as_view(), name="index"),
+    path("documento/orden/<str:folio>/", views.DocumentoOrden.as_view(), name="documento_orden"),
+    path("documento/orden/<str:folio>/pdf/", views.DocumentoOrdenPDF.as_view(), name="documento_orden_pdf"),
     path("ordenes/", views.OrdenesListAPIView.as_view(), name="ordenes-datos"),
     path("reportes-disponibles/", views.ReportesDisponiblesAPIView.as_view(), name="reportes-disponibles"),
     path("ordenes/crear/", views.OrdenCrearAPIView.as_view(), name="ordenes-crear"),

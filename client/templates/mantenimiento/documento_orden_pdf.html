@@ -1,0 +1,61 @@
+<html>
+<head>
+<style>
+  @page { size: letter; margin: 2cm; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #1f2430; font-size: 11pt; }
+  h1 { font-size: 20pt; margin: 0 0 2px 0; }
+  h3 { font-size: 11pt; margin: 14px 0 4px 0; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+  .kicker { font-size: 9pt; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin: 0; }
+  .estado { font-size: 9pt; padding: 3px 10px; border: 1px solid #94a3b8; border-radius: 10px; color: #334155; }
+  table.head { width: 100%; margin-bottom: 10px; }
+  table.grid { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  table.grid td { width: 50%; padding: 6px 8px; border: 1px solid #e2e8f0; vertical-align: top; }
+  .label { display: block; font-size: 8pt; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+  .value { font-size: 10.5pt; color: #1f2430; }
+  .texto { font-size: 10.5pt; line-height: 1.4; }
+  .footer { margin-top: 24px; font-size: 8pt; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+</style>
+</head>
+<body>
+
+  <table class="head">
+    <tr>
+      <td>
+        <p class="kicker">{{ orden.tipo_mantenimiento_nombre|default:orden.tipo_mantenimiento }}</p>
+        <h1>{{ orden.folio }}</h1>
+      </td>
+      <td align="right">
+        <span class="estado">{{ orden.estado_orden_nombre|default:orden.estado_orden|default:"-" }}</span><br/>
+        {% if orden.fechacierre %}<span style="font-size:8pt;color:#64748b;">Cerrada el {{ orden.fechacierre }} · {{ orden.horacierre }}</span>{% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <table class="grid">
+    <tr>
+      <td><span class="label">Máquina</span><span class="value">{{ orden.maquina_nombre|default:"-" }}</span></td>
+      <td><span class="label">Asignada a</span><span class="value">{{ orden.trabajador_nombre|default:"Sin asignar" }}</span></td>
+    </tr>
+    <tr>
+      <td><span class="label">Fecha de creación</span><span class="value">{{ orden.fechacreacion }} · {{ orden.horacreacion }}</span></td>
+      <td><span class="label">Fecha programada</span><span class="value">{{ orden.fechaprogramada|default:"-" }}</span></td>
+    </tr>
+    <tr>
+      <td><span class="label">Horas intervenidas</span><span class="value">{{ orden.horasintervenidas|default:"-" }}</span></td>
+      <td>{% if orden.reporte_falla %}<span class="label">Reporte de falla</span><span class="value">#{{ orden.reporte_falla }} · {{ orden.reporte_falla_asunto }}</span>{% endif %}</td>
+    </tr>
+  </table>
+
+  <h3>Descripción</h3>
+  <p class="texto">{{ orden.descripcion|default:"Sin descripción." }}</p>
+
+  <h3>Diagnóstico</h3>
+  <p class="texto">{{ orden.diagnostico|default:"Sin diagnóstico registrado." }}</p>
+
+  <h3>Notas</h3>
+  <p class="texto">{{ orden.notas|default:"Sin notas." }}</p>
+
+  <p class="footer">OperaCore · Documento generado automáticamente a partir de la orden {{ orden.folio }}.</p>
+
+</body>
+</html>

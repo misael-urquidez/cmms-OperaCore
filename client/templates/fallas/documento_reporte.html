@@ -1,0 +1,81 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Reporte #{{ reporte.numeroRegistro }} · OperaCore{% endblock %}
+{% block breadcrumb %}Fallas{% endblock %}
+{% block page_title %}Documento del reporte #{{ reporte.numeroRegistro }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'fallas/css/documento-reporte.css' %}">{% endblock %}
+
+{% block content %}
+<div class="documento-reporte__actions">
+  <a class="documento-reporte__btn" href="{% url 'fallas:lista' %}">← Volver a la lista</a>
+  <div class="documento-reporte__actions-right">
+    <a class="documento-reporte__btn" href="{% url 'fallas:actualizar_reporte' pk=reporte.numeroRegistro %}">Modificar</a>
+    <a class="documento-reporte__btn documento-reporte__btn--primary" href="{% url 'fallas:documento_reporte_pdf' pk=reporte.numeroRegistro %}">⬇ Descargar PDF</a>
+  </div>
+</div>
+
+<article class="documento-reporte">
+  <header class="documento-reporte__head">
+    <div>
+      <p class="documento-reporte__kicker">Reporte de falla</p>
+      <h1 class="documento-reporte__folio">#{{ reporte.numeroRegistro }}</h1>
+    </div>
+    <div class="documento-reporte__estado">
+      <span class="badge">{{ reporte.estado_reporte_nombre|default:reporte.estado_reporte|default:"-" }}</span>
+      {% if reporte.fechaResolucion %}<p class="documento-reporte__cerrado">Cerrado el {{ reporte.fechaResolucion }}</p>{% endif %}
+    </div>
+  </header>
+
+  <h2 class="documento-reporte__asunto">{{ reporte.asunto }}</h2>
+
+  <section class="documento-reporte__grid">
+    <div class="documento-reporte__field">
+      <span class="documento-reporte__label">Máquina</span>
+      <span class="documento-reporte__value">{{ reporte.maquina_nombre|default:"-" }}</span>
+    </div>
+    <div class="documento-reporte__field">
+      <span class="documento-reporte__label">Reportado por</span>
+      <span class="documento-reporte__value">{{ reporte.trabajador_nombre|default:"-" }}</span>
+    </div>
+    <div class="documento-reporte__field">
+      <span class="documento-reporte__label">Severidad</span>
+      <span class="documento-reporte__value">{{ reporte.tipo_severidad_nombre|default:"-" }}</span>
+    </div>
+    <div class="documento-reporte__field">
+      <span class="documento-reporte__label">Tipo de falla</span>
+      <span class="documento-reporte__value">
+        {% for f in reporte.fallas_asociadas %}{{ f.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
+      </span>
+    </div>
+    <div class="documento-reporte__field">
+      <span class="documento-reporte__label">Fecha de creación</span>
+      <span class="documento-reporte__value">{{ reporte.fechaCreacion }} · {{ reporte.horaCreacion }}</span>
+    </div>
+    <div class="documento-reporte__field">
+      <span class="documento-reporte__label">Fecha de solución</span>
+      <span class="documento-reporte__value">{{ reporte.fechaResolucion|default:"-" }}</span>
+    </div>
+    <div class="documento-reporte__field">
+      <span class="documento-reporte__label">Tiempo de paro</span>
+      <span class="documento-reporte__value">{{ reporte.tiempoParo|default:"0" }} hrs</span>
+    </div>
+  </section>
+
+  <section class="documento-reporte__section">
+    <h3>Descripción</h3>
+    <p>{{ reporte.descripcion|default:"Sin descripción." }}</p>
+  </section>
+
+  <section class="documento-reporte__section">
+    <h3>Causa raíz</h3>
+    <p>{{ reporte.causaRaiz|default:"Sin causa raíz registrada." }}</p>
+  </section>
+
+  {% if reporte.imagen %}
+  <section class="documento-reporte__section">
+    <h3>Evidencia</h3>
+    <img class="documento-reporte__img" src="{{ reporte.imagen }}" alt="Evidencia del reporte">
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

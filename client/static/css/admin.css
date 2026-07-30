@@ -140,7 +140,7 @@
     grid-template-rows: 0fr;              /* truco para animar height:auto */
     transition: grid-template-rows 0.24s ease;
 }
-.sidebar__submenu > a { overflow: hidden; }
+.sidebar__submenu-inner { overflow: hidden; min-height: 0; }
 .sidebar__group.is-open .sidebar__submenu { grid-template-rows: 1fr; }
 
 /* wrapper interno implícito: los <a> se ocultan al colapsar por el 0fr */

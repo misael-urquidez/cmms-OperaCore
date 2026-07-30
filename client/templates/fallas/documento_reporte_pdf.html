@@ -1,0 +1,71 @@
+<html>
+<head>
+<style>
+  @page { size: letter; margin: 2cm; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #1f2430; font-size: 11pt; }
+  h1 { font-size: 20pt; margin: 0 0 2px 0; }
+  h2 { font-size: 14pt; margin: 14px 0 8px 0; color: #1f2430; }
+  h3 { font-size: 11pt; margin: 14px 0 4px 0; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+  .kicker { font-size: 9pt; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin: 0; }
+  .estado { font-size: 9pt; padding: 3px 10px; border: 1px solid #94a3b8; border-radius: 10px; color: #334155; }
+  table.head { width: 100%; margin-bottom: 10px; }
+  table.grid { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  table.grid td { width: 50%; padding: 6px 8px; border: 1px solid #e2e8f0; vertical-align: top; }
+  .label { display: block; font-size: 8pt; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+  .value { font-size: 10.5pt; color: #1f2430; }
+  .texto { font-size: 10.5pt; line-height: 1.4; }
+  .evidencia { max-width: 100%; max-height: 320px; margin-top: 6px; border: 1px solid #e2e8f0; }
+  .footer { margin-top: 24px; font-size: 8pt; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+</style>
+</head>
+<body>
+
+  <table class="head">
+    <tr>
+      <td>
+        <p class="kicker">Reporte de falla</p>
+        <h1>#{{ reporte.numeroRegistro }}</h1>
+      </td>
+      <td align="right">
+        <span class="estado">{{ reporte.estado_reporte_nombre|default:reporte.estado_reporte|default:"-" }}</span><br/>
+        {% if reporte.fechaResolucion %}<span style="font-size:8pt;color:#64748b;">Cerrado el {{ reporte.fechaResolucion }}</span>{% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <h2>{{ reporte.asunto }}</h2>
+
+  <table class="grid">
+    <tr>
+      <td><span class="label">Máquina</span><span class="value">{{ reporte.maquina_nombre|default:"-" }}</span></td>
+      <td><span class="label">Reportado por</span><span class="value">{{ reporte.trabajador_nombre|default:"-" }}</span></td>
+    </tr>
+    <tr>
+      <td><span class="label">Severidad</span><span class="value">{{ reporte.tipo_severidad_nombre|default:"-" }}</span></td>
+      <td><span class="label">Tipo de falla</span><span class="value">{% for f in reporte.fallas_asociadas %}{{ f.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}</span></td>
+    </tr>
+    <tr>
+      <td><span class="label">Fecha de creación</span><span class="value">{{ reporte.fechaCreacion }} · {{ reporte.horaCreacion }}</span></td>
+      <td><span class="label">Fecha de solución</span><span class="value">{{ reporte.fechaResolucion|default:"-" }}</span></td>
+    </tr>
+    <tr>
+      <td><span class="label">Tiempo de paro</span><span class="value">{{ reporte.tiempoParo|default:"0" }} hrs</span></td>
+      <td></td>
+    </tr>
+  </table>
+
+  <h3>Descripción</h3>
+  <p class="texto">{{ reporte.descripcion|default:"Sin descripción." }}</p>
+
+  <h3>Causa raíz</h3>
+  <p class="texto">{{ reporte.causaRaiz|default:"Sin causa raíz registrada." }}</p>
+
+  {% if reporte.imagen %}
+  <h3>Evidencia</h3>
+  <img class="evidencia" src="{{ reporte.imagen }}"/>
+  {% endif %}
+
+  <p class="footer">OperaCore · Documento generado automáticamente a partir del reporte #{{ reporte.numeroRegistro }}.</p>
+
+</body>
+</html>

@@ -1,0 +1,75 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Orden {{ orden.folio }} · OperaCore{% endblock %}
+{% block breadcrumb %}Mantenimiento{% endblock %}
+{% block page_title %}Documento de la orden {{ orden.folio }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'mantenimiento/css/documento-orden.css' %}">{% endblock %}
+
+{% block content %}
+<div class="documento-orden__actions">
+  <a class="documento-orden__btn" href="{% url 'mantenimiento:index' %}">← Volver a la lista</a>
+  <div class="documento-orden__actions-right">
+    {% if puede_modificar %}
+    <a class="documento-orden__btn" href="{% url 'mantenimiento:index' %}?orden={{ orden.folio }}">Modificar</a>
+    {% endif %}
+    <a class="documento-orden__btn documento-orden__btn--primary" href="{% url 'mantenimiento:documento_orden_pdf' folio=orden.folio %}">⬇ Descargar PDF</a>
+  </div>
+</div>
+
+<article class="documento-orden">
+  <header class="documento-orden__head">
+    <div>
+      <p class="documento-orden__kicker">{{ orden.tipo_mantenimiento_nombre|default:orden.tipo_mantenimiento }}</p>
+      <h1 class="documento-orden__folio">{{ orden.folio }}</h1>
+    </div>
+    <div class="documento-orden__estado">
+      <span class="badge">{{ orden.estado_orden_nombre|default:orden.estado_orden|default:"-" }}</span>
+      {% if orden.fechacierre %}<p class="documento-orden__cerrado">Cerrada el {{ orden.fechacierre }} · {{ orden.horacierre }}</p>{% endif %}
+    </div>
+  </header>
+
+  <section class="documento-orden__grid">
+    <div class="documento-orden__field">
+      <span class="documento-orden__label">Máquina</span>
+      <span class="documento-orden__value">{{ orden.maquina_nombre|default:"-" }}</span>
+    </div>
+    <div class="documento-orden__field">
+      <span class="documento-orden__label">Asignada a</span>
+      <span class="documento-orden__value">{{ orden.trabajador_nombre|default:"Sin asignar" }}</span>
+    </div>
+    <div class="documento-orden__field">
+      <span class="documento-orden__label">Fecha de creación</span>
+      <span class="documento-orden__value">{{ orden.fechacreacion }} · {{ orden.horacreacion }}</span>
+    </div>
+    <div class="documento-orden__field">
+      <span class="documento-orden__label">Fecha programada</span>
+      <span class="documento-orden__value">{{ orden.fechaprogramada|default:"-" }}</span>
+    </div>
+    <div class="documento-orden__field">
+      <span class="documento-orden__label">Horas intervenidas</span>
+      <span class="documento-orden__value">{{ orden.horasintervenidas|default:"-" }}</span>
+    </div>
+    {% if orden.reporte_falla %}
+    <div class="documento-orden__field">
+      <span class="documento-orden__label">Reporte de falla</span>
+      <span class="documento-orden__value">#{{ orden.reporte_falla }} · {{ orden.reporte_falla_asunto }}</span>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="documento-orden__section">
+    <h3>Descripción</h3>
+    <p>{{ orden.descripcion|default:"Sin descripción." }}</p>
+  </section>
+
+  <section class="documento-orden__section">
+    <h3>Diagnóstico</h3>
+    <p>{{ orden.diagnostico|default:"Sin diagnóstico registrado." }}</p>
+  </section>
+
+  <section class="documento-orden__section">
+    <h3>Notas</h3>
+    <p>{{ orden.notas|default:"Sin notas." }}</p>
+  </section>
+</article>
+{% endblock %}
