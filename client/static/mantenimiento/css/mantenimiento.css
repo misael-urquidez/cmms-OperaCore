@@ -35,13 +35,13 @@ dialog#newOrdenModal, dialog#ordenDrawer {
 /* reset universal: cualquier botón/texto suelto dentro de los diálogos hereda el tema oscuro,
    así no dependemos de que el HTML traiga la clase correcta en cada botón */
 dialog#newOrdenModal *, dialog#ordenDrawer * { color:inherit; box-sizing:border-box; }
-dialog#newOrdenModal button:not(#newOrdenCancel),
+dialog#newOrdenModal button:not(#newOrdenCancel):not(#elipseOrdenClose):not(#elipseOrdenBtn),
 dialog#ordenDrawer button:not(#ordenDrawerClose) {
   font:inherit; cursor:pointer; border-radius:.5rem; border:1px solid var(--line);
   background:var(--color-primary); color:#04121c; font-weight:700; font-size:.85rem;
   padding:.6rem 1rem; width:100%; transition:filter .12s ease, opacity .12s ease;
 }
-dialog#newOrdenModal button:not(#newOrdenCancel):hover,
+dialog#newOrdenModal button:not(#newOrdenCancel):not(#elipseOrdenClose):not(#elipseOrdenBtn):hover,
 dialog#ordenDrawer button:not(#ordenDrawerClose):hover { filter:brightness(1.08); }
 dialog#newOrdenModal button:disabled, dialog#ordenDrawer button:disabled { opacity:.5; cursor:not-allowed; filter:none; }
 
@@ -50,14 +50,52 @@ dialog#newOrdenModal::backdrop, dialog#ordenDrawer::backdrop {
 }
 
 dialog#newOrdenModal { position:fixed; inset:0; margin:auto; }
-dialog#newOrdenModal form {
+
+/* Layout: form + panel de Elipse lado a lado dentro del mismo dialog (evita
+   el problema de un <aside> normal quedando atrapado detras del "top layer"
+   del <dialog>). En pantallas angostas se apilan en columna. */
+dialog#newOrdenModal .new-orden-layout {
+  display:flex; align-items:stretch; gap:0; max-width:96vw;
+}
+dialog#newOrdenModal #newOrdenForm {
   width:min(520px,92vw); background:var(--color-surface); border:1px solid var(--line);
   border-radius:.75rem; padding:1.25rem; box-shadow:0 20px 50px rgba(0,0,0,.45);
-  display:grid; gap:.75rem;
+  display:grid; gap:.75rem; max-height:88vh; overflow-y:auto;
+}
+
+/* Panel de Elipse embebido: pisa las reglas de posicion fija/slide-in de
+   elipse-falla.css (misma especificidad de clase pero combinando ambas
+   clases en el selector gana igual sin depender del orden de los <link>). */
+.elipse-falla-panel.elipse-falla-panel--embedded {
+  position:static; transform:none; box-shadow:none;
+  top:auto; right:auto; bottom:auto; z-index:auto;
+  width:0; max-width:0; padding:0; margin:0; opacity:0; pointer-events:none;
+  overflow:hidden; border-left:none; max-height:88vh;
+  transition:width .2s ease, opacity .15s ease, padding .2s ease, margin .2s ease;
+}
+.elipse-falla-panel.elipse-falla-panel--embedded.is-open {
+  width:min(380px,42vw); max-width:380px; min-width:280px; padding:1.1rem 1.1rem 1.4rem;
+  margin-left:.9rem; opacity:1; pointer-events:auto; border-left:1px solid var(--line);
+}
+.elipse-falla-panel--embedded .elipse-falla-panel__head { flex-wrap:nowrap; gap:.5rem; }
+.elipse-falla-panel--embedded .elipse-falla-panel__title { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.elipse-falla-panel--embedded .elipse-falla-panel__close { flex:0 0 auto; }
+
+.elipse-falla-panel--embedded .elipse-falla-panel__hint,
+.elipse-falla-panel--embedded .elipse-falla-panel__footnote,
+.elipse-falla-panel--embedded .elipse-falla-panel__msg--ai ul { color:var(--color-muted); }
+.elipse-falla-panel--embedded .elipse-falla-panel__msg--user { color:#04121c; }
+
+@media (max-width:900px) {
+  dialog#newOrdenModal .new-orden-layout { flex-direction:column; max-height:92vh; overflow-y:auto; }
+  dialog#newOrdenModal #newOrdenForm { max-height:none; }
+  .elipse-falla-panel.elipse-falla-panel--embedded.is-open {
+    width:100%; max-width:100%; min-width:0; margin-left:0; margin-top:.9rem; max-height:60vh;
+  }
 }
 dialog#newOrdenModal h2 { margin:0 0 .25rem; font-size:1.1rem; }
 dialog#newOrdenModal label { display:flex; flex-direction:column; gap:.3rem; font-size:.78rem; color:var(--color-muted); }
-dialog#newOrdenModal input, dialog#newOrdenModal select, dialog#newOrdenModal textarea {
+dialog#newOrdenModal #newOrdenForm input, dialog#newOrdenModal #newOrdenForm select, dialog#newOrdenModal #newOrdenForm textarea {
   background:var(--input-bg); border:1px solid var(--line); border-radius:.45rem; padding:.5rem .6rem;
   color:var(--color-text); font-size:.85rem; font-family:inherit;
 }

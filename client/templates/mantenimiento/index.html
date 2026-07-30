@@ -18,7 +18,7 @@
 {% if not es_tecnico %}<label>Estado <select id="filtroEstado"><option value="">Todos</option>{% for e in estados %}<option value="{{ e.codigo }}">{{ e.nombre }}</option>{% endfor %}</select></label>{% endif %}
 <div class="ordenes-list" id="ordenesList"><p id="ordenesEmpty" hidden>No hay órdenes para mostrar.</p></div>
 </section>
-{% if not es_tecnico %}<dialog id="newOrdenModal"><form id="newOrdenForm"><h2>Nueva orden</h2><button type="button" class="btn-elipse-falla" id="btnElipseOrden" title="Describe lo que necesita la maquina y Elipse te ayuda a llenar el formulario"><span class="elipse-bolt">⚡</span> Ayúdame a redactar con Elipse</button><label>Máquina <select id="oMaquina" required></select></label><label>Tipo <select id="oTipo"><option value="PREVE">Preventivo</option><option value="CORRE">Correctivo</option></select></label><div id="oReporteFallaWrap" class="orden-reporte" hidden><span class="orden-reporte__label">Reporte de falla (opcional)</span><div id="oReporteFallaEmpty"><button type="button" id="oReporteFallaBtn">+ Adjuntar reporte de falla</button></div><div id="oReporteFallaChip" class="orden-reporte__chip" hidden><span id="oReporteFallaTexto"></span><button type="button" id="oReporteFallaVer">Ver</button><button type="button" id="oReporteFallaQuitar">Quitar</button></div></div><label>Asignar a <select id="oTrabajador"><option value="">Sin asignar</option></select></label><label>Fecha <input id="oFecha" type="date"></label><label>Descripción <textarea id="oDescripcion" required></textarea></label><p id="newOrdenError" hidden></p><button class="btn-orden-new">Crear</button><button type="button" id="newOrdenCancel">Cancelar</button></form></dialog>
+{% if not es_tecnico %}<dialog id="newOrdenModal"><div class="new-orden-layout"><form id="newOrdenForm"><h2>Nueva orden</h2><button type="button" class="btn-elipse-falla" id="btnElipseOrden" title="Describe lo que necesita la maquina y Elipse te ayuda a llenar el formulario"><span class="elipse-bolt">⚡</span> Ayúdame a redactar con Elipse</button><label>Máquina <select id="oMaquina" required></select></label><label>Tipo <select id="oTipo"><option value="PREVE">Preventivo</option><option value="CORRE">Correctivo</option></select></label><div id="oReporteFallaWrap" class="orden-reporte" hidden><span class="orden-reporte__label">Reporte de falla (opcional)</span><div id="oReporteFallaEmpty"><button type="button" id="oReporteFallaBtn">+ Adjuntar reporte de falla</button></div><div id="oReporteFallaChip" class="orden-reporte__chip" hidden><span id="oReporteFallaTexto"></span><button type="button" id="oReporteFallaVer">Ver</button><button type="button" id="oReporteFallaQuitar">Quitar</button></div></div><label>Asignar a <select id="oTrabajador"><option value="">Sin asignar</option></select></label><label>Fecha <input id="oFecha" type="date"></label><label>Descripción <textarea id="oDescripcion" required></textarea></label><p id="newOrdenError" hidden></p><button class="btn-orden-new">Crear</button><button type="button" id="newOrdenCancel">Cancelar</button></form><aside class="elipse-falla-panel elipse-falla-panel--embedded" id="elipseOrdenPanel" aria-hidden="false"><div class="elipse-falla-panel__head"><div class="elipse-falla-panel__title"><span class="elipse-bolt">⚡</span> Elipse</div><button type="button" class="elipse-falla-panel__close" id="elipseOrdenClose" aria-label="Cerrar panel">✕</button></div><p class="elipse-falla-panel__hint">Cuéntame qué necesita la máquina y te ayudo a llenar la orden.</p><div class="elipse-falla-panel__chat" id="elipseOrdenChat"></div><form class="elipse-falla-panel__form" id="elipseOrdenForm" onsubmit="return false;"><textarea id="elipseOrdenInput" rows="2" placeholder="Ej. hay que revisar la banda de MAQ003, esta rechinando..."></textarea><button type="button" class="elipse-falla-panel__btn" id="elipseOrdenBtn">➤</button></form><p class="elipse-falla-panel__footnote">Elipse solo propone texto; nada se guarda hasta que tú das "Crear".</p></aside></div></dialog>
 <dialog id="reporteFallaPickerModal"><h2>Adjuntar reporte de falla</h2><p id="rfPickerHint">Reportes abiertos de la máquina seleccionada, sin orden vinculada.</p><div id="rfLista" class="orden-reporte__lista"></div><p id="rfEmpty" hidden>No hay reportes disponibles para esta máquina.</p><button type="button" id="rfCancelar">Cerrar</button></dialog>{% endif %}
 <div class="fallas-modal" id="detalle-falla"></div>
 <div class="orden-drawer-scrim" id="ordenDrawerScrim" hidden></div>
@@ -55,21 +55,7 @@
 </div>
 
 {% if not es_tecnico %}
-{# ---- panel lateral de Elipse para "Nueva orden": no toca la BD, solo propone texto (reusa las clases de elipse-falla.css) ---- #}
-<div class="elipse-falla-overlay" id="elipseOrdenOverlay" hidden></div>
-<aside class="elipse-falla-panel" id="elipseOrdenPanel" aria-hidden="true">
-  <div class="elipse-falla-panel__head">
-    <div class="elipse-falla-panel__title"><span class="elipse-bolt">⚡</span> Elipse</div>
-    <button type="button" class="elipse-falla-panel__close" id="elipseOrdenClose" aria-label="Cerrar panel">✕</button>
-  </div>
-  <p class="elipse-falla-panel__hint">Cuéntame qué necesita la máquina y te ayudo a llenar la orden.</p>
-  <div class="elipse-falla-panel__chat" id="elipseOrdenChat"></div>
-  <form class="elipse-falla-panel__form" id="elipseOrdenForm" onsubmit="return false;">
-    <textarea id="elipseOrdenInput" rows="2" placeholder="Ej. hay que revisar la banda de MAQ003, esta rechinando..."></textarea>
-    <button type="button" class="elipse-falla-panel__btn" id="elipseOrdenBtn">➤</button>
-  </form>
-  <p class="elipse-falla-panel__footnote">Elipse solo propone texto; nada se guarda hasta que tú das "Crear".</p>
-</aside>
+{# ---- config de Elipse para "Nueva orden": el panel ahora vive DENTRO de #newOrdenModal (ver arriba), embebido junto al formulario ---- #}
 <script>
   window.ELIPSE_ORDEN_CONFIG = {
     csrf: "{{ csrf_token }}",

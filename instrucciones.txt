@@ -1,0 +1,42 @@
+views). El "bug" no es uno solo, son tres cosas que se combinan y por eso al final siempre te manda al modo "modificar" en vez de a una vista de solo lectura:
+
+1. El endpoint que llena la lista no trae los datos de cierre
+
+cargarOrdenes() pide mantenimiento:ordenes-datos, que usa ListOrdenMantenimientoSerializer. Ese serializer no incluye diagnostico, notas, horasintervenidas ni porcentaje (esos campos solo están en DetailOrdenMantenimientoSerializer, api/apps/mantenimiento/serializers.py).
+
+Como el drawer arma toda su info con estado.ordenes (lo que vino de esa lista), nunca tiene el diagnóstico ni las notas de una orden ya cerrada. Por eso no hay nada que "ver": los datos simplemente no llegaron al navegador.
+
+2. abrirDrawer() nunca llena los inputs con lo ya guardado
+
+En mantenimiento.js, abrirDrawer(folio) solo setea folio/título/info/descripción. Nunca hace algo como:
+
+js
+document.getElementById("cDiagnostico").value = orden.diagnostico || "";
+document.getElementById("cNotas").value = orden.notas || "";
+document.getElementById("cHoras").value = orden.horasintervenidas || "";
+
+Así que aunque esos campos se vean, están vacíos o con lo que haya quedado de la orden anterior que abriste (no se limpian tampoco).
+
+3. El formulario de cierre queda oculto siempre para el admin, sea cual sea el estado
+
+js
+formCerrar.hidden = cerrada || !(ES_TECNICO && (orden.estado_orden === "ENPRO" || orden.estado_orden === "PROGR"));
+
+Si ES_TECNICO es false (un admin), el segundo término es !(false && ...) → siempre true. Entonces formCerrar.hidden es true sin importar si la orden está abierta o cerrada. Como admin nunca ves ese bloque con datos correctos — y como técnico, en cuanto la orden pasa a CERRA, se oculta también, sin mostrar nunca la info ya capturada.
+
+Conclusión: ahora mismo no existe una "vista" real de orden cerrada — solo existe un único drawer que muestra/oculta el formulario de edición. Cuando lo ocultas, no queda nada que ver; cuando lo dejas visible, sale vacío y editable, que es justo lo que describes ("te manda a modificar").
+
+Cómo arreglarlo
+Backend: agrega diagnostico, notas, horasintervenidas, porcentaje a ListOrdenMantenimientoSerializer (o mejor, haz que abrirDrawer() pida el detalle con mantenimiento:ordenes-detalle en vez de depender de la lista).
+Frontend: en abrirDrawer(), cuando cerrada sea true, pinta esos valores en modo solo-lectura (puedes reusar los mismos campos con readonly/disabled, o mostrarlos como texto plano) en vez de ocultar todo el bloque:
+js
+if (cerrada) {
+  document.getElementById("cDiagnostico").value = orden.diagnostico || "Sin diagnóstico registrado";
+  document.getElementById("cNotas").value = orden.notas || "";
+  document.getElementById("cHoras").value = orden.horasintervenidas ?? "";
+  [cDiagnostico, cNotas, cHoras].forEach(el => el.disabled = true);
+  formCerrar.hidden = false; // mostrar como vista, no como formulario activo
+  movConfirmar.hidden = movAddBtn.hidden = true; // sin edición de piezas
+} else {
+  formCerrar.hidden = !(ES_TECNICO && ["ENPRO","PROGR"].includes(orden.estado_orden));
+}

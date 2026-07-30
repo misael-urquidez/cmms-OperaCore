@@ -184,6 +184,8 @@
   }
 
   // ------------------------------------------------------------- fetch
+  var _folioParaAbrir = new URLSearchParams(window.location.search).get("orden");
+
   function cargarOrdenes() {
     var params = new URLSearchParams();
     if (ES_TECNICO && NUMERO_NOMINA) params.set("trabajador", NUMERO_NOMINA);
@@ -193,6 +195,11 @@
       .then(function (data) {
         estado.ordenes = Array.isArray(data) ? data : [];
         pintarLista();
+        if (_folioParaAbrir) {
+          abrirDrawer(_folioParaAbrir);
+          _folioParaAbrir = null;
+          window.history.replaceState({}, "", window.location.pathname);
+        }
       })
       .catch(function () {
         listEl.querySelectorAll(".orden-card").forEach(function (n) { n.remove(); });
@@ -220,7 +227,9 @@
       '<span class="orden-card__desc">' + o.descripcion + '</span>' +
       '<span class="orden-card__meta">' + (o.maquina_nombre || o.maquina || "Sin máquina") + " · " + (o.tipo_mantenimiento_nombre || o.tipo_mantenimiento || "") + '</span>' +
       '<span class="orden-card__meta">Asignada a: ' + (o.trabajador_nombre || "Sin asignar") + '</span>';
-    card.addEventListener("click", function () { abrirDrawer(o.folio); });
+    card.addEventListener("click", function () {
+      abrirDrawer(o.folio);
+    });
     return card;
   }
 
@@ -234,6 +243,8 @@
     var errorEl = document.getElementById("newOrdenError");
     var selectMaquina = document.getElementById("oMaquina");
     var selectTrabajador = document.getElementById("oTrabajador");
+    var oFecha = document.getElementById("oFecha");
+    if (oFecha) oFecha.min = new Date().toISOString().slice(0, 10);
 
     maquinas.forEach(function (m) {
       var opt = document.createElement("option");
@@ -257,6 +268,23 @@
     btnNueva.addEventListener("click", abrirModal);
     var btnCancelar = document.getElementById("newOrdenCancel");
     if (btnCancelar) btnCancelar.addEventListener("click", function (ev) { ev.preventDefault(); cerrarModal(); });
+
+    (function prellenarDesdeMonitoreo() {
+      var params = new URLSearchParams(window.location.search);
+      var maquinaParam = params.get("maquina");
+      if (!maquinaParam) return;
+      abrirModal();
+      selectMaquina.value = maquinaParam;
+      var tipoParam = params.get("tipo");
+      var oTipoSelect = document.getElementById("oTipo");
+      if (tipoParam && oTipoSelect) {
+        oTipoSelect.value = tipoParam;
+        oTipoSelect.dispatchEvent(new Event("change"));
+      }
+      var fechaParam = params.get("fecha");
+      if (fechaParam && oFecha) oFecha.value = fechaParam;
+      window.history.replaceState({}, "", window.location.pathname);
+    })();
 
     form.addEventListener("submit", function (ev) {
       ev.preventDefault();
@@ -349,7 +377,11 @@
       }
     }
 
-    var cerrada = !!orden.fechacierre;
+    // La tarjeta de la lista usa estado_orden para decidir el color/etiqueta
+    // "Cerrada"; el drawer debe usar la misma fuente de verdad en vez de
+    // confiar solo en fechacierre, que puede venir vacío en ordenes viejas
+    // o cerradas fuera del flujo normal.
+    var cerrada = orden.estado_orden === "CERRA" || orden.estado_orden === "CANCE" || !!orden.fechacierre;
 
     if (asignarSelect && btnAsignar) {
       var seccionAsignar = asignarSelect.closest("label") || asignarSelect;

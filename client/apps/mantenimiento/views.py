@@ -9,6 +9,7 @@ from django.views import View
 API_URL = f"{settings.API_BASE_URL}/mantenimiento"
 SESSION = requests.Session()
 
+
 class Index(View):
     template_name = "mantenimiento/index.html"
     def get(self, request):
@@ -21,6 +22,7 @@ class Index(View):
                 r = SESSION.get(url, timeout=5); r.raise_for_status(); return r.json()
             except requests.RequestException: return []
         return render(request, self.template_name, {"seccion":"mantenimiento", "base_template":"base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html", "es_tecnico":usuario.get("rol") == "TECNI", "usuario":usuario, "trabajadores":obtener(f"{settings.API_BASE_URL}/fallas/v1/trabajadores/"), "maquinas":obtener(f"{settings.API_BASE_URL}/monitoreo/maquinas/"), "estados":obtener(f"{API_URL}/v1/estado-orden/list/"), "tipos_mantenimiento":obtener(f"{API_URL}/v1/tipo-mantenimiento/list/"), "piezas":obtener(f"{settings.API_BASE_URL}/inventario/v1/piezas/list/"), "refacciones":obtener(f"{settings.API_BASE_URL}/inventario/v1/refacciones/list/")})
+
 
 class ProxyOrden(View):
     action = None
