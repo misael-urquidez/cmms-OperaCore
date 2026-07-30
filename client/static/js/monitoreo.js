@@ -187,6 +187,7 @@ function render(maquinas) {
     var arrastrando = false, offX = 0, offY = 0;
 
     node.addEventListener("pointerdown", function (ev) {
+      if (ev.button !== 0) return;   // solo click izquierdo mueve el nodo; derecho es para la cámara
       arrastrando = true;
       node.dataset.dragged = "0";
       node.classList.add("is-dragging");
@@ -216,6 +217,42 @@ function render(maquinas) {
     }
     node.addEventListener("pointerup", soltar);
     node.addEventListener("pointercancel", soltar);
+  }
+
+  // -------------------------------------------------- pan de cámara con click derecho
+  var plantWrap = document.querySelector(".plant-wrap");
+  if (plantWrap) {
+    var isPanning = false;
+    var startX, startY, scrollLeft, scrollTop;
+
+    plantWrap.addEventListener("pointerdown", function (ev) {
+      if (ev.button !== 2) return;   // solo click derecho
+      isPanning = true;
+      startX = ev.clientX;
+      startY = ev.clientY;
+      scrollLeft = plantWrap.scrollLeft;
+      scrollTop = plantWrap.scrollTop;
+      plantWrap.classList.add("is-panning");
+      ev.preventDefault();
+    });
+
+    plantWrap.addEventListener("pointermove", function (ev) {
+      if (!isPanning) return;
+      var x = ev.clientX;
+      var y = ev.clientY;
+      plantWrap.scrollLeft = scrollLeft - (x - startX);
+      plantWrap.scrollTop = scrollTop - (y - startY);
+    });
+
+    plantWrap.addEventListener("pointerup", function () {
+      isPanning = false;
+      plantWrap.classList.remove("is-panning");
+    });
+
+    plantWrap.addEventListener("pointerleave", function () {
+      isPanning = false;
+      plantWrap.classList.remove("is-panning");
+    });
   }
 
   // ------------------------------------------------------------- feed
@@ -428,6 +465,14 @@ refrescar();
     if (!estado.seleccionada) return;
     var codigo = estado.seleccionada;
     var accion = drawerAccionEstadoBtn.dataset.accion;
+
+    // Redirigir a Mantenimiento para programar mantenimiento preventivo si la acción es "deshabilitar"
+    if (accion === "deshabilitar") {
+      var fechaActual = new Date().toISOString().split('T')[0];
+      window.location.href = "/mantenimiento/?maquina=" + encodeURIComponent(codigo) + "&tipo=PREVE&fecha=" + fechaActual;
+      return;
+    }
+
     drawerAccionEstadoBtn.disabled = true;
     fetch(urlPara(ESTADO_ACCION_TPL, codigo), {
       method: "POST",
