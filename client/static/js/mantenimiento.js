@@ -294,6 +294,16 @@
       }
       var fechaParam = params.get("fecha");
       if (fechaParam && oFecha) oFecha.value = fechaParam;
+
+      var reporteParam = params.get("reporte");
+      if (reporteParam) {
+        reporteSeleccionado = {
+          numeroRegistro: reporteParam,
+          asunto: params.get("asunto") || ("Reporte #" + reporteParam),
+        };
+        pintarReporteSeleccionado();
+      }
+
       window.history.replaceState({}, "", window.location.pathname);
     })();
 
@@ -634,6 +644,38 @@
       document.getElementById("export-orden-pdf-link").href  = urlPara(EXPORTAR_PDF_TPL, folio);
       exportModal.classList.add("is-open");
     });
+
+    // Si la orden tiene reporte de falla asociado, preguntamos si debe
+    // incluirse en el mismo archivo antes de iniciar la descarga.
+    var confirmFallaModal = document.getElementById("confirmFallaPdfModal");
+    var pdfLink = document.getElementById("export-orden-pdf-link");
+    if (confirmFallaModal && pdfLink) {
+      pdfLink.addEventListener("click", function (ev) {
+        var ordenSel = estado.seleccionada;
+        if (!ordenSel || !ordenSel.reporte_falla) return;
+        ev.preventDefault();
+        var pdfUrl = urlPara(EXPORTAR_PDF_TPL, ordenSel.folio);
+        document.getElementById("confirmFallaPdfTexto").textContent =
+          "Esta orden tiene el reporte de falla \"" +
+          (ordenSel.reporte_falla_asunto || ("#" + ordenSel.reporte_falla)) +
+          "\" asociado. ¿Quieres incluirlo en el mismo PDF?";
+        confirmFallaModal.showModal();
+
+        document.getElementById("btnConfirmFallaSi").onclick = function () {
+          window.location.href = pdfUrl + "?incluir_falla=1";
+          confirmFallaModal.close();
+          exportModal.classList.remove("is-open");
+        };
+        document.getElementById("btnConfirmFallaSolo").onclick = function () {
+          window.location.href = pdfUrl;
+          confirmFallaModal.close();
+          exportModal.classList.remove("is-open");
+        };
+        document.getElementById("btnConfirmFallaCancelar").onclick = function () {
+          confirmFallaModal.close();
+        };
+      });
+    }
 
     $(document).on("click", "[data-dismiss='modal-export-orden']", function () {
       exportModal.classList.remove("is-open");

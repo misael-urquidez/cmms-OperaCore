@@ -11,6 +11,14 @@
     <span class="elipse-bolt">⚡</span> Ayúdame a redactar con Elipse
   </button>
 
+  <button type="button" class="btn-elipse-falla" id="btnImportarDocx" title="Sube un reporte llenado en Word o PDF y Elipse lo lee por ti" onclick="document.getElementById('inputImportarDocx').click()">
+    📄 Importar Word o PDF
+  </button>
+  <input type="file" id="inputImportarDocx" accept=".docx,.pdf" hidden>
+  <a class="btn-elipse-falla" href="{% static 'fallas/plantillas/plantilla_reporte_falla.docx' %}" download style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">
+    ⬇️ Descargar plantilla
+  </a>
+
   <div class="guias">
     <details open>
       <summary>¿Que hacer en un reporte de falla?</summary>
@@ -160,8 +168,23 @@
       urlAutocompletar: "{% url 'elipse:autocompletar_falla' %}"
   };
 </script>
+<script>
+  // Si llegamos desde el mapa de máquinas con ?maquina=CODIGO, la
+  // dejamos ya seleccionada en el formulario.
+  (function () {
+    var codigo = new URLSearchParams(window.location.search).get("maquina");
+    if (!codigo) return;
+    var select = document.getElementById("maquina");
+    if (select) select.value = codigo;
+    window.history.replaceState({}, "", window.location.pathname);
+  })();
+</script>
 <script src="{% static 'fallas/js/preview-imagenes.js' %}"></script>
 <script src="{% static 'fallas/js/añadir-elementos.js' %}"></script>
 <script src="{% static 'js/validaciones-inputs.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
+<script src="{% static 'js/extraer-texto-doc.js' %}"></script>
 <script src="{% static 'fallas/js/elipse-falla.js' %}"></script>
 {% endblock %}

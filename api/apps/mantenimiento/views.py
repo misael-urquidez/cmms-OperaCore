@@ -1,4 +1,5 @@
 import csv
+import os
 import io
 
 from django.http import HttpResponse
@@ -6,9 +7,10 @@ from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from rest_framework import generics, status
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
@@ -18,6 +20,7 @@ from apps.maquinaria.services import cambiar_estado_maquina
 from django.db import transaction
 from . import models
 from . import serializers
+from apps.fallas.views import _get_reporte_data
 
 
 class PingAPIView(APIView):
@@ -432,56 +435,228 @@ class ExportarOrdenXLSXAPIView(APIView):
         return response
 
 
+LOGO_PATH = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
+PAGE_W, PAGE_H = letter
+
+BRAND_DARK = colors.HexColor("#12261e")
+BRAND_ACCENT = colors.HexColor("#0369a1")
+BRAND_DANGER = colors.HexColor("#dc2626")
+BRAND_MUTED = colors.HexColor("#6b7280")
+BRAND_LINE = colors.HexColor("#e5e7eb")
+
+ESTADO_STYLES = {
+    "SOLIC": (colors.HexColor("#e2e8f0"), colors.HexColor("#334155")),
+    "PENDI": (colors.HexColor("#e2e8f0"), colors.HexColor("#334155")),
+    "APROB": (colors.HexColor("#dbeafe"), colors.HexColor("#1d4ed8")),
+    "PROGR": (colors.HexColor("#dbeafe"), colors.HexColor("#1d4ed8")),
+    "ENPRO": (colors.HexColor("#fef3c7"), colors.HexColor("#b45309")),
+    "ESESP": (colors.HexColor("#fef3c7"), colors.HexColor("#b45309")),
+    "EJECU": (colors.HexColor("#dcfce7"), colors.HexColor("#15803d")),
+    "CERRA": (colors.HexColor("#dcfce7"), colors.HexColor("#15803d")),
+    "CANCE": (colors.HexColor("#fee2e2"), colors.HexColor("#b91c1c")),
+}
+ESTADO_DEFAULT = (colors.HexColor("#e5e7eb"), colors.HexColor("#374151"))
+
+_styles = getSampleStyleSheet()
+_style_label = ParagraphStyle("ordenLabel", parent=_styles["Normal"], fontName="Helvetica-Bold",
+                               fontSize=7.5, textColor=BRAND_MUTED, leading=10)
+_style_value = ParagraphStyle("ordenValue", parent=_styles["Normal"], fontName="Helvetica",
+                               fontSize=9.5, textColor=BRAND_DARK, leading=13)
+_style_section_head = ParagraphStyle("ordenSectionHead", parent=_styles["Normal"], fontName="Helvetica-Bold",
+                                      fontSize=9.5, textColor=BRAND_DARK, leading=12)
+_style_body = ParagraphStyle("ordenBody", parent=_styles["Normal"], fontName="Helvetica",
+                              fontSize=9.5, textColor=colors.HexColor("#1f2937"), leading=14)
+_style_kicker = ParagraphStyle("ordenKicker", parent=_styles["Normal"], fontName="Helvetica-Bold",
+                                fontSize=8, textColor=BRAND_ACCENT, spaceAfter=6)
+_style_kicker_falla = ParagraphStyle("fallaKicker", parent=_styles["Normal"], fontName="Helvetica-Bold",
+                                      fontSize=8, textColor=BRAND_DANGER, spaceAfter=6)
+
+
+def _pdf_header_footer(data):
+    """Dibuja encabezado y pie en todas las páginas del documento."""
+    def _draw(canvas, doc):
+        canvas.saveState()
+        margin = 20 * mm
+
+        logo_w = 0
+        if os.path.isfile(LOGO_PATH):
+            logo_w = 14 * mm
+            try:
+                canvas.drawImage(
+                    LOGO_PATH, margin, PAGE_H - margin - logo_w + 6 * mm,
+                    width=logo_w, height=logo_w,
+                    preserveAspectRatio=True, mask="auto",
+                )
+            except Exception:
+                logo_w = 0
+
+        text_x = margin + (logo_w + 4 * mm if logo_w else 0)
+        canvas.setFillColor(BRAND_DARK)
+        canvas.setFont("Helvetica-Bold", 14)
+        canvas.drawString(text_x, PAGE_H - margin, "OperaCore")
+        canvas.setFont("Helvetica", 8)
+        canvas.setFillColor(BRAND_MUTED)
+        canvas.drawString(text_x, PAGE_H - margin - 10, "Sistema de mantenimiento industrial")
+
+        canvas.setFont("Helvetica-Bold", 12)
+        canvas.setFillColor(BRAND_DARK)
+        canvas.drawRightString(PAGE_W - margin, PAGE_H - margin, "Orden " + str(data.get("folio") or ""))
+
+        estado_codigo = data.get("estado_orden") or ""
+        estado_nombre = (data.get("estado_orden_nombre") or estado_codigo or "—").upper()
+        bg, fg = ESTADO_STYLES.get(estado_codigo, ESTADO_DEFAULT)
+        badge_w = 8 * mm + 1.7 * mm * len(estado_nombre)
+        badge_h = 5.5 * mm
+        badge_x = PAGE_W - margin - badge_w
+        badge_y = PAGE_H - margin - 10 - badge_h
+        canvas.setFillColor(bg)
+        canvas.roundRect(badge_x, badge_y, badge_w, badge_h, 2.5, stroke=0, fill=1)
+        canvas.setFillColor(fg)
+        canvas.setFont("Helvetica-Bold", 8)
+        canvas.drawCentredString(badge_x + badge_w / 2, badge_y + 1.7 * mm, estado_nombre)
+
+        canvas.setStrokeColor(BRAND_ACCENT)
+        canvas.setLineWidth(1.3)
+        line_y = PAGE_H - margin - 20 * mm
+        canvas.line(margin, line_y, PAGE_W - margin, line_y)
+
+        canvas.setStrokeColor(BRAND_LINE)
+        canvas.setLineWidth(0.6)
+        canvas.line(margin, margin - 4 * mm, PAGE_W - margin, margin - 4 * mm)
+        canvas.setFont("Helvetica", 7.5)
+        canvas.setFillColor(BRAND_MUTED)
+        generado = timezone.now().strftime("%d/%m/%Y %H:%M")
+        canvas.drawString(margin, margin - 10 * mm, "OperaCore · Documento generado automáticamente el " + generado)
+        canvas.drawRightString(PAGE_W - margin, margin - 10 * mm, "Página " + str(doc.page))
+
+        canvas.restoreState()
+    return _draw
+
+
+def _pdf_campo(label, valor):
+    return [Paragraph(label.upper(), _style_label), Paragraph(str(valor or "—"), _style_value)]
+
+
+def _pdf_ficha_tecnica(data):
+    filas = [
+        _pdf_campo("Máquina", data.get("maquina_nombre")) +
+        _pdf_campo("Trabajador asignado", data.get("trabajador_nombre") or "Sin asignar"),
+
+        _pdf_campo("Tipo de mantenimiento", data.get("tipo_mantenimiento_nombre")) +
+        _pdf_campo("Horas intervenidas", str(data.get("horasintervenidas") or "—")),
+
+        _pdf_campo("Fecha de creación", (data.get("fechacreacion") or "—") + " " + (data.get("horacreacion") or "")) +
+        _pdf_campo("Fecha programada", data.get("fechaprogramada")),
+
+        _pdf_campo("Fecha de cierre", (data.get("fechacierre") or "—") + " " + (data.get("horacierre") or "")) +
+        _pdf_campo("Reporte de falla asociado", data.get("reporte_falla_asunto") or "—"),
+    ]
+    tabla = Table(filas, colWidths=[30 * mm, 54 * mm, 30 * mm, 54 * mm])
+    tabla.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("LINEBELOW", (0, 0), (-1, -2), 0.5, BRAND_LINE),
+    ]))
+    return tabla
+
+
+def _pdf_ficha_falla(data):
+    filas = [
+        _pdf_campo("Severidad", data.get("tipo_severidad_nombre")) +
+        _pdf_campo("Estado del reporte", data.get("estado_reporte_nombre")),
+
+        _pdf_campo("Máquina", data.get("maquina_nombre")) +
+        _pdf_campo("Trabajador", data.get("trabajador_nombre")),
+
+        _pdf_campo("Fecha de creación", (data.get("fechaCreacion") or "—") + " " + (data.get("horaCreacion") or "")) +
+        _pdf_campo("Fecha de resolución", data.get("fechaResolucion") or "—"),
+
+        _pdf_campo("Tiempo de paro (hrs)", str(data.get("tiempoParo") or "—")) +
+        _pdf_campo("Tipos de falla", ", ".join(f["nombre"] for f in data.get("fallas_asociadas", [])) or "—"),
+    ]
+    tabla = Table(filas, colWidths=[30 * mm, 54 * mm, 30 * mm, 54 * mm])
+    tabla.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("LINEBELOW", (0, 0), (-1, -2), 0.5, BRAND_LINE),
+    ]))
+    return tabla
+
+
+def _pdf_seccion(titulo, contenido, color=BRAND_ACCENT):
+    """Bloque con acento para descripción, diagnóstico y notas."""
+    if not contenido:
+        return []
+    barra = Table([[""]], colWidths=[3], rowHeights=[16])
+    barra.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), color)]))
+    cuerpo = Table([[barra, Paragraph(titulo.upper(), _style_section_head)]], colWidths=[3, 465])
+    cuerpo.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (0, 0), 0),
+        ("RIGHTPADDING", (0, 0), (0, 0), 0),
+        ("LEFTPADDING", (1, 0), (1, 0), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    texto = str(contenido).replace("\n", "<br/>")
+    return [cuerpo, Spacer(1, 4), Paragraph(texto, _style_body), Spacer(1, 14)]
+
+
 class ExportarOrdenPDFAPIView(APIView):
 
     def get(self, request, folio):
         data = _get_orden_data(folio)
+        incluir_falla = request.GET.get("incluir_falla") == "1" and bool(data.get("reporte_falla"))
+
         buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter)
-        styles = getSampleStyleSheet()
-        elements = []
+        doc = SimpleDocTemplate(
+            buffer, pagesize=letter,
+            topMargin=34 * mm, bottomMargin=26 * mm,
+            leftMargin=20 * mm, rightMargin=20 * mm,
+            title="Orden de mantenimiento {}".format(data.get("folio") or ""),
+        )
 
-        elements.append(Paragraph(f"Orden de Mantenimiento {data.get('folio')}", styles["Title"]))
-        elements.append(Spacer(1, 12))
-
-        rows = [
-            ["Campo", "Valor"],
-            ["Descripcion", data.get("descripcion") or ""],
-            ["Diagnostico", data.get("diagnostico") or ""],
-            ["Notas", data.get("notas") or ""],
-            ["Maquina", data.get("maquina_nombre") or ""],
-            ["Trabajador", data.get("trabajador_nombre") or ""],
-            ["Tipo mantenimiento", data.get("tipo_mantenimiento_nombre") or ""],
-            ["Estado", data.get("estado_orden_nombre") or ""],
-            ["Fecha creacion", f"{data.get('fechacreacion') or ''} {data.get('horacreacion') or ''}"],
-            ["Fecha programada", data.get("fechaprogramada") or ""],
-            ["Fecha cierre", f"{data.get('fechacierre') or ''} {data.get('horacierre') or ''}"],
-            ["Horas intervenidas", str(data.get("horasintervenidas") or "")],
-            ["Reporte falla", data.get("reporte_falla_asunto") or ""],
+        elements = [
+            Paragraph("FICHA TÉCNICA", _style_kicker),
+            _pdf_ficha_tecnica(data),
+            Spacer(1, 10),
         ]
 
-        table = Table(rows, colWidths=[140, 340])
-        table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, 0), 10),
-            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-            ("FONTSIZE", (0, 1), (-1, -1), 9),
-            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d1d5db")),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#ffffff"), colors.HexColor("#f9fafb")]),
-        ]))
-        elements.append(table)
-        elements.append(Spacer(1, 16))
+        for titulo, contenido in [
+            ("Descripción", data.get("descripcion")),
+            ("Diagnóstico", data.get("diagnostico")),
+            ("Notas", data.get("notas")),
+        ]:
+            elements.extend(_pdf_seccion(titulo, contenido))
 
-        if data.get("descripcion"):
-            elements.append(Paragraph("Descripcion", styles["Heading2"]))
-            elements.append(Paragraph(data["descripcion"], styles["Normal"]))
+        filename_extra = ""
+        if incluir_falla:
+            falla_data = _get_reporte_data(data["reporte_falla"])
+            filename_extra = "_con_falla"
 
-        doc.build(elements)
+            elements.append(PageBreak())
+            elements.append(Paragraph("REPORTE DE FALLA ASOCIADO", _style_kicker_falla))
+            elements.append(Paragraph(
+                "#{} · {}".format(falla_data.get("numeroRegistro"), falla_data.get("asunto") or ""),
+                ParagraphStyle("fallaTitulo", parent=_styles["Normal"], fontName="Helvetica-Bold",
+                               fontSize=13, textColor=BRAND_DARK, spaceAfter=10),
+            ))
+            elements.append(_pdf_ficha_falla(falla_data))
+            elements.append(Spacer(1, 10))
+            for titulo, contenido in [
+                ("Descripción", falla_data.get("descripcion")),
+                ("Causa raíz", falla_data.get("causaRaiz")),
+            ]:
+                elements.extend(_pdf_seccion(titulo, contenido, color=BRAND_DANGER))
+
+        draw = _pdf_header_footer(data)
+        doc.build(elements, onFirstPage=draw, onLaterPages=draw)
+
         buffer.seek(0)
         response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="orden_mantenimiento_{folio}.pdf"'
+        response["Content-Disposition"] = "attachment; filename=\"orden_mantenimiento_{}{}.pdf\"".format(folio, filename_extra)
         return response

@@ -16,6 +16,8 @@
   var SIMULAR_TPL = root.dataset.simularUrlBase;
   var REGISTRO_OPS_TPL = root.dataset.registroOpsUrlBase;
   var REPARACION_MANUAL_TPL = root.dataset.reparacionManualUrlBase;
+  var MANTENIMIENTO_URL = root.dataset.mantenimientoUrl;
+  var REPORTAR_FALLA_URL = root.dataset.reportarFallaUrl;
 
 
   var canvas = document.getElementById("plantCanvas");
@@ -331,6 +333,7 @@ refrescar();
   var drawerAccionEstadoSection = document.getElementById("drawerAccionEstadoSection");
   var drawerAccionEstadoBtn = document.getElementById("drawerAccionEstadoBtn");
   var drawerAccionEstadoMsg = document.getElementById("drawerAccionEstadoMsg");
+  var drawerAccionFallaMantBtn = document.getElementById("drawerAccionFallaMantBtn");
 
   // estado actual -> qué acción se ofrece y a qué endpoint de maquinaria pega
   var ACCIONES_POR_ESTADO = {
@@ -406,6 +409,13 @@ refrescar();
       drawerAccionEstadoSection.hidden = true;
     }
     drawerAccionEstadoMsg.hidden = true;
+    if (estadoClase === "FALLO") {
+      drawerAccionFallaMantBtn.textContent = "⛔ Reportar falla";
+      drawerAccionFallaMantBtn.dataset.tipo = "falla";
+    } else {
+      drawerAccionFallaMantBtn.textContent = "🛠 Programar mantenimiento preventivo";
+      drawerAccionFallaMantBtn.dataset.tipo = "preventivo";
+    }
     drawerAlert.hidden = !m.requiere_revision_preventiva;
     document.getElementById("drawerOrdenMsg").hidden = true;
     drawerVibracion.textContent = m.ultima_lectura ? m.ultima_lectura.vibracion : "Sin datos";
@@ -491,6 +501,18 @@ refrescar();
         drawerAccionEstadoBtn.disabled = false;
         mostrarMsg(drawerAccionEstadoMsg, "No fue posible conectar con el servidor.", false);
       });
+  });
+
+  drawerAccionFallaMantBtn.addEventListener("click", function () {
+    if (!estado.seleccionada) return;
+    var codigo = estado.seleccionada;
+    var fechaActual = new Date().toISOString().split("T")[0];
+
+    if (drawerAccionFallaMantBtn.dataset.tipo === "falla") {
+      window.location.href = REPORTAR_FALLA_URL + "?maquina=" + encodeURIComponent(codigo);
+    } else {
+      window.location.href = MANTENIMIENTO_URL + "?maquina=" + encodeURIComponent(codigo) + "&tipo=PREVE&fecha=" + fechaActual;
+    }
   });
 
   drawerManualForm.addEventListener("submit", function (ev) {

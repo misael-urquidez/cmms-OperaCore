@@ -51,6 +51,8 @@ window.elipseIrAModulo = function (url, camposB64) {
     const elMemPanel = $('elipseMemPanel');
     const elMemList  = $('elipseMemList');
     const elMemCount = $('elipseMemCount');
+    const elAdjuntarBtn = $("elipseAdjuntarBtn");
+    const elAdjuntarInput = $("elipseAdjuntarInput");
 
     // ─────────────────────────────────────────────────────────
     // Utilidades
@@ -508,7 +510,7 @@ window.elipseIrAModulo = function (url, camposB64) {
     }
     elInput.addEventListener('input', autoAlto);
 
-    async function enviar(textoDirecto) {
+    async function enviar(textoDirecto, textoMostrar) {
         if (ocupado) return;
         const txt = (textoDirecto !== undefined ? textoDirecto : elInput.value).trim();
         if (!txt) return;
@@ -518,7 +520,7 @@ window.elipseIrAModulo = function (url, camposB64) {
             autoAlto();
         }
 
-        addMsg('user', esc(txt), false);
+        addMsg('user', esc(textoMostrar || txt), false);
         bajar(true);
 
         // "recuerda que ..." se resuelve aqui: no gastamos una llamada a la IA
@@ -587,6 +589,37 @@ window.elipseIrAModulo = function (url, camposB64) {
         }
     });
     elSend.addEventListener('click', () => enviar());
+
+    // ── adjuntar reporte de falla en Word o PDF ───────────────────
+    if (elAdjuntarBtn && elAdjuntarInput) {
+        elAdjuntarInput.addEventListener("change", () => {
+            const archivo = elAdjuntarInput.files[0];
+            elAdjuntarInput.value = "";
+            if (!archivo || ocupado) return;
+            if (!window.extraerTextoDocumento) {
+                addMsg("ai", "<p>La importación de documentos no está disponible en este momento.</p>", false);
+                bajar(true);
+                return;
+            }
+
+            window.extraerTextoDocumento(archivo)
+                .then((textoCrudo) => {
+                    const texto = (textoCrudo || "").trim();
+                    if (!texto) {
+                        addMsg("ai", "<p>No encontré texto en ese documento. Si es un PDF escaneado, usa el Word original o un PDF exportado desde Word.</p>", false);
+                        bajar(true);
+                        return;
+                    }
+                    const prompt = "Aquí está un reporte de falla que alguien llenó en Word, " +
+                        "ayúdame a levantarlo en el sistema:\n\n" + texto;
+                    enviar(prompt, "📄 " + archivo.name);
+                })
+                .catch(() => {
+                    addMsg("ai", "<p>No pude leer ese archivo. Usa un .docx o un PDF que contenga texto seleccionable.</p>", false);
+                    bajar(true);
+                });
+        });
+    }
 
     // ─────────────────────────────────────────────────────────
     // Arranque

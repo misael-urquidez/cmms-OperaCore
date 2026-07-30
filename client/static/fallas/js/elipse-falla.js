@@ -218,4 +218,65 @@
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviarTurno(); }
     });
   }
+
+  // ── importar reporte desde un .docx o .pdf con texto ──────
+  var btnImportarDocx = document.getElementById("btnImportarDocx");
+  var inputImportarDocx = document.getElementById("inputImportarDocx");
+
+  if (btnImportarDocx && inputImportarDocx) {
+    inputImportarDocx.addEventListener("change", function () {
+      var archivo = inputImportarDocx.files[0];
+      inputImportarDocx.value = "";
+      if (!archivo) return;
+      if (!window.extraerTextoDocumento || !cfg.urlAutocompletar) {
+        abrirPanel();
+        pintarMsg("ai", "La importación de documentos no está disponible en este momento.");
+        return;
+      }
+
+      abrirPanel();
+      pintarMsg("ai", "Leyendo " + archivo.name + "…");
+
+      window.extraerTextoDocumento(archivo)
+        .then(function (textoCrudo) {
+          var texto = (textoCrudo || "").trim();
+          if (!texto) {
+            pintarMsg("ai", "No encontré texto en ese documento. Si es un PDF escaneado, expórtalo desde Word o usa el archivo original.");
+            return;
+          }
+
+          historial.push({ role: "user", content: texto });
+          var resumen = resumenCamposTexto();
+          var historialParaEnviar = resumen
+            ? historial.slice(-20).concat([{ role: "assistant", content: resumen }])
+            : historial.slice(-20);
+
+          return fetch(cfg.urlAutocompletar, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": cfg.csrf || "" },
+            body: JSON.stringify({
+              texto: texto,
+              maquinas: maquinas,
+              severidades: severidades,
+              tipos_falla: tiposFalla,
+              historial: historialParaEnviar,
+            }),
+          })
+            .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+            .then(function (res) {
+              if (!res.ok || res.data.error) {
+                pintarMsg("ai", res.data.error || "No se pudo leer el documento.");
+                return;
+              }
+              aplicarCampos(res.data.campos);
+              fusionarCampos(res.data.campos);
+              pintarMsg("ai", res.data.mensaje || "Listo, importé lo que encontré en el documento. Revisa el formulario.");
+              historial.push({ role: "assistant", content: res.data.mensaje || "" });
+            });
+        })
+        .catch(function () {
+          pintarMsg("ai", "No pude leer ese archivo. Usa un .docx o un PDF que contenga texto seleccionable.");
+        });
+    });
+  }
 })();
