@@ -125,7 +125,7 @@
     grid-template-rows: 0fr;
     transition: grid-template-rows 0.24s ease;
 }
-.tecni-sidebar__submenu > a { overflow: hidden; }
+.tecni-sidebar__submenu-inner { overflow: hidden; min-height: 0; }
 .tecni-sidebar__group.is-open .tecni-sidebar__submenu { grid-template-rows: 1fr; }
 .tecni-sidebar__submenu a {
     display: block;

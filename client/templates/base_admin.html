@@ -69,6 +69,7 @@
                     <a href="{% url 'maquinaria:index' %}" class="{% if seccion == 'maquinaria' and subseccion == 'lista' %}is-active{% endif %}">Ver lista</a>
                     <a href="{% url 'maquinaria:crear_maquina' %}" class="{% if seccion == 'maquinaria' and subseccion == 'crear' %}is-active{% endif %}">Registrar nueva</a>
                     <a href="{% url 'maquinaria:wiki_maquinas' %}" class="{% if seccion == 'maquinaria' and subseccion == 'wiki' %}is-active{% endif %}">Wiki de equipos</a>
+                    <a href="{% url 'maquinaria:registro-ops' %}" class="{% if seccion == 'maquinaria' and subseccion == 'registro-ops' %}is-active{% endif %}">Registro de operación</a>
                 </div>
             </div>
 
@@ -79,8 +80,10 @@
         <svg class="sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
     </button>
     <div class="sidebar__submenu">
-        <a href="{% url 'fallas:reporte' %}" class="{% if seccion == 'fallas' and subseccion == 'reporte' %}is-active{% endif %}">Nuevo reporte</a>
-        <a href="{% url 'fallas:lista' %}" class="{% if seccion == 'fallas' and subseccion == 'lista' %}is-active{% endif %}">Ver reportes</a>
+        <div class="sidebar__submenu-inner">
+            <a href="{% url 'fallas:reporte' %}" class="{% if seccion == 'fallas' and subseccion == 'reporte' %}is-active{% endif %}">Nuevo reporte</a>
+            <a href="{% url 'fallas:lista' %}" class="{% if seccion == 'fallas' and subseccion == 'lista' %}is-active{% endif %}">Ver reportes</a>
+        </div>
     </div>
 </div>
             {# Aqui iremos agregando las demas secciones conforme esten desarrolladas #}

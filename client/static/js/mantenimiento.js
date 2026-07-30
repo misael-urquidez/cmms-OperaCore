@@ -9,7 +9,12 @@
   var ASIGNAR_TPL = root.dataset.asignarUrlBase;
   var INICIAR_TPL = root.dataset.iniciarUrlBase;
   var CERRAR_TPL = root.dataset.cerrarUrlBase;
+  var ACTUALIZAR_TPL = root.dataset.actualizarUrlBase;
   var REPORTES_DISPONIBLES_URL = root.dataset.reportesDisponiblesUrl;
+  var EXPORTAR_CSV_TPL = root.dataset.exportarCsvBase;
+  var EXPORTAR_XLSX_TPL = root.dataset.exportarXlsxBase;
+  var EXPORTAR_PDF_TPL = root.dataset.exportarPdfBase;
+  var DOCUMENTO_TPL = root.dataset.documentoUrlBase;
   var ES_TECNICO = root.dataset.esTecnico === "1";
   var NUMERO_NOMINA = root.dataset.numeroNomina;
 
@@ -180,6 +185,9 @@
   }
 
   // ------------------------------------------------------------- fetch
+  var _folioParaAbrir = new URLSearchParams(window.location.search).get("orden");
+  var _autoEditar = new URLSearchParams(window.location.search).get("editar") === "1";
+
   function cargarOrdenes() {
     var params = new URLSearchParams();
     if (ES_TECNICO && NUMERO_NOMINA) params.set("trabajador", NUMERO_NOMINA);
@@ -189,6 +197,15 @@
       .then(function (data) {
         estado.ordenes = Array.isArray(data) ? data : [];
         pintarLista();
+        if (_folioParaAbrir) {
+          abrirDrawer(_folioParaAbrir);
+          if (_autoEditar) {
+            var editarBtnAuto = document.getElementById("ordenEditarBtn");
+            if (editarBtnAuto) editarBtnAuto.click();
+          }
+          _folioParaAbrir = null;
+          window.history.replaceState({}, "", window.location.pathname);
+        }
       })
       .catch(function () {
         listEl.querySelectorAll(".orden-card").forEach(function (n) { n.remove(); });
@@ -216,7 +233,14 @@
       '<span class="orden-card__desc">' + o.descripcion + '</span>' +
       '<span class="orden-card__meta">' + (o.maquina_nombre || o.maquina || "Sin máquina") + " · " + (o.tipo_mantenimiento_nombre || o.tipo_mantenimiento || "") + '</span>' +
       '<span class="orden-card__meta">Asignada a: ' + (o.trabajador_nombre || "Sin asignar") + '</span>';
-    card.addEventListener("click", function () { abrirDrawer(o.folio); });
+    card.addEventListener("click", function () {
+      var cerrada = o.estado_orden === "CERRA" || o.estado_orden === "CANCE";
+      if (cerrada && DOCUMENTO_TPL) {
+        window.location.href = urlPara(DOCUMENTO_TPL, o.folio);
+        return;
+      }
+      abrirDrawer(o.folio);
+    });
     return card;
   }
 
@@ -230,6 +254,8 @@
     var errorEl = document.getElementById("newOrdenError");
     var selectMaquina = document.getElementById("oMaquina");
     var selectTrabajador = document.getElementById("oTrabajador");
+    var oFecha = document.getElementById("oFecha");
+    if (oFecha) oFecha.min = new Date().toISOString().slice(0, 10);
 
     maquinas.forEach(function (m) {
       var opt = document.createElement("option");
@@ -253,6 +279,23 @@
     btnNueva.addEventListener("click", abrirModal);
     var btnCancelar = document.getElementById("newOrdenCancel");
     if (btnCancelar) btnCancelar.addEventListener("click", function (ev) { ev.preventDefault(); cerrarModal(); });
+
+    (function prellenarDesdeMonitoreo() {
+      var params = new URLSearchParams(window.location.search);
+      var maquinaParam = params.get("maquina");
+      if (!maquinaParam) return;
+      abrirModal();
+      selectMaquina.value = maquinaParam;
+      var tipoParam = params.get("tipo");
+      var oTipoSelect = document.getElementById("oTipo");
+      if (tipoParam && oTipoSelect) {
+        oTipoSelect.value = tipoParam;
+        oTipoSelect.dispatchEvent(new Event("change"));
+      }
+      var fechaParam = params.get("fecha");
+      if (fechaParam && oFecha) oFecha.value = fechaParam;
+      window.history.replaceState({}, "", window.location.pathname);
+    })();
 
     form.addEventListener("submit", function (ev) {
       ev.preventDefault();
@@ -309,6 +352,13 @@
     estado.seleccionada = orden;
     limpiarMsg();
 
+    var editarBtn = document.getElementById("ordenEditarBtn");
+    var editDiv = document.getElementById("ordenDrawerEdit");
+
+    // Reset edit mode
+    if (editDiv) editDiv.hidden = true;
+    if (editarBtn) editarBtn.hidden = false;
+
     document.getElementById("ordenDrawerFolio").textContent = orden.folio;
     document.getElementById("ordenDrawerTitle").textContent = orden.tipo_mantenimiento_nombre || orden.tipo_mantenimiento;
     document.getElementById("ordenDrawerInfo").textContent =
@@ -316,6 +366,18 @@
       (orden.estado_orden_nombre || orden.estado_orden) + " · Asignada a: " +
       (orden.trabajador_nombre || "Sin asignar");
     document.getElementById("ordenDrawerDescripcion").textContent = orden.descripcion || "";
+
+    // Pre-fill edit inputs
+    var edDesc = document.getElementById("edDescripcion");
+    var edTipo = document.getElementById("edTipo");
+    var edFecha = document.getElementById("edFecha");
+    var edNotas = document.getElementById("edNotas");
+    var edDiag = document.getElementById("edDiagnostico");
+    if (edDesc) edDesc.value = orden.descripcion || "";
+    if (edTipo) edTipo.value = orden.tipo_mantenimiento || "";
+    if (edFecha) edFecha.value = orden.fechaprogramada || "";
+    if (edNotas) edNotas.value = orden.notas || "";
+    if (edDiag) edDiag.value = orden.diagnostico || "";
 
     var reporteWrap = document.getElementById("ordenDrawerReporte");
     if (reporteWrap) {
@@ -326,7 +388,11 @@
       }
     }
 
-    var cerrada = !!orden.fechacierre;
+    // La tarjeta de la lista usa estado_orden para decidir el color/etiqueta
+    // "Cerrada"; el drawer debe usar la misma fuente de verdad en vez de
+    // confiar solo en fechacierre, que puede venir vacío en ordenes viejas
+    // o cerradas fuera del flujo normal.
+    var cerrada = orden.estado_orden === "CERRA" || orden.estado_orden === "CANCE" || !!orden.fechacierre;
 
     if (asignarSelect && btnAsignar) {
       var seccionAsignar = asignarSelect.closest("label") || asignarSelect;
@@ -402,6 +468,50 @@
           cerrarDrawerPanel();
           cargarOrdenes();
         }).catch(function () { mostrarMsg("Sin conexión.", false); });
+    });
+  }
+
+  // ----------------------------------------------- editar orden
+  var editarBtn = document.getElementById("ordenEditarBtn");
+  var editDiv = document.getElementById("ordenDrawerEdit");
+  var guardarBtn = document.getElementById("ordenGuardarBtn");
+  var cancelarEditBtn = document.getElementById("ordenCancelarEditBtn");
+
+  if (editarBtn && editDiv) {
+    editarBtn.addEventListener("click", function () {
+      editDiv.hidden = false;
+      editarBtn.hidden = true;
+    });
+  }
+
+  if (guardarBtn && editDiv) {
+    guardarBtn.addEventListener("click", function () {
+      if (!estado.seleccionada) return;
+      var payload = {
+        descripcion: document.getElementById("edDescripcion").value,
+        tipo_mantenimiento: document.getElementById("edTipo").value,
+        fechaprogramada: document.getElementById("edFecha").value || null,
+        notas: document.getElementById("edNotas").value,
+        diagnostico: document.getElementById("edDiagnostico").value,
+      };
+      fetch(urlPara(ACTUALIZAR_TPL, estado.seleccionada.folio), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+        body: JSON.stringify(payload),
+      }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (res) {
+          if (!res.ok) { mostrarMsg(typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo actualizar.", false); return; }
+          mostrarMsg("Orden actualizada.", true);
+          cerrarDrawerPanel();
+          cargarOrdenes();
+        }).catch(function () { mostrarMsg("Sin conexión.", false); });
+    });
+  }
+
+  if (cancelarEditBtn && editDiv && editarBtn) {
+    cancelarEditBtn.addEventListener("click", function () {
+      editDiv.hidden = true;
+      editarBtn.hidden = false;
     });
   }
 
@@ -509,6 +619,35 @@
         }).catch(function () { mostrarMsg("Sin conexión.", false); });
     });
   }
+
+  // -------------------------------------------------- exportar orden (modal)
+  var exportBtn = document.getElementById("ordenExportarBtn");
+  var exportModal = document.getElementById("exportar-orden");
+
+  if (exportBtn && exportModal) {
+    exportBtn.addEventListener("click", function () {
+      if (!estado.seleccionada) return;
+      var folio = estado.seleccionada.folio;
+      document.getElementById("export-orden-folio").textContent = folio;
+      document.getElementById("export-orden-csv-link").href  = urlPara(EXPORTAR_CSV_TPL, folio);
+      document.getElementById("export-orden-xlsx-link").href = urlPara(EXPORTAR_XLSX_TPL, folio);
+      document.getElementById("export-orden-pdf-link").href  = urlPara(EXPORTAR_PDF_TPL, folio);
+      exportModal.classList.add("is-open");
+    });
+
+    $(document).on("click", "[data-dismiss='modal-export-orden']", function () {
+      exportModal.classList.remove("is-open");
+    });
+    $(document).on("keydown", function (e) {
+      if (e.key === "Escape") exportModal.classList.remove("is-open");
+    });
+  }
+
+  // Exponer drawer para la pagina de calendario
+  window.__estado = estado;
+  window.__abrirDrawer = abrirDrawer;
+  window.__cerrarDrawerPanel = cerrarDrawerPanel;
+  window.__cargarOrdenes = cargarOrdenes;
 
   cargarOrdenes();
 })();

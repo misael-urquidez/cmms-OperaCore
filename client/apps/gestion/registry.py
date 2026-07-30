@@ -635,7 +635,7 @@ GESTION_REGISTRY = {
             {"name": "rol", "label": "Rol", "tipo": "select", "requerido": False, "columna": True,
              "fk": "rol", "fk_value": "codigo", "fk_label": "nombre"},
             {"name": "especialidad", "label": "Especialidad", "tipo": "select", "requerido": False, "columna": False,
-             "fk": "especialidad", "fk_value": "codigo", "fk_label": "nombre"},
+             "fk": "especialidad", "fk_value": "numeroRegistro", "fk_label": "nombre"},
         ],
     },
 

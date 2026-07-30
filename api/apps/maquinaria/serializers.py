@@ -192,10 +192,6 @@ class UpdateTipoMaquinaSerializer(serializers.ModelSerializer):
 # MAQUINA
 # ==========================================================
 class ListMaquinaSerializer(serializers.ModelSerializer):
-    estado_maquina = serializers.StringRelatedField()
-    tipo_maquina = serializers.StringRelatedField()
-    linea = serializers.StringRelatedField()
-
     class Meta:
         model = Maquina
         fields = "__all__"

@@ -8,5 +8,6 @@ urlpatterns = [
     path("listar/", views.ListarMaquinas.as_view(), name="listar"),
     path("crear/", views.CrearMaquina.as_view(), name="crear_maquina"), 
     path("wiki/", views.WikiMaquinasView.as_view(), name="wiki_maquinas"),
+    path("registro-ops/", views.RegistroOpsView.as_view(), name="registro-ops"),
     path("<str:codigo>/", views.DetalleMaquina.as_view(), name="detail"), 
 ]

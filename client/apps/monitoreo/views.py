@@ -199,6 +199,17 @@ class ReparacionManualAPIView(View):
 
 
 class RegistroOpsAPIView(View):
+    def get(self, request, codigo):
+        try:
+            respuesta = SESSION.get(f"{API_URL}/maquinas/{codigo}/registro-ops/", timeout=5)
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        try:
+            cuerpo = respuesta.json()
+        except ValueError:
+            cuerpo = {"detail": "Respuesta inválida del API."}
+        return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
+
     def post(self, request, codigo):
         try:
             payload = json.loads(request.body.decode("utf-8") or "{}")
@@ -206,6 +217,36 @@ class RegistroOpsAPIView(View):
             return JsonResponse({"detail": "JSON inválido."}, status=400)
         try:
             respuesta = SESSION.post(f"{API_URL}/maquinas/{codigo}/registro-ops/", json=payload, timeout=5)
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        try:
+            cuerpo = respuesta.json()
+        except ValueError:
+            cuerpo = {"detail": "Respuesta inválida del API."}
+        return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
+
+
+class RegistroOpsUpdateAPIView(View):
+    def patch(self, request, pk):
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except ValueError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+        try:
+            respuesta = SESSION.patch(f"{API_URL}/registro-ops/{pk}/", json=payload, timeout=5)
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        try:
+            cuerpo = respuesta.json()
+        except ValueError:
+            cuerpo = {"detail": "Respuesta inválida del API."}
+        return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
+
+
+class RegistroOpsDeleteAPIView(View):
+    def delete(self, request, pk):
+        try:
+            respuesta = SESSION.delete(f"{API_URL}/registro-ops/{pk}/delete/", timeout=5)
         except requests.RequestException:
             return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
         try:

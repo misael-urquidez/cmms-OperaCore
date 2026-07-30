@@ -198,6 +198,24 @@ class GestionListView(generic.View):
         tiene_imagen = any(c.get("tipo") == "file" for c in config["campos"])
         necesita_modal = len(todas_las) > MAX_COLUMNAS or tiene_imagen
 
+        EXCLUDED_FK_SLUGS = {"tarea-orden", "herra-orden", "trabajador-orden"}
+        campos_con_fk = []
+        fk_filters = []
+        if config["slug"] not in EXCLUDED_FK_SLUGS:
+            for campo in config["campos"]:
+                if campo.get("fk"):
+                    choices = _fetch_fk_choices(campo["fk"])
+                    fk_filters.append({
+                        "name": campo["name"],
+                        "label": campo["label"],
+                        "opciones": [
+                            {"value": c.get(campo["fk_value"]),
+                             "label": c.get(campo["fk_label"])}
+                            for c in choices
+                        ],
+                    })
+                    campos_con_fk.append(campo["name"])
+
         context = {
             "config": config,
             "registros": registros,
@@ -208,6 +226,8 @@ class GestionListView(generic.View):
             "api_root_url": settings.API_ROOT_URL,
             "seccion": "gestion",
             "subseccion": slug,
+            "campos_con_fk": campos_con_fk,
+            "fk_filters": fk_filters,
         }
         return render(request, self.template_name, context)
 

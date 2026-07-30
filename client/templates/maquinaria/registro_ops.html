@@ -1,0 +1,163 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}OPERACORE | Registro de operación{% endblock %}
+{% block breadcrumb %}Maquinaria{% endblock %}
+{% block page_title %}Registro de horas de operación{% endblock %}
+{% block extra_css %}
+<style>
+    .ops-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .ops-select {
+        background: var(--bg-card, #161920);
+        border: 1px solid var(--border-color, #2a313e);
+        color: #fff;
+        padding: .5rem .75rem;
+        border-radius: 6px;
+        font-size: 14px;
+        outline: none;
+        cursor: pointer;
+        min-width: 250px;
+    }
+    .ops-select:focus {
+        border-color: var(--accent, #00adb5);
+    }
+    .status-table-container {
+        background-color: var(--bg-card, #161920);
+        border: 1px solid var(--border-color, #2a313e);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+    th, td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-color, #2a313e);
+        font-size: 14px;
+    }
+    th {
+        background-color: var(--bg-info, #1f242e);
+        color: var(--text-muted, #94a3b8);
+        font-weight: 600;
+    }
+    tr:last-child td {
+        border-bottom: none;
+    }
+    .ops-edit {
+        display: none;
+    }
+    .ops-edit.is-editing {
+        display: inline-block;
+    }
+    .ops-view {
+        display: inline;
+    }
+    .ops-view.is-hidden {
+        display: none;
+    }
+    .ops-edit-input {
+        background: var(--bg-main, #0f1115);
+        border: 1px solid var(--border-color, #2a313e);
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 13px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .ops-edit-input:focus {
+        border-color: var(--accent, #00adb5);
+        outline: none;
+    }
+    .ops-actions {
+        display: flex;
+        gap: 6px;
+    }
+    .btn-icon {
+        background: none;
+        border: 1px solid var(--border-color, #2a313e);
+        color: var(--text-muted, #94a3b8);
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all .15s;
+    }
+    .btn-icon:hover {
+        border-color: var(--accent, #00adb5);
+        color: #fff;
+    }
+    .btn-icon.btn-danger:hover {
+        border-color: #ef4444;
+        color: #ef4444;
+    }
+    .btn-icon.btn-save {
+        border-color: var(--accent, #00adb5);
+        color: var(--accent, #00adb5);
+    }
+    .btn-icon.btn-save:hover {
+        background: var(--accent, #00adb5);
+        color: var(--bg-main, #0f1115);
+    }
+    .ops-empty {
+        text-align: center;
+        color: var(--text-muted, #94a3b8);
+        padding: 40px;
+    }
+    .feedback-msg {
+        margin-top: 12px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+    .feedback-msg.is-success {
+        background: rgba(16, 185, 129, .15);
+        color: #10b981;
+    }
+    .feedback-msg.is-error {
+        background: rgba(239, 68, 68, .15);
+        color: #ef4444;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="ops-header">
+    <label for="maquinaSelect" style="color:var(--text-muted, #94a3b8);font-size:14px;">Máquina</label>
+    <select id="maquinaSelect" class="ops-select">
+        <option value="">Selecciona una máquina</option>
+        {% for m in maquinas %}
+        <option value="{{ m.codigo }}">{{ m.codigo }} — {{ m.nombre }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<p class="feedback-msg" id="opsMsg" hidden></p>
+
+<div class="status-table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Fecha inicio</th>
+                <th>Fecha fin</th>
+                <th>Horas operación</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody id="opsTableBody">
+            <tr><td colspan="5" class="ops-empty">Selecciona una máquina para ver sus registros.</td></tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/registro_ops.js' %}"></script>
+{% endblock %}

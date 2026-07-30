@@ -255,3 +255,9 @@ class CerrarOrdenSerializer(serializers.Serializer):
     # mezclando ambos datos; ahora viaja en la misma peticion de cierre y
     # se crea todo dentro de la misma transaccion atomica.
     movimientos = MovimientoCierreItemSerializer(many=True, required=False)
+
+
+class UpdateOrdenMantenimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.OrdenMantenimiento
+        fields = ["descripcion", "fechaprogramada", "tipo_mantenimiento", "notas", "diagnostico"]
