@@ -198,6 +198,23 @@
         </div>
     </header>
 
+    {% if ubicacion %}
+    <div style="background:var(--bg-card);padding:12px 40px;border-bottom:1px solid var(--border-color);font-size:13px;color:var(--text-muted);">
+      <span style="color:var(--text-muted);margin-right:4px;">Ubicación:</span>
+      {% if ubicacion.planta %}
+        <span style="color:var(--text-main);">{{ ubicacion.planta }}</span>
+        <span style="margin:0 8px;color:var(--border-color);">→</span>
+      {% endif %}
+      {% if ubicacion.area %}
+        <span style="color:var(--text-main);">{{ ubicacion.area }}</span>
+        <span style="margin:0 8px;color:var(--border-color);">→</span>
+      {% endif %}
+      {% if ubicacion.linea %}
+        <span style="color:var(--accent);font-weight:600;">{{ ubicacion.linea }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <div class="container">
         {% if maquina %}
         <div class="content-grid">

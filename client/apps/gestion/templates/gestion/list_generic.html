@@ -56,7 +56,10 @@
           {% endif %}
           {% for fk_name in campos_con_fk %}
             data-{{ fk_name }}="{{ registro|get_item:fk_name|default_if_none:'' }}"
-          {% endfor %}>
+          {% endfor %}
+          {% if ubicacion_dict %}
+            data-ubicacion="{{ ubicacion_dict|get_item:pk_val|default:'' }}"
+          {% endif %}>
         <td>{{ pk_val }}</td>
         {% for col in columnas %}
           {% if not col.name|es_pk:config.pk_field %}
@@ -156,6 +159,11 @@
       html += '<span class="gestion-modal__label">' + imagenLabel + '</span>';
       html += '<img class="gestion-modal__img" src="' + imagenSrc + '" alt="' + imagenLabel + '">';
       html += '</div>';
+    }
+
+    var ubicacion = tr.getAttribute('data-ubicacion') || '';
+    if (ubicacion) {
+      html = '<div class="gestion-modal__ubicacion">' + ubicacion + '</div>' + html;
     }
 
     body.innerHTML = html;

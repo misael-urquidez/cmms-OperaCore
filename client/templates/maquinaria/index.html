@@ -174,6 +174,20 @@
           <option value="{{ t.numeroregistro }}">{{ t.nombre }}</option>
         {% endfor %}
       </select>
+      <select class="filter-select" data-filter="marca"
+              style="background:var(--bg-card);border:1px solid var(--border-color);color:#fff;padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
+        <option value="">Todas las marcas</option>
+        {% for m in marcas %}
+          <option value="{{ m.clave }}">{{ m.nombre }}</option>
+        {% endfor %}
+      </select>
+      <select class="filter-select" data-filter="modelo"
+              style="background:var(--bg-card);border:1px solid var(--border-color);color:#fff;padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
+        <option value="">Todos los modelos</option>
+        {% for mo in modelos %}
+          <option value="{{ mo.codigo }}">{{ mo.nombre }}</option>
+        {% endfor %}
+      </select>
     </div>
     <div class="status-table-container">
         <table id="tabla-maquinas">
@@ -182,6 +196,8 @@
                     <th>Código</th>
                     <th>Nombre del Equipo</th>
                     <th>Tipo</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
                     <th>Línea</th>
                     <th>Estado Operativo</th>
                     <th>Acción</th>
@@ -189,10 +205,12 @@
             </thead>
             <tbody>
                 {% for maquina in maquinas %}
-                <tr data-linea="{{ maquina.linea|default:'' }}" data-estado_maquina="{{ maquina.estado_maquina|default:'' }}" data-tipo_maquina="{{ maquina.tipo_maquina|default:'' }}">
+                <tr data-linea="{{ maquina.linea|default:'' }}" data-estado_maquina="{{ maquina.estado_maquina|default:'' }}" data-tipo_maquina="{{ maquina.tipo_maquina|default:'' }}" data-marca="{{ maquina.marca|default:'' }}" data-modelo="{{ maquina.modelo|default:'' }}">
                     <td><b>{{ maquina.codigo }}</b></td>
                     <td>{{ maquina.nombre }}</td>
                     <td>{{ tipo_dict|get_item:maquina.tipo_maquina|default:maquina.tipo_maquina|default:"-" }}</td>
+                    <td>{{ marca_dict|get_item:maquina.marca|default:maquina.marca|default:"-" }}</td>
+                    <td>{{ modelo_dict|get_item:maquina.modelo|default:maquina.modelo|default:"-" }}</td>
                     <td>{{ linea_dict|get_item:maquina.linea|default:maquina.linea|default:"Sin línea" }}</td>
                     <td>
                         <span style="color: var(--accent, #00adb5);">{{ edo_dict|get_item:maquina.estado_maquina|default:maquina.estado_maquina|default:"Sin estado" }}</span>
@@ -203,7 +221,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" style="text-align: center; color: var(--text-muted, #94a3b8); padding: 40px;">
+                    <td colspan="8" style="text-align: center; color: var(--text-muted, #94a3b8); padding: 40px;">
                         No hay información de maquinaria registrada.
                     </td>
                 </tr>

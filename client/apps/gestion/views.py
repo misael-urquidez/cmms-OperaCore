@@ -216,6 +216,25 @@ class GestionListView(generic.View):
                     })
                     campos_con_fk.append(campo["name"])
 
+        ubicacion_dict = {}
+        if config["slug"] == "maquina" and registros:
+            lineas = _fetch_fk_choices("linea")
+            areas = _fetch_fk_choices("area")
+            plantas = _fetch_fk_choices("planta")
+            linea_map = {l.get("codigo"): l for l in lineas}
+            area_map = {a.get("codigo"): a for a in areas}
+            planta_map = {p.get("codigo"): p.get("nombre") for p in plantas}
+            for r in registros:
+                partes = []
+                lin = linea_map.get(r.get("linea"))
+                if lin:
+                    area = area_map.get(lin.get("area"))
+                    if area:
+                        partes.append(planta_map.get(area.get("planta")))
+                        partes.append(area.get("nombre"))
+                    partes.append(lin.get("nombre"))
+                ubicacion_dict[r.get("codigo")] = " → ".join(p for p in partes if p)
+
         context = {
             "config": config,
             "registros": registros,
@@ -228,6 +247,7 @@ class GestionListView(generic.View):
             "subseccion": slug,
             "campos_con_fk": campos_con_fk,
             "fk_filters": fk_filters,
+            "ubicacion_dict": ubicacion_dict,
         }
         return render(request, self.template_name, context)
 

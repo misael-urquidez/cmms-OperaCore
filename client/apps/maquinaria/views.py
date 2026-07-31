@@ -78,9 +78,29 @@ class Index(generic.View):
             except requests.exceptions.RequestException:
                 tipos_maquina = []
 
+        marcas = cache.get("maquinaria_marcas_list")
+        if marcas is None:
+            try:
+                res_mar = SESSION.get(f"{API_URL}/v1/marca/list/", timeout=5)
+                marcas = res_mar.json() if res_mar.status_code == 200 else []
+                cache.set("maquinaria_marcas_list", marcas, 300)
+            except requests.exceptions.RequestException:
+                marcas = []
+
+        modelos = cache.get("maquinaria_modelos_list")
+        if modelos is None:
+            try:
+                res_mod = SESSION.get(f"{API_URL}/v1/modelo/list/", timeout=5)
+                modelos = res_mod.json() if res_mod.status_code == 200 else []
+                cache.set("maquinaria_modelos_list", modelos, 300)
+            except requests.exceptions.RequestException:
+                modelos = []
+
         linea_dict = {l["codigo"]: l["nombre"] for l in lineas if "codigo" in l}
         edo_dict = {e["codigo"]: e["nombre"] for e in edos_maquina if "codigo" in e}
         tipo_dict = {t.get("numeroregistro", t.get("codigo", "")): t["nombre"] for t in tipos_maquina if "nombre" in t}
+        marca_dict = {m["clave"]: m["nombre"] for m in marcas if "clave" in m}
+        modelo_dict = {m["codigo"]: m["nombre"] for m in modelos if "codigo" in m}
 
         context = {
             "modulo": "Maquinaria",
@@ -89,9 +109,13 @@ class Index(generic.View):
             "lineas": lineas,
             "edos_maquina": edos_maquina,
             "tipos_maquina": tipos_maquina,
+            "marcas": marcas,
+            "modelos": modelos,
             "linea_dict": linea_dict,
             "edo_dict": edo_dict,
             "tipo_dict": tipo_dict,
+            "marca_dict": marca_dict,
+            "modelo_dict": modelo_dict,
             "total_maquinas": total_maquinas,
             "operativas": operativas,
             "en_mantenimiento": en_mantenimiento,
@@ -129,7 +153,35 @@ class DetalleMaquina(generic.View):
         except requests.exceptions.RequestException:
             data = None
 
-        return render(request, self.template_name, {"maquina": data})
+        ubicacion = None
+        if data and data.get("linea"):
+            try:
+                res_lin = SESSION.get(f"{API_URL}/v1/linea/list/", timeout=5)
+                lineas = res_lin.json() if res_lin.status_code == 200 else []
+
+                res_are = SESSION.get(f"{API_URL}/v1/area/list/", timeout=5)
+                areas = res_are.json() if res_are.status_code == 200 else []
+
+                res_pla = SESSION.get(f"{API_URL}/v1/planta/list/", timeout=5)
+                plantas = res_pla.json() if res_pla.status_code == 200 else []
+
+                linea = next((l for l in lineas if l.get("codigo") == data["linea"]), None)
+                area = None
+                planta = None
+                if linea:
+                    area = next((a for a in areas if a.get("codigo") == linea.get("area")), None)
+                if area:
+                    planta = next((p for p in plantas if p.get("codigo") == area.get("planta")), None)
+
+                ubicacion = {
+                    "linea": linea.get("nombre") if linea else None,
+                    "area": area.get("nombre") if area else None,
+                    "planta": planta.get("nombre") if planta else None,
+                }
+            except requests.exceptions.RequestException:
+                ubicacion = None
+
+        return render(request, self.template_name, {"maquina": data, "ubicacion": ubicacion})
 
 
 class CrearMaquina(generic.View):

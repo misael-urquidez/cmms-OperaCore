@@ -588,6 +588,17 @@
   margin-top: 0.5rem;
 }
 
+.gestion-modal__ubicacion {
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--accent, #00adb5);
+  border-radius: 0.5rem;
+  background: rgba(0, 173, 181, 0.08);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: 0.01em;
+}
+
 .gestion-modal__footer {
   display: flex;
   justify-content: flex-end;
