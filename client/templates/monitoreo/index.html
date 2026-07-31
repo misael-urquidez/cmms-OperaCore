@@ -18,6 +18,8 @@
          data-simular-url-base="{% url 'monitoreo:simular' codigo='__CODIGO__' %}"
          data-registro-ops-url-base="{% url 'monitoreo:registro-ops' codigo='__CODIGO__' %}"
          data-reparacion-manual-url-base="{% url 'monitoreo:reparacion-manual' codigo='__CODIGO__' %}"
+         data-mantenimiento-url="{% url 'mantenimiento:index' %}"
+         data-reportar-falla-url="{% url 'fallas:reporte' %}"
          data-crear-orden-url="{% url 'mantenimiento:ordenes-crear' %}">
 
   {{ maquinas|json_script:"maquinas-data" }}
@@ -185,6 +187,11 @@
       <h3>Estado de la máquina</h3>
       <button type="button" class="btn-plant-new" id="drawerAccionEstadoBtn" style="width:100%;"></button>
       <p class="feedback-msg" id="drawerAccionEstadoMsg" hidden></p>
+    </div>
+
+    <div class="machine-drawer__section" id="drawerAccionFallaMantSection">
+      <h3>Falla / mantenimiento</h3>
+      <button type="button" class="btn-plant-new" id="drawerAccionFallaMantBtn" style="width:100%;"></button>
     </div>
   </aside>
 </div>

@@ -22,6 +22,10 @@
   .doc-orden__btn--csv { background: #10b981; color: #fff; }
   .doc-orden__btn--xlsx { background: #22c55e; color: #fff; }
   .doc-orden__btn--pdf { background: #ef4444; color: #fff; }
+  dialog.confirm-falla-pdf { border:none; padding:1.25rem; max-width:420px; border-radius:.75rem; background:#16241d; color:inherit; box-shadow:0 20px 50px rgba(0,0,0,.45); }
+  dialog.confirm-falla-pdf::backdrop { background:rgba(2,6,15,.72); backdrop-filter:blur(2px); }
+  dialog.confirm-falla-pdf p { margin:0 0 .75rem; font-size:.9rem; }
+  .confirm-falla-pdf__actions { display:flex; flex-direction:column; gap:.5rem; margin-top:.5rem; }
 </style>
 {% endblock %}
 {% block content %}
@@ -47,7 +51,37 @@
     {% if puede_modificar %}<a class="doc-orden__btn doc-orden__btn--editar" href="{% url 'mantenimiento:index' %}?orden={{ orden.folio }}&editar=1">Editar</a>{% endif %}
     <a class="doc-orden__btn doc-orden__btn--csv" href="{% url 'mantenimiento:exportar_csv' folio=orden.folio %}">Descargar CSV</a>
     <a class="doc-orden__btn doc-orden__btn--xlsx" href="{% url 'mantenimiento:exportar_xlsx' folio=orden.folio %}">Descargar Excel</a>
-    <a class="doc-orden__btn doc-orden__btn--pdf" href="{% url 'mantenimiento:exportar_pdf' folio=orden.folio %}">Descargar PDF</a>
+{% if orden.reporte_falla %}
+  <button type="button" class="doc-orden__btn doc-orden__btn--pdf" id="btnDescargarPdf">Descargar PDF</button>
+{% else %}
+  <a class="doc-orden__btn doc-orden__btn--pdf" href="{% url 'mantenimiento:exportar_pdf' folio=orden.folio %}">Descargar PDF</a>
+{% endif %}
   </div>
+
+  <dialog id="confirmFallaPdfDialog" class="confirm-falla-pdf">
+    <p>Esta orden tiene el reporte de falla asociado <strong>#{{ orden.reporte_falla }}{% if orden.reporte_falla_asunto %} · {{ orden.reporte_falla_asunto }}{% endif %}</strong>.</p>
+    <p>¿Quieres incluirlo en el mismo PDF?</p>
+    <div class="confirm-falla-pdf__actions">
+      <button type="button" id="btnPdfConFalla" class="doc-orden__btn doc-orden__btn--pdf">Sí, incluir ambos</button>
+      <button type="button" id="btnPdfSoloOrden" class="doc-orden__btn doc-orden__btn--editar">Solo la orden</button>
+      <button type="button" id="btnPdfCancelar" class="doc-orden__btn" style="background:transparent;border:1px solid var(--color-border, rgba(255,255,255,0.2));">Cancelar</button>
+    </div>
+  </dialog>
+  <script>
+  (function () {
+    var btn = document.getElementById("btnDescargarPdf");
+    var dialog = document.getElementById("confirmFallaPdfDialog");
+    if (!btn || !dialog) return;
+    var baseUrl = "{% url 'mantenimiento:exportar_pdf' folio=orden.folio %}";
+    btn.addEventListener("click", function () { dialog.showModal(); });
+    document.getElementById("btnPdfConFalla").addEventListener("click", function () {
+      window.location.href = baseUrl + "?incluir_falla=1";
+    });
+    document.getElementById("btnPdfSoloOrden").addEventListener("click", function () {
+      window.location.href = baseUrl;
+    });
+    document.getElementById("btnPdfCancelar").addEventListener("click", function () { dialog.close(); });
+  })();
+  </script>
 </div>
 {% endblock %}

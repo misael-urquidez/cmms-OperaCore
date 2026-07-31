@@ -1,8 +1,10 @@
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.http import JsonResponse, HttpResponse
 from django.views import generic
 from django.contrib import messages
 import requests
+from urllib.parse import quote
 
 from django.conf import settings
 from django.core.cache import cache
@@ -132,8 +134,16 @@ class ReporteFalla(generic.View):
             # invalidar el cache de la lista: el reporte recien creado debe
             # aparecer de inmediato en "Ver reportes" y en el dashboard.
             cache.delete("fallas_reportes_list")
+            creado = self.response.json()
             messages.success(request, "El reporte de falla ha sido registrado")
-            return redirect("fallas:lista")
+            return redirect(
+                "{}?levantar_orden=1&reporte={}&asunto={}&maquina={}".format(
+                    reverse("fallas:lista"),
+                    creado.get("numeroRegistro"),
+                    quote(creado.get("asunto") or ""),
+                    quote(self.payload.get("maquina") or ""),
+                )
+            )
         else:
             messages.warning(request, "Error al registrar el reporte")
             return redirect("fallas:reporte")

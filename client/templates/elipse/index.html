@@ -14,6 +14,13 @@
         <button type="button" class="elipse-headbtn" id="elipseNuevaBtn" title="Empezar de cero">
             ✚ Nueva conversación
         </button>
+        <button type="button" class="elipse-headbtn" id="elipseAdjuntarBtn" title="Sube un reporte de falla llenado en Word o PDF" onclick="document.getElementById('elipseAdjuntarInput').click()">
+            📎 Adjuntar reporte
+        </button>
+        <input type="file" id="elipseAdjuntarInput" accept=".docx,.pdf" hidden>
+        <a class="elipse-headbtn" href="{% static 'fallas/plantillas/plantilla_reporte_falla.docx' %}" download style="text-decoration:none;">
+            ⬇️ Descargar plantilla
+        </a>
     </div>
 
     {# Panel de memoria: se abre con el boton de arriba, lo llena elipse.js #}
@@ -55,5 +62,9 @@
         nombreUsuario: "{{ usuario.nombre|default:'Tú'|escapejs }}"
     };
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
+<script src="{% static 'js/extraer-texto-doc.js' %}"></script>
 <script src="{% static 'js/elipse.js' %}"></script>
 {% endblock %}
