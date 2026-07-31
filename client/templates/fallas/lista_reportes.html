@@ -185,4 +185,20 @@ $(function() {
   });
 });
 </script>
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get("levantar_orden") !== "1") return;
+  var reporte = params.get("reporte");
+  var asunto = params.get("asunto") || "";
+  var maquina = params.get("maquina") || "";
+  window.history.replaceState({}, "", window.location.pathname);
+  if (!reporte) return;
+  var quiere = confirm("Reporte #" + reporte + " registrado.\n¿Deseas levantar la orden de mantenimiento correctiva ahora?");
+  if (quiere) {
+    window.location.href = "{% url 'mantenimiento:index' %}?maquina=" + encodeURIComponent(maquina) +
+      "&tipo=CORRE&reporte=" + encodeURIComponent(reporte) + "&asunto=" + encodeURIComponent(asunto);
+  }
+})();
+</script>
 {% endblock %}

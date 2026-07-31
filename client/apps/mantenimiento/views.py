@@ -136,8 +136,12 @@ class _ExportarOrdenBase(View):
     formato = None
 
     def get(self, request, folio):
+        url = f"{API_URL}/v1/ordenes/{folio}/export/{self.formato}/"
+        qs = request.META.get("QUERY_STRING", "")
+        if qs:
+            url += f"?{qs}"
         try:
-            resp = SESSION.get(f"{API_URL}/v1/ordenes/{folio}/export/{self.formato}/", timeout=15)
+            resp = SESSION.get(url, timeout=15)
         except requests.RequestException:
             return HttpResponse("Error de conexion con la API", status=502)
 

@@ -102,7 +102,7 @@ dialog#newOrdenModal #newOrdenForm input, dialog#newOrdenModal #newOrdenForm sel
 dialog#newOrdenModal textarea { resize:vertical; min-height:4.5rem; }
 #newOrdenError { color:#fca5a5; font-size:.8rem; margin:0; }
 #newOrdenError:empty { display:none; }
-dialog#newOrdenModal form > div:last-of-type,
+dialog#newOrdenModal form > div:last-of-type:not(.orden-reporte),
 dialog#newOrdenModal .new-orden-form__actions { display:flex; justify-content:flex-end; gap:.6rem; margin-top:.25rem; }
 
 dialog#ordenDrawer { position:fixed; inset:0 0 0 auto; margin:0; height:100%; }
@@ -159,6 +159,14 @@ dialog#reporteFallaPickerModal[open] {
   border-radius:.75rem; padding:1.25rem; box-shadow:0 20px 50px rgba(0,0,0,.45); display:grid; gap:.75rem;
 }
 dialog#reporteFallaPickerModal h2 { margin:0; font-size:1.05rem; }
+dialog#confirmFallaPdfModal { border:none; padding:0; background:transparent; position:fixed; inset:0; margin:auto; color:var(--color-text); }
+dialog#confirmFallaPdfModal::backdrop { background:rgba(2,6,15,.72); backdrop-filter:blur(2px); }
+dialog#confirmFallaPdfModal[open] {
+  width:min(420px,92vw); background:var(--color-surface); border:1px solid var(--line);
+  border-radius:.75rem; padding:1.25rem; box-shadow:0 20px 50px rgba(0,0,0,.45); display:grid; gap:.75rem;
+}
+dialog#confirmFallaPdfModal h2 { margin:0; font-size:1.05rem; }
+#confirmFallaPdfTexto { margin:0; font-size:.85rem; color:var(--color-muted); }
 #rfPickerHint { margin:0; font-size:.78rem; color:var(--color-muted); }
 .orden-reporte__lista { display:grid; gap:.5rem; max-height:50vh; overflow-y:auto; }
 .orden-reporte__item {
