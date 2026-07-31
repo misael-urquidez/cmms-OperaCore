@@ -1,3 +1,19 @@
+/* Cualquier clase que fije "display" explícito (ej. .btn-orden-secondary)
+   le gana en CSS al [hidden] nativo del navegador, porque una regla de
+   autor siempre pesa más que el display:none por defecto del user-agent.
+   Esta regla obliga a que [hidden] SIEMPRE oculte, sin importar qué otras
+   clases traiga el elemento (botones, selects, forms, etc.). */
+/* El fondo oscuro detras del drawer: antes SOLO vivia en tecni-inventario.css
+   (una hoja que solo carga el lado del tecnico), asi que en el admin
+   (base_admin.html, que no la incluye) el drawer se abria sin ningun
+   backdrop y quedaba mezclado visualmente con el contenido de atras
+   (ej. el calendario). Se declara aqui, en la hoja que SI cargan ambos
+   lados, con z-index justo debajo del drawer (300) para que siempre
+   quede entre el contenido de la pagina y el panel.  */
+.orden-drawer-scrim { position:fixed; inset:0; background:rgba(2,6,15,.55); z-index:290; }
+
+[hidden] { display: none !important; }
+
 .ordenes { display:grid; gap:1.25rem; }
 .ordenes__head { display:flex; justify-content:space-between; align-items:end; gap:1rem; border-bottom:1px solid var(--line); padding-bottom:1rem; flex-wrap:wrap; }
 .ordenes__head p { color:var(--color-primary); font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; margin:0; }
@@ -36,14 +52,19 @@ dialog#newOrdenModal, dialog#ordenDrawer {
    así no dependemos de que el HTML traiga la clase correcta en cada botón */
 dialog#newOrdenModal *, dialog#ordenDrawer * { color:inherit; box-sizing:border-box; }
 dialog#newOrdenModal button:not(#newOrdenCancel):not(#elipseOrdenClose):not(#elipseOrdenBtn),
-dialog#ordenDrawer button:not(#ordenDrawerClose) {
+dialog#ordenDrawer button:not(#ordenDrawerClose):not(.orden-mov__item-del) {
   font:inherit; cursor:pointer; border-radius:.5rem; border:1px solid var(--line);
   background:var(--color-primary); color:#04121c; font-weight:700; font-size:.85rem;
   padding:.6rem 1rem; width:100%; transition:filter .12s ease, opacity .12s ease;
 }
 dialog#newOrdenModal button:not(#newOrdenCancel):not(#elipseOrdenClose):not(#elipseOrdenBtn):hover,
-dialog#ordenDrawer button:not(#ordenDrawerClose):hover { filter:brightness(1.08); }
+dialog#ordenDrawer button:not(#ordenDrawerClose):not(.orden-mov__item-del):hover { filter:brightness(1.08); }
 dialog#newOrdenModal button:disabled, dialog#ordenDrawer button:disabled { opacity:.5; cursor:not-allowed; filter:none; }
+dialog#ordenDrawer .orden-mov__item-del {
+  width:auto; background:transparent; border:none; color:var(--color-muted);
+  font-weight:400; padding:0 .3rem; border-radius:.3rem;
+}
+dialog#ordenDrawer .orden-mov__item-del:hover { color:#ef4444; filter:none; }
 
 dialog#newOrdenModal::backdrop, dialog#ordenDrawer::backdrop {
   background:rgba(2,6,15,.72); backdrop-filter:blur(2px);
@@ -105,16 +126,18 @@ dialog#newOrdenModal textarea { resize:vertical; min-height:4.5rem; }
 dialog#newOrdenModal form > div:last-of-type:not(.orden-reporte),
 dialog#newOrdenModal .new-orden-form__actions { display:flex; justify-content:flex-end; gap:.6rem; margin-top:.25rem; }
 
-dialog#ordenDrawer { position:fixed; inset:0 0 0 auto; margin:0; height:100%; }
+dialog#ordenDrawer { position:fixed; inset:0 0 0 auto; margin:0; height:100%; z-index:300; }
 dialog#ordenDrawer section {
   height:100%; width:min(420px,92vw); background:var(--color-surface); border-left:1px solid var(--line);
   padding:1.25rem; overflow-y:auto; box-shadow:-12px 0 30px rgba(0,0,0,.35); display:grid; gap:.75rem;
   align-content:start;
 }
 dialog#ordenDrawer #ordenDrawerClose {
-  justify-self:end; background:transparent; border:none; color:var(--color-muted); cursor:pointer; font-size:1.2rem; line-height:1;
+  justify-self:end; width:2rem; height:2rem; display:flex; align-items:center; justify-content:center;
+  background:rgba(148,163,184,.15); border:1px solid var(--line); border-radius:50%;
+  color:var(--color-text); cursor:pointer; font-size:1.2rem; line-height:1;
 }
-dialog#ordenDrawer #ordenDrawerClose:hover { color:var(--color-text); }
+dialog#ordenDrawer #ordenDrawerClose:hover { background:rgba(239,68,68,.15); border-color:#ef4444; color:#ef4444; }
 dialog#ordenDrawer #ordenDrawerFolio { color:var(--color-primary); font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin:0; }
 dialog#ordenDrawer #ordenDrawerTitle { margin:0; font-size:1.15rem; }
 dialog#ordenDrawer #ordenDrawerInfo { font-size:.8rem; color:var(--color-muted); margin:0; }
@@ -125,6 +148,7 @@ dialog#ordenDrawer select, dialog#ordenDrawer input, dialog#ordenDrawer textarea
   color:var(--color-text); font-size:.85rem; font-family:inherit;
 }
 dialog#ordenDrawer form { display:grid; gap:.6rem; border-top:1px solid var(--line); padding-top:.9rem; margin-top:.25rem; }
+dialog#ordenDrawer form[hidden] { display:none; }
 dialog#ordenDrawer #ordenAsignarBtn, dialog#ordenDrawer #ordenIniciarBtn { align-self:start; }
 dialog#ordenDrawer #ordenMsg { font-size:.8rem; margin:0; }
 dialog#ordenDrawer #ordenMsg:empty { display:none; }
@@ -195,5 +219,8 @@ dialog#ordenDrawer #ordenMsg.error { color:#fca5a5; }
 .orden-mov__label { font-size:.78rem; color:var(--color-muted); margin:0; }
 .orden-mov__item { display:flex; justify-content:space-between; align-items:center; font-size:.82rem; background:var(--input-bg); border:1px solid var(--line); border-radius:.4rem; padding:.4rem .6rem; }
 .orden-mov__item-del { background:transparent; border:none; color:var(--color-muted); cursor:pointer; width:auto; padding:0 .3rem; }
-.orden-mov__form { display:grid; gap:.5rem; }
+.orden-mov__form { display:grid; gap:.6rem; background:var(--input-bg); border:1px solid var(--line); border-radius:.5rem; padding:.75rem; }
+.orden-mov__form label { display:flex; flex-direction:column; gap:.3rem; font-size:.8rem; color:var(--color-muted); }
+.orden-mov__form select { background:var(--input-bg); border:1px solid var(--line); border-radius:.4rem; padding:.5rem .6rem; color:inherit; font:inherit; }
+.orden-mov__error { font-size:.8rem; color:#fca5a5; margin:0; }
 .orden-mov__form-actions { display:flex; gap:.5rem; justify-content:flex-end; }

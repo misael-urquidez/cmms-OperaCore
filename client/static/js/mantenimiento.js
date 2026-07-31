@@ -264,7 +264,7 @@
     });
     trabajadores.forEach(function (t) {
       var opt = document.createElement("option");
-      opt.value = t.numeroNomina; opt.textContent = t.nombre + " " + (t.apellidoPat || "");
+      opt.value = t.numeroNomina; opt.textContent = t.nombre + " " + (t.apellidoPat || "") + " (" + t.numeroNomina + ")";
       selectTrabajador.appendChild(opt);
     });
 
@@ -343,6 +343,7 @@
   var asignarSelect = document.getElementById("ordenAsignarSelect");
   var btnAsignar = document.getElementById("ordenAsignarBtn");
   var btnIniciar = document.getElementById("ordenIniciarBtn");
+  var btnVistaCompleta = document.getElementById("ordenVistaCompletaBtn");
   var formCerrar = document.getElementById("ordenCerrarForm");
 
   function mostrarMsg(texto, ok) {
@@ -411,13 +412,41 @@
       asignarSelect.innerHTML = "";
       trabajadores.forEach(function (t) {
         var opt = document.createElement("option");
-        opt.value = t.numeroNomina; opt.textContent = t.nombre + " " + (t.apellidoPat || "");
+        opt.value = t.numeroNomina; opt.textContent = t.nombre + " " + (t.apellidoPat || "") + " (" + t.numeroNomina + ")";
         asignarSelect.appendChild(opt);
       });
+      // Arranca en quien ya tiene la orden (si aplica), para que solo cambie
+      // de dueño si el admin de verdad elige a otra persona a proposito.
+      if (orden.trabajador) asignarSelect.value = orden.trabajador;
+      // Si la orden ya tiene alguien asignado, esto ya no es "asignar" sino
+      // "reasignar": se le quita a quien la tenia y pasa a la persona nueva.
+      var yaAsignada = !!orden.trabajador_nombre;
+      var labelAsignar = document.getElementById("ordenAsignarLabel");
+      var btnAsignarTexto = document.getElementById("ordenAsignarBtnTexto");
+      if (labelAsignar) labelAsignar.textContent = yaAsignada ? "Reasignar" : "Asignar";
+      if (btnAsignarTexto) btnAsignarTexto.textContent = yaAsignada ? "Reasignar" : "Asignar";
     }
 
     if (btnIniciar) btnIniciar.hidden = cerrada || orden.estado_orden !== "PROGR";
-    if (formCerrar) formCerrar.hidden = cerrada || !(ES_TECNICO && (orden.estado_orden === "ENPRO" || orden.estado_orden === "PROGR"));
+
+    // El formulario de cierre (diagnostico/notas/horas/piezas) solo debe
+    // verse cuando la orden YA esta en progreso: mientras esta "PROGR" el
+    // tecnico solo debe ver info + "Marcar en progreso".
+    var puedeLlenar = ES_TECNICO && !cerrada && orden.estado_orden === "ENPRO";
+    if (formCerrar) formCerrar.hidden = !puedeLlenar;
+
+    // "Vista completa" debe ofrecerse en cuanto el tecnico tiene algo que
+    // hacer con su propia orden abierta (programada o ya en progreso), no
+    // solo cuando ya esta en progreso: es la salida hacia el formulario
+    // completo y validado de documento_orden.html.
+    var puedeVerCompleta = ES_TECNICO && !cerrada && (orden.estado_orden === "PROGR" || orden.estado_orden === "ENPRO");
+    if (btnVistaCompleta) btnVistaCompleta.hidden = !puedeVerCompleta;
+
+    // El tecnico solo puede exportar una orden ya cerrada (mientras sigue
+    // abierta no hay diagnostico/notas/horas/piezas que documentar todavia).
+    // El admin conserva el boton siempre visible, igual que en la vista
+    // completa (documento_orden.html).
+    if (exportBtn) exportBtn.hidden = ES_TECNICO && !cerrada;
 
     // Piezas disponibles para "reemplaza" = solo las de esta maquina.
     refrescarSelectPiezas(orden.maquina);
@@ -468,16 +497,30 @@
   if (btnIniciar) {
     btnIniciar.addEventListener("click", function () {
       if (!estado.seleccionada) return;
-      fetch(urlPara(INICIAR_TPL, estado.seleccionada.folio), {
+      var folio = estado.seleccionada.folio;
+      fetch(urlPara(INICIAR_TPL, folio), {
         method: "PATCH",
         headers: { "X-CSRFToken": getCookie("csrftoken") },
       }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
         .then(function (res) {
           if (!res.ok) { mostrarMsg("No se pudo actualizar.", false); return; }
+          if (ES_TECNICO && DOCUMENTO_TPL) {
+            // El tecnico pasa directo a la vista formal (la misma de una
+            // orden cerrada) para llenar diagnostico/notas/horas/piezas.
+            window.location.href = urlPara(DOCUMENTO_TPL, folio);
+            return;
+          }
           mostrarMsg("Orden marcada en progreso.", true);
           cerrarDrawerPanel();
           cargarOrdenes();
         }).catch(function () { mostrarMsg("Sin conexión.", false); });
+    });
+  }
+
+  if (btnVistaCompleta) {
+    btnVistaCompleta.addEventListener("click", function () {
+      if (!estado.seleccionada || !DOCUMENTO_TPL) return;
+      window.location.href = urlPara(DOCUMENTO_TPL, estado.seleccionada.folio);
     });
   }
 
@@ -534,6 +577,10 @@
   var movPieza = document.getElementById("ordenMovPieza");
   var movConfirmar = document.getElementById("ordenMovConfirmar");
   var movCancelar = document.getElementById("ordenMovCancelar");
+  var movError = document.getElementById("ordenMovError");
+
+  function limpiarMovError() { if (movError) movError.hidden = true; }
+  function mostrarMovError() { if (movError) movError.hidden = false; }
 
   function llenarSelect(select, items, valueKey, labelFn) {
     select.querySelectorAll("option:not(:first-child)").forEach(function (o) { o.remove(); });
@@ -573,17 +620,19 @@
       row.appendChild(del);
       movList.appendChild(row);
     });
+    if (movAddBtn) movAddBtn.textContent = movPendientes.length ? "+ Agregar otra pieza" : "+ Agregar pieza";
   }
 
   if (movAddBtn && movForm) {
-    movAddBtn.addEventListener("click", function () { movForm.hidden = false; movAddBtn.hidden = true; });
+    movAddBtn.addEventListener("click", function () { movForm.hidden = false; movAddBtn.hidden = true; limpiarMovError(); });
   }
   if (movCancelar) {
-    movCancelar.addEventListener("click", function () { movForm.hidden = true; movAddBtn.hidden = false; movRefaccion.value = ""; movPieza.value = ""; });
+    movCancelar.addEventListener("click", function () { movForm.hidden = true; movAddBtn.hidden = false; movRefaccion.value = ""; movPieza.value = ""; limpiarMovError(); });
   }
   if (movConfirmar) {
     movConfirmar.addEventListener("click", function () {
-      if (!movRefaccion.value) return;
+      if (!movRefaccion.value) { mostrarMovError(); return; }
+      limpiarMovError();
       movPendientes.push({
         refaccion: movRefaccion.value,
         refaccionNombre: movRefaccion.options[movRefaccion.selectedIndex].textContent,
