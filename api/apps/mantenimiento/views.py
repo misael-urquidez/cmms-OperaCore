@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.usuarios.models import Trabajador
 from apps.maquinaria.services import cambiar_estado_maquina
+from apps.maquinaria.models import Maquina
 from django.db import transaction
 from . import models
 from . import serializers
@@ -274,11 +275,19 @@ class OrdenMantenimientoAsignarAPIView(APIView):
         return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
 
 class OrdenMantenimientoIniciarAPIView(APIView):
+    @transaction.atomic
     def patch(self, request, folio):
         try: orden = models.OrdenMantenimiento.objects.get(pk=folio)
         except models.OrdenMantenimiento.DoesNotExist as exc: raise NotFound("Orden no encontrada.") from exc
         orden.estado_orden_id = "ENPRO"; orden.save(update_fields=["estado_orden"])
-        cambiar_estado_maquina(orden.maquina_id, "MANTE", "orden_mantenimiento", orden.folio)
+        # El diagrama solo contempla OPERA -> FALLO -> MANTE: la maquina nada
+        # mas se mueve a MANTE cuando de verdad viene de una falla reportada.
+        # Preventivo/predictivo/emergencia (sin reporte_falla) no representan
+        # un paro no planificado, asi que la maquina se queda como estaba y
+        # solo se lleva el seguimiento en la propia orden.
+        maquina = Maquina.objects.get(pk=orden.maquina_id)
+        if maquina.estado_maquina_id == "FALLO":
+            cambiar_estado_maquina(orden.maquina_id, "MANTE", "orden_mantenimiento", orden.folio)
         return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
 
 class OrdenMantenimientoCerrarAPIView(APIView):
@@ -334,7 +343,12 @@ class OrdenMantenimientoCerrarAPIView(APIView):
                 refaccion=refaccion,
             )
 
-        cambiar_estado_maquina(orden.maquina_id, "ESPER", "orden_mantenimiento", orden.folio)
+        # Simetrico al guard de "iniciar": si la maquina nunca entro a MANTE
+        # (preventivo/predictivo/emergencia que no tocaron su estado) no hay
+        # nada que regresar a ESPER; se deja como esta.
+        maquina = Maquina.objects.get(pk=orden.maquina_id)
+        if maquina.estado_maquina_id == "MANTE":
+            cambiar_estado_maquina(orden.maquina_id, "ESPER", "orden_mantenimiento", orden.folio)
         return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
 
 

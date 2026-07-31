@@ -163,10 +163,12 @@ class ReporteFallaUpdateAPIView(generics.UpdateAPIView):
         )
     
 class TrabajadorListAPIView(generics.ListAPIView):
-    """Listado ligero de trabajadores (solo nomina + nombre) para el
-    select del formulario de reporte de falla."""
+    """Listado ligero de técnicos activos para asignar o reasignar
+    órdenes de mantenimiento."""
 
-    queryset = Trabajador.objects.filter(actividad=True).order_by("nombre")
+    queryset = Trabajador.objects.filter(
+        actividad=True, rol__codigo="TECNI"
+    ).order_by("nombre")
     serializer_class = serializers.TrabajadorLightSerializer
 
 

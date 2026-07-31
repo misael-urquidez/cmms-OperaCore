@@ -27,3 +27,8 @@ GROQ_API_KEY=
 -- como prender el script del wiimote
 cd wiimote
 python3 wiimote_sensor.py --url http://127.0.0.1:8000
+
+
+-- comando para el config.yaml
+set MISTRAL_API_KEY=tu_clave_real_de_mistral_aqui
+litellm --config config.yaml --port 4000
