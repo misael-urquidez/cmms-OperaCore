@@ -298,6 +298,41 @@ class AdminDashboardView(generic.View):
         stats["fallas_abiertas"] = len(reportes)
         ultimas_fallas = reportes[:5]
 
+        # Máquinas: total y operativas.
+        try:
+            maquinas = SESSION.get(
+                f"{settings.API_BASE_URL}/monitoreo/maquinas/", timeout=3
+            ).json()
+            stats["maquinas"] = len(maquinas)
+            stats["maquinas_operativas"] = sum(
+                1 for m in maquinas if m.get("estado_maquina") == "OPERA"
+            )
+        except (requests.RequestException, ValueError):
+            pass
+
+        # Órdenes activas: cualquiera que no esté cerrada o cancelada.
+        try:
+            ordenes = SESSION.get(
+                f"{settings.API_BASE_URL}/mantenimiento/v1/ordenes/list/", timeout=3
+            ).json()
+            stats["ordenes_activas"] = sum(
+                1 for o in ordenes if o.get("estado_orden") not in ("CERRA", "CANCE")
+            )
+        except (requests.RequestException, ValueError):
+            pass
+
+        # Trabajadores: total y activos.
+        try:
+            trabajadores = SESSION.get(
+                f"{settings.API_BASE_URL}/fallas/v1/trabajadores/", timeout=3
+            ).json()
+            stats["trabajadores"] = len(trabajadores)
+            stats["trabajadores_activos"] = sum(
+                1 for t in trabajadores if t.get("actividad")
+            )
+        except (requests.RequestException, ValueError):
+            pass
+
         return render(
             request,
             self.template_name,

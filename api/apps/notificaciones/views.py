@@ -2,6 +2,7 @@ from datetime import date, datetime, time, timedelta
 
 from django.db.models import F
 from django.db.utils import ProgrammingError
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -128,7 +129,7 @@ class NotificacionesListAPIView(APIView):
         # 7. Máquinas caídas (FALLO/MANTE) por más de 24h
         try:
             from apps.maquinaria.models import HistorialEstadoMaquina
-            hace_24h = datetime.combine(hoy - timedelta(days=1), time.min)
+            hace_24h = timezone.make_aware(datetime.combine(hoy - timedelta(days=1), time.min))
             maquinas_caidas = Maquina.objects.filter(estado_maquina__in=["FALLO", "MANTE"])
             for m in maquinas_caidas:
                 ultimo = HistorialEstadoMaquina.objects.filter(

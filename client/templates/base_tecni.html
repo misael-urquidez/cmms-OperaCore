@@ -67,8 +67,10 @@
                     <svg class="tecni-sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
                 </button>
                 <div class="tecni-sidebar__submenu">
-                    <a href="{% url 'maquinaria:index' %}" class="{% if seccion == 'maquinaria' and subseccion == 'lista' %}is-active{% endif %}">Ver lista</a>
+                    <div class="tecni-sidebar__submenu-inner">
+                        <a href="{% url 'maquinaria:index' %}" class="{% if seccion == 'maquinaria' and subseccion == 'lista' %}is-active{% endif %}">Ver lista</a>
                     <a href="{% url 'maquinaria:registro-ops' %}" class="{% if seccion == 'maquinaria' and subseccion == 'registro-ops' %}is-active{% endif %}">Registro de operación</a>
+                    </div>
                 </div>
             </div>
 
