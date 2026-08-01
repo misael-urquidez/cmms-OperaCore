@@ -73,6 +73,19 @@
           {% endfor %}
         </select>
 
+        <div class="sugerencia-ia" id="sugerenciaIA" hidden>
+          <div class="sugerencia-ia__head">
+            <span class="sugerencia-ia__icono">🔎</span>
+            <span id="sugerenciaIATitulo">Analizando historial de la máquina…</span>
+          </div>
+          <p class="sugerencia-ia__causa" id="sugerenciaIACausa"></p>
+          <p class="sugerencia-ia__justif" id="sugerenciaIAJustif"></p>
+          <div class="sugerencia-ia__acciones">
+            <button type="button" class="sugerencia-ia__usar" id="sugerenciaIAUsar">Usar esta sugerencia</button>
+            <button type="button" class="sugerencia-ia__cerrar" id="sugerenciaIACerrar">Ignorar</button>
+          </div>
+        </div>
+
         <label for="tipo_falla">Selecione una o mas fallas encontradas</label>
         <select name="tipo_falla" id="tipo_falla" required>
           <option value="">Seleccione...</option>
@@ -140,6 +153,7 @@
   {{ maquinas|json_script:"elipseMaquinasData" }}
   {{ severidades|json_script:"elipseSeveridadesData" }}
   {{ tipos_falla|json_script:"elipseTiposFallaData" }}
+  {{ estados|json_script:"elipseEstadosData" }}
 
   {# ---- panel lateral de Elipse: no toca la BD, solo propone texto ---- #}
   <div class="elipse-falla-overlay" id="elipseFallaOverlay" hidden></div>
@@ -148,7 +162,17 @@
       <div class="elipse-falla-panel__title"><span class="elipse-bolt">⚡</span> Elipse</div>
       <button type="button" class="elipse-falla-panel__close" id="elipseFallaClose" aria-label="Cerrar panel">✕</button>
     </div>
-    <p class="elipse-falla-panel__hint">
+
+    <div class="elipse-falla-panel__tabs" role="tablist">
+      <button type="button" class="elipse-falla-panel__tab is-active" id="elipseTabRedactar" data-modo="redactar" role="tab" aria-selected="true">
+        ✍️ Redactar
+      </button>
+      <button type="button" class="elipse-falla-panel__tab" id="elipseTabDiagnosticar" data-modo="diagnosticar" role="tab" aria-selected="false">
+        🩺 Diagnosticar
+      </button>
+    </div>
+
+    <p class="elipse-falla-panel__hint" id="elipseFallaHint">
       Cuéntame qué pasó con la máquina. Voy preguntando lo que falte
       (severidad, estado, fecha…) y lleno el formulario contigo.
     </p>
@@ -157,7 +181,7 @@
       <textarea id="elipseFallaInput" rows="2" placeholder="Ej. la banda del pick and place se trabó, lleva 2 horas parada..."></textarea>
       <button type="button" class="elipse-falla-panel__btn" id="elipseFallaBtn">➤</button>
     </form>
-    <p class="elipse-falla-panel__footnote">Elipse solo propone texto; nada se guarda hasta que tú das "Reportar falla".</p>
+    <p class="elipse-falla-panel__footnote" id="elipseFallaFootnote">Elipse solo propone texto; nada se guarda hasta que tú das "Reportar falla".</p>
   </aside>
 
 {% endblock %}
@@ -165,7 +189,14 @@
 <script>
   window.ELIPSE_FALLA_CONFIG = {
       csrf: "{{ csrf_token }}",
-      urlAutocompletar: "{% url 'elipse:autocompletar_falla' %}"
+      urlAutocompletar: "{% url 'elipse:autocompletar_falla' %}",
+      urlDiagnostico: "{% url 'elipse:sugerencia_diagnostico' %}"
+  };
+</script>
+<script>
+  window.SUGERENCIA_IA_CONFIG = {
+      csrf: "{{ csrf_token }}",
+      url: "{% url 'elipse:sugerencia_diagnostico' %}"
   };
 </script>
 <script>
@@ -187,4 +218,5 @@
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
 <script src="{% static 'js/extraer-texto-doc.js' %}"></script>
 <script src="{% static 'fallas/js/elipse-falla.js' %}"></script>
+<script src="{% static 'fallas/js/sugerencia-diagnostico.js' %}"></script>
 {% endblock %}

@@ -57,7 +57,7 @@ dialog#newOrdenModal, dialog#ordenDrawer {
    así no dependemos de que el HTML traiga la clase correcta en cada botón */
 dialog#newOrdenModal *, dialog#ordenDrawer * { color:inherit; box-sizing:border-box; }
 dialog#newOrdenModal button:not(#newOrdenCancel):not(#elipseOrdenClose):not(#elipseOrdenBtn),
-dialog#ordenDrawer button:not(#ordenDrawerClose):not(.orden-mov__item-del) {
+dialog#ordenDrawer button:not(#ordenDrawerClose):not(.orden-mov__item-del):not(.btn-orden-secondary) {
   font:inherit; cursor:pointer; border-radius:.5rem; border:1px solid var(--line);
   background:var(--color-primary); color:#04121c; font-weight:700; font-size:.85rem;
   padding:.6rem 1rem; width:100%; transition:filter .12s ease, opacity .12s ease;
@@ -70,6 +70,7 @@ dialog#ordenDrawer .orden-mov__item-del {
   font-weight:400; padding:0 .3rem; border-radius:.3rem;
 }
 dialog#ordenDrawer .orden-mov__item-del:hover { color:#ef4444; filter:none; }
+dialog#ordenDrawer .btn-orden-secondary { width:100%; }
 
 dialog#newOrdenModal::backdrop, dialog#ordenDrawer::backdrop {
   background:rgba(2,6,15,.72); backdrop-filter:blur(2px);

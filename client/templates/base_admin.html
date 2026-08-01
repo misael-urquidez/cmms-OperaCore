@@ -97,8 +97,8 @@
         </a>
 
         <div class="sidebar__foot">
-            <span class="sidebar__foot-dot"></span>
-            <span class="sidebar__foot-text">API conectada</span>
+            <span class="sidebar__foot-dot" id="elipseFootDot"></span>
+            <span class="sidebar__foot-text" id="elipseFootText">API conectada</span>
         </div>
     </aside>
 
@@ -159,6 +159,7 @@
 <script src="{% static 'js/navbar.js' %}"></script>
 <script src="{% static 'js/theme.js' %}"></script>
 <script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/elipse-estado.js' %}"></script>
 <script>
 (function(){
   var msgs = document.querySelectorAll('.messages__item');

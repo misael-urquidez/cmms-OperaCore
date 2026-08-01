@@ -371,6 +371,20 @@ class TecniDashboardView(generic.View):
         stats["fallas_abiertas"] = len(reportes)
         ultimas_fallas = reportes[:5]
 
+        # Ordenes programadas asignadas a este tecnico (no todas las activas,
+        # solo las que estan en estado PROGRAMADA y le pertenecen a el).
+        try:
+            ordenes = SESSION.get(
+                f"{settings.API_BASE_URL}/mantenimiento/v1/ordenes/list/", timeout=3
+            ).json()
+            stats["ordenes_activas"] = sum(
+                1 for o in ordenes
+                if o.get("trabajador") == usuario.get("numeroNomina")
+                and o.get("estado_orden") == "PROGR"
+            )
+        except (requests.RequestException, ValueError):
+            pass
+
         return render(
             request,
             self.template_name,

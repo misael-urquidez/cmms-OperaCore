@@ -190,6 +190,11 @@
     flex-shrink: 0;
 }
 
+.sidebar__foot-dot.is-offline {
+    background: #f87171;
+    box-shadow: 0 0 6px rgba(248, 113, 113, 0.8);
+}
+
 /* ---- colapsado (solo iconos, escritorio) ---- */
 
 .admin-shell.is-collapsed .sidebar { width: var(--sidebar-w-collapsed); }

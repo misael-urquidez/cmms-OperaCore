@@ -332,9 +332,53 @@ def _catalogo_texto(items, campos):
     return '\n'.join(out) if out else '(sin datos disponibles)'
 
 
+ETIQUETAS_CAMPO_FALLA = {
+    'asunto': 'Asunto', 'descripcion': 'Descripcion', 'causaRaiz': 'Causa raiz',
+    'tiempoParo': 'Tiempo de paro (hrs)', 'fecha': 'Fecha', 'maquina': 'Maquina',
+    'tipo_severidad': 'Severidad', 'tipo_falla': 'Tipo de falla',
+    'estado_reporte': 'Estado del reporte',
+}
+
+
+def _nombre_por_codigo(catalogo, valor):
+    """Busca en un catalogo [{'codigo':..,'nombre':..}, ...] el nombre legible
+    de un codigo ya confirmado, para mostrarselo al modelo en texto plano en
+    vez del codigo crudo."""
+    for it in (catalogo or []):
+        if not isinstance(it, dict):
+            continue
+        clave = it.get('codigo', it.get('numeroRegistro'))
+        if str(clave) == str(valor):
+            return it.get('nombre', str(valor))
+    return str(valor)
+
+
+def _texto_campos_confirmados(campos_previos, maquinas=None, severidades=None,
+                               tipos_falla=None, estados=None):
+    """Arma el bloque 'CAMPOS YA CONFIRMADOS' que se inyecta en el system
+    prompt para que el modelo deje de volver a preguntar por datos que el
+    tecnico ya dio en un turno anterior (en vez de confiar en que lo
+    detecte solo, revolviendo el historial de chat)."""
+    if not campos_previos:
+        return '(ninguno todavia, es el primer turno)'
+    catalogos = {
+        'maquina': maquinas, 'tipo_severidad': severidades,
+        'tipo_falla': tipos_falla, 'estado_reporte': estados,
+    }
+    lineas = []
+    for k, v in campos_previos.items():
+        if v in (None, ''):
+            continue
+        etiqueta = ETIQUETAS_CAMPO_FALLA.get(k, k)
+        cat = catalogos.get(k)
+        legible = _nombre_por_codigo(cat, v) if cat else v
+        lineas.append('- %s: %s' % (etiqueta, legible))
+    return '\n'.join(lineas) if lineas else '(ninguno todavia, es el primer turno)'
+
+
 def _parsear_json_autofill(crudo, claves=(
         'asunto', 'descripcion', 'causaRaiz', 'tiempoParo', 'fecha',
-        'maquina', 'tipo_severidad', 'tipo_falla')):
+        'maquina', 'tipo_severidad', 'tipo_falla', 'estado_reporte')):
     """El modelo deberia regresar JSON puro, pero a veces lo envuelve en
     ```json ... ``` pese a la instruccion, o le mete texto alrededor. Este
     parser es tolerante a eso; regresa (campos, mensaje), o (None, None) si
@@ -1176,6 +1220,423 @@ def _resolver_busqueda_web(pregunta, modelo_key, historial=None):
 
 
 # ─────────────────────────────────────────────────────────
+# Sugerencia de diagnostico (RF-28 / RNF-Propuesta 1)
+# ─────────────────────────────────────────────────────────
+# Al capturar un reporte de falla, se consulta el historial de esa MISMA
+# maquina (sintomas, causa raiz, severidad, refacciones usadas) y se le pide
+# a la IA una causa probable + severidad recomendada. El tecnico SIEMPRE
+# puede editar o ignorar la sugerencia -- esto nunca escribe en la BD.
+#
+# Si no hay conexion/API key, no se cae a un error: se arma una sugerencia
+# local con el historial (sin IA, usando similitud de texto) y, si la
+# maquina no tiene historial todavia, se cae a un tip pregrabado por
+# palabra clave para que la pantalla nunca se vea vacia/rota.
+
+TIPS_PREGRABADOS = [
+    # ── Seguridad critica: se revisan PRIMERO, sin importar que mas diga
+    # el sintoma. Si el tecnico menciona una explosion o fuego, eso pesa
+    # mas que cualquier otra palabra en el texto. ──────────────────────
+    {
+        'claves': ('explot', 'exploto', 'explosion', 'estallo', 'reven', 'volo en pedazos',
+                   'salio disparado', 'salio volando'),
+        'severidad': 'CRITI',
+        'causa_probable': 'Posible falla catastrofica: ruptura de un componente a presion, '
+                           'corto circuito severo o acumulacion de gas/presion. Riesgo de '
+                           'seguridad inmediato para el personal.',
+        'tip': 'Evacua y acordona el area de inmediato. Corta la alimentacion electrica/'
+               'neumatica desde el tablero principal solo si es seguro hacerlo. NO reactives '
+               'la maquina ni te acerques hasta que se haga una inspeccion presencial completa.',
+    },
+    {
+        'claves': ('humo', 'humea', 'huele a quemado', 'olor a quemado', 'se incendio',
+                   'incendio', 'fuego', 'llamas', 'se prendio en llamas'),
+        'severidad': 'CRITI',
+        'causa_probable': 'Sobrecalentamiento severo o falla electrica con riesgo real de incendio.',
+        'tip': 'Corta la alimentacion de inmediato, aleja al personal y ten a la mano un '
+               'extintor para equipo electrico (clase C). No apliques agua sobre el equipo.',
+    },
+    {
+        'claves': ('chispa', 'chisporrote', 'corto circuito', 'se corto', 'olor a quemado electrico'),
+        'severidad': 'CRITI',
+        'causa_probable': 'Corto circuito o arco electrico en cableado, contactor o tablero.',
+        'tip': 'Corta la alimentacion desde el interruptor principal antes de acercarte. No '
+               'intervengas el tablero sin bloqueo/etiquetado (LOTO) y equipo de proteccion.',
+    },
+    # ── Fallas mecanicas / electricas comunes (no urgentes de seguridad) ──
+    {
+        'claves': ('sobrecalent', 'temperatura', 'calor', 'quemad'),
+        'severidad': 'ALTA',
+        'causa_probable': 'Posible sobrecalentamiento (ventilacion obstruida, lubricante insuficiente o sobrecarga del motor).',
+        'tip': 'Revisa temperatura del motor/servo, estado del lubricante y que las rejillas de ventilacion no esten obstruidas.',
+    },
+    {
+        'claves': ('fuga', 'derrame', 'gotea', 'liquido', 'refrigerante', 'aceite', 'mancha de aceite'),
+        'severidad': 'MEDIA',
+        'causa_probable': 'Fuga en sellos, empaques o mangueras de la linea de fluido.',
+        'tip': 'Ubica el punto exacto de la fuga antes de intervenir; revisa sellos, o-rings y conexiones cercanas.',
+    },
+    {
+        'claves': ('vibra', 'ruido', 'sonido raro', 'sonido extra', 'traba', 'atora', 'rechina',
+                   'suena raro', 'hace un ruido'),
+        'severidad': 'MEDIA',
+        'causa_probable': 'Desalineacion mecanica, rodamiento desgastado o banda floja.',
+        'tip': 'Verifica alineacion, tension de bandas y estado de rodamientos/rieles antes de forzar el mecanismo.',
+    },
+    {
+        'claves': ('golpe', 'impacto', 'choco', 'colision', 'se atoro y se rompio'),
+        'severidad': 'ALTA',
+        'causa_probable': 'Dano mecanico por golpe o colision con otra pieza/equipo.',
+        'tip': 'Inspecciona visualmente piezas moviles cercanas al punto de impacto antes de reactivar; busca deformaciones.',
+    },
+    {
+        'claves': ('electric', 'corto', 'no enciende', 'no prende', 'fusible'),
+        'severidad': 'CRITI',
+        'causa_probable': 'Falla electrica: fusible, contactor o cableado en corto.',
+        'tip': 'Corta la alimentacion antes de revisar. Checa fusibles, contactores y continuidad del cableado.',
+    },
+    {
+        'claves': ('congel', 'no responde', 'se traba el software', 'error de software',
+                   'pantalla congelada', 'pantalla no responde'),
+        'severidad': 'MEDIA',
+        'causa_probable': 'Falla de software o del controlador/HMI del equipo.',
+        'tip': 'Intenta un reinicio controlado del panel HMI/PLC; si no responde, documenta el mensaje de error visible antes de forzar el apagado.',
+    },
+    {
+        'claves': ('paro total', 'no funciona', 'se detuvo', 'dejo de funcionar', 'apagada'),
+        'severidad': 'CRITI',
+        'causa_probable': 'Paro total del equipo; requiere diagnostico presencial antes de reanudar produccion.',
+        'tip': 'Documenta el estado exacto en que quedo la maquina (pantallas, sonidos, olores) antes de manipularla.',
+    },
+]
+TIP_GENERICO = {
+    'severidad': 'MEDIA',
+    'causa_probable': 'No hay suficiente informacion para sugerir una causa especifica todavia.',
+    'tip': 'Describe el sintoma con mas detalle (que hace/deja de hacer la maquina, desde cuando) para una mejor sugerencia.',
+}
+
+
+def _tip_por_palabra_clave(sintoma):
+    s = (sintoma or '').lower()
+    for tip in TIPS_PREGRABADOS:
+        if any(k in s for k in tip['claves']):
+            return tip
+    return TIP_GENERICO
+
+
+
+def _historial_fallas_maquina(codigo_maquina, limite=8):
+    """Ultimos reportes de ESTA maquina, con severidad y refacciones que se
+    usaron para resolverlos (via ORDEN_MANTENIMIENTO -> MOVIMIENTO)."""
+    cols, rows = _q(
+        "SELECT r.numeroRegistro Id, r.asunto Asunto, r.descripcion Descripcion,"
+        " r.causaRaiz CausaRaiz, r.fechaCreacion Fecha, r.tiempoParo TiempoParoHrs,"
+        " sev.codigo SeveridadCodigo, sev.nombre SeveridadNombre"
+        " FROM REPORTE_FALLA r"
+        " LEFT JOIN TIPO_SEVERIDAD sev ON sev.codigo = r.tipo_severidad"
+        " WHERE r.maquina = %s"
+        " ORDER BY r.fechaCreacion DESC LIMIT %s",
+        [codigo_maquina, limite]
+    )
+    if not rows:
+        return rows
+
+    ids = [r['Id'] for r in rows]
+    placeholders = ','.join(['%s'] * len(ids))
+    _, refs = _q(
+        "SELECT om.reporte_falla ReporteId,"
+        " GROUP_CONCAT(DISTINCT ref.nombre SEPARATOR ', ') Refacciones"
+        " FROM ORDEN_MANTENIMIENTO om"
+        " JOIN MOVIMIENTO mv ON mv.orden_mantenimiento = om.folio"
+        " JOIN REFACCION ref ON ref.numeroRegistro = mv.refaccion"
+        " WHERE om.reporte_falla IN (%s)"
+        " GROUP BY om.reporte_falla" % placeholders,
+        ids
+    )
+    refs_por_reporte = {r['ReporteId']: r['Refacciones'] for r in refs}
+    for r in rows:
+        r['Refacciones'] = refs_por_reporte.get(r['Id'], '')
+    return rows
+
+
+def _info_maquina_para_busqueda(codigo_maquina):
+    """Nombre/descripcion/marca/modelo/tipo de la maquina, para armar una
+    query de internet que si tenga sentido (el codigo interno "MQ003" no
+    significa nada para un buscador)."""
+    _, rows = _q(
+        "SELECT m.nombre Nombre, m.descripcion Descripcion,"
+        " ma.nombre Marca, mo.nombre Modelo, tm.nombre Tipo"
+        " FROM MAQUINA m"
+        " LEFT JOIN MARCA ma ON ma.clave = m.marca"
+        " LEFT JOIN MODELO mo ON mo.codigo = m.modelo"
+        " LEFT JOIN TIPO_MAQUINA tm ON tm.numeroRegistro = m.tipo_maquina"
+        " WHERE m.codigo = %s", [codigo_maquina]
+    )
+    return rows[0] if rows else {}
+
+
+SUGERENCIA_WEB_SYSTEM_TPL = """Eres Elipse, asistente tecnico de OperaCore (CMMS de mantenimiento
+industrial). Un tecnico esta reportando una falla NUEVA en una maquina que
+TODAVIA NO TIENE historial de fallas en el sistema, asi que se busco en
+internet informacion general sobre fallas comunes de este tipo de equipo.
+Tu trabajo es, con base UNICAMENTE en esos resultados de busqueda y el
+sintoma que describe el tecnico, sugerir una causa probable y una severidad.
+
+Responde SOLO con un objeto JSON (nada de texto ni markdown alrededor):
+{
+  "causa_probable": string, 1-2 oraciones, especifica y tecnica, basada en
+    lo que dicen los resultados de busqueda (ej. "Segun fuentes tecnicas,
+    un ruido seguido de falla subita en bandas transportadoras suele
+    deberse a rotura del rodillo motriz o falla del motorreductor"),
+  "severidad": "codigo" (string) EXACTO de la lista de severidades de abajo,
+    el que mejor corresponda,
+  "justificacion": string breve (1 oracion) de por que esa severidad,
+  "confianza": "alta" | "media" | "baja" -- como esto NO es historial real
+    de la maquina sino informacion general de internet, normalmente debe
+    ser "media" o "baja", nunca "alta"
+}
+
+Reglas:
+- Usa SOLO codigos de severidad que aparezcan en la lista de abajo.
+- No inventes datos que no esten sugeridos por los resultados de busqueda.
+- Si los resultados no traen nada util para el sintoma, se honesto y baja la
+  confianza a "baja" en vez de inventar una causa.
+
+SEVERIDADES DISPONIBLES (codigo | nombre):
+%s
+
+MAQUINA (sin historial en el sistema todavia):
+%s
+
+RESULTADOS DE BUSQUEDA:
+%s
+"""
+
+
+def _sugerencia_via_web(codigo_maquina, sintoma, severidades, modelo_id):
+    """Cuando la maquina no tiene historial local: en vez de saltar directo
+    al tip pregrabado por palabra clave, se intenta primero enriquecer la
+    sugerencia con una busqueda real en internet (mismo mecanismo que ya usa
+    el chat general, _buscar_web) + IA. Regresa un dict listo para la
+    Response, o None si la busqueda/IA no dieron nada usable (el caller cae
+    entonces al tip pregrabado)."""
+    info = _info_maquina_para_busqueda(codigo_maquina)
+    nombre = info.get('Nombre') or codigo_maquina
+    marca = info.get('Marca') or ''
+    modelo = info.get('Modelo') or ''
+    tipo = info.get('Tipo') or ''
+
+    descriptor = ' '.join(x for x in (tipo, marca, modelo) if x) or nombre
+    query_busqueda = '%s %s causas fallas comunes reparacion' % (descriptor, sintoma[:120])
+
+    resultados, err = _buscar_web(query_busqueda)
+    if err or not resultados:
+        return None
+
+    fuentes_texto = '\n'.join(
+        '%d. %s - %s (%s)' % (i + 1, r['titulo'], r['snippet'], r['url'])
+        for i, r in enumerate(resultados)
+    )
+    info_maquina_texto = 'Nombre: %s | Tipo: %s | Marca: %s | Modelo: %s' % (
+        nombre, tipo or '(sin registrar)', marca or '(sin registrar)', modelo or '(sin registrar)'
+    )
+    system = SUGERENCIA_WEB_SYSTEM_TPL % (
+        _catalogo_texto(severidades, ['codigo', 'nombre']),
+        info_maquina_texto,
+        fuentes_texto,
+    )
+    crudo, err2 = _llamar_groq(system, sintoma, modelo_id, max_tokens=300, temperature=0.2)
+    if err2:
+        return None
+
+    campos, _msg = _parsear_json_autofill(
+        crudo, claves=('causa_probable', 'severidad', 'justificacion', 'confianza')
+    )
+    codigos_validos = {s['codigo'] for s in severidades}
+    if not campos or not campos.get('causa_probable') or campos.get('severidad') not in codigos_validos:
+        return None
+
+    return {
+        'fuente': 'web',
+        'casos_similares': 0,
+        'causa_probable': campos['causa_probable'],
+        'severidad': campos['severidad'],
+        'justificacion': campos.get('justificacion') or '',
+        'confianza': campos.get('confianza') or 'baja',
+        'fuentes_web': [{'titulo': r['titulo'], 'url': r['url']} for r in resultados[:3]],
+    }
+
+
+def _severidad_mas_frecuente(historial):
+    conteo = {}
+    for r in historial:
+        c = r.get('SeveridadCodigo')
+        if c:
+            conteo[c] = conteo.get(c, 0) + 1
+    if not conteo:
+        return None
+    return max(conteo, key=conteo.get)
+
+
+def _caso_mas_similar(sintoma, historial):
+    """Sin IA: compara el sintoma nuevo contra descripcion+causaRaiz de cada
+    caso pasado con difflib (ya viene importado arriba) y regresa el mas
+    parecido."""
+    mejor, mejor_score = None, 0.0
+    for r in historial:
+        texto = '%s %s' % (r.get('Descripcion') or '', r.get('CausaRaiz') or '')
+        score = difflib.SequenceMatcher(None, sintoma.lower(), texto.lower()).ratio()
+        if score > mejor_score:
+            mejor, mejor_score = r, score
+    return mejor
+
+
+SUGERENCIA_DIAGNOSTICO_SYSTEM_TPL = """Eres Elipse, asistente tecnico de OperaCore (CMMS de mantenimiento
+industrial). Un tecnico esta reportando una falla NUEVA en una maquina y te doy
+el HISTORIAL REAL de fallas previas de esa MISMA maquina (sintoma, causa raiz,
+severidad y refacciones que se usaron para resolverlas). Tu trabajo es sugerir
+una causa probable y una severidad para el caso nuevo, basandote en los
+patrones del historial.
+
+Responde SOLO con un objeto JSON (nada de texto ni markdown alrededor):
+{
+  "causa_probable": string, 1-2 oraciones, especifica y tecnica, citando el
+    patron del historial en que te basas (ej. "Similar a 3 fallas previas por
+    desgaste del rodamiento del eje X"),
+  "severidad": "codigo" (string) EXACTO de la lista de severidades de abajo,
+    el que mejor corresponda,
+  "justificacion": string breve (1 oracion) de por que esa severidad,
+  "confianza": "alta" | "media" | "baja" segun que tan parecido es el
+    historial al caso nuevo
+}
+
+Reglas:
+- Usa SOLO codigos de severidad que aparezcan en la lista de abajo.
+- Si el historial no se parece al sintoma nuevo, dilo con confianza "baja" en
+  vez de inventar una relacion que no existe.
+- No prometas nada que no puedas saber por el historial (no diagnostiques
+  causas fisicas que no esten sugeridas por los datos).
+
+SEVERIDADES DISPONIBLES (codigo | nombre):
+%s
+
+HISTORIAL DE ESTA MAQUINA (mas reciente primero):
+%s
+"""
+
+
+def _formatear_historial_para_prompt(historial):
+    out = []
+    for r in historial:
+        out.append(
+            '- [%s] %s | causa raiz: %s | severidad: %s | refacciones usadas: %s'
+            % (
+                r.get('Fecha'), r.get('Descripcion') or r.get('Asunto') or '(sin descripcion)',
+                r.get('CausaRaiz') or '(sin registrar)',
+                r.get('SeveridadNombre') or '(sin registrar)',
+                r.get('Refacciones') or '(ninguna registrada)',
+            )
+        )
+    return '\n'.join(out)
+
+
+class ElipseSugerenciaDiagnosticoAPIView(APIView):
+    """RF-28 + RNF Asistencia Inteligente para Diagnostico de Fallas.
+
+    POST { maquina: "MQ001", sintoma: "la banda se traba y hace ruido...",
+           modelo: "groq-llama" (opcional) }
+
+    Responde SIEMPRE 200 con una sugerencia utilizable, nunca un error crudo:
+      fuente = "ia"               -> IA con historial real (mejor caso)
+      fuente = "historial_local"  -> sin IA (sin internet/API key), pero SI
+                                      hay historial: se usa el caso mas
+                                      parecido con difflib
+      fuente = "web"              -> sin historial de esta maquina, pero se
+                                      encontro informacion util buscando en
+                                      internet (tipo/marca/modelo + sintoma)
+      fuente = "consejo_general"  -> sin historial NI resultados utiles de
+                                      internet: tip pregrabado por palabra
+                                      clave (nunca deja la pantalla vacia)
+    Nunca escribe en la BD; el tecnico decide si usa/edita/ignora.
+    """
+
+    def post(self, request):
+        codigo_maquina = (request.data.get('maquina') or '').strip()
+        sintoma = (request.data.get('sintoma') or '').strip()
+        modelo_k = request.data.get('modelo', MODELO_DEFAULT)
+        if modelo_k not in MODELOS_IA:
+            modelo_k = MODELO_DEFAULT
+
+        if not codigo_maquina or not sintoma:
+            return Response({'error': 'Selecciona una maquina y describe el sintoma.'}, status=400)
+        sintoma = sintoma[:1000]
+
+        historial = _historial_fallas_maquina(codigo_maquina)
+        _, severidades = _q("SELECT codigo, nombre FROM TIPO_SEVERIDAD")
+
+        # Sin historial de esta maquina: en vez de saltar directo al tip
+        # pregrabado por palabra clave, primero se intenta enriquecer la
+        # sugerencia con una busqueda real en internet (mismo mecanismo que
+        # ya usa el chat general) + IA. Si eso no da nada usable (sin
+        # internet, sin API key, o la IA no respondio en formato valido),
+        # se cae al tip pregrabado -- la pantalla nunca se queda vacia.
+        if not historial:
+            sugerencia_web = _sugerencia_via_web(codigo_maquina, sintoma, severidades, MODELOS_IA[modelo_k]['id'])
+            if sugerencia_web:
+                return Response(sugerencia_web)
+
+            tip = _tip_por_palabra_clave(sintoma)
+            return Response({
+                'fuente': 'consejo_general',
+                'casos_similares': 0,
+                'causa_probable': tip['causa_probable'],
+                'severidad': tip['severidad'],
+                'justificacion': 'Esta maquina no tiene fallas registradas todavia; ' + tip['tip'],
+            })
+
+        system = SUGERENCIA_DIAGNOSTICO_SYSTEM_TPL % (
+            _catalogo_texto(severidades, ['codigo', 'nombre']),
+            _formatear_historial_para_prompt(historial),
+        )
+        modelo_id = MODELOS_IA[modelo_k]['id']
+        crudo, err = _llamar_groq(system, sintoma, modelo_id, max_tokens=300, temperature=0.2)
+
+        if not err:
+            campos, _msg = _parsear_json_autofill(
+                crudo, claves=('causa_probable', 'severidad', 'justificacion', 'confianza')
+            )
+            codigos_validos = {s['codigo'] for s in severidades}
+            if campos and campos.get('causa_probable') and campos.get('severidad') in codigos_validos:
+                return Response({
+                    'fuente': 'ia',
+                    'casos_similares': len(historial),
+                    'causa_probable': campos['causa_probable'],
+                    'severidad': campos['severidad'],
+                    'justificacion': campos.get('justificacion') or '',
+                    'confianza': campos.get('confianza') or 'media',
+                })
+            # la IA respondio pero no en el formato esperado -> cae al modo local
+
+        # Sin internet/API key, o la IA fallo: sugerencia local con el
+        # historial real (nunca un error crudo en pantalla).
+        caso = _caso_mas_similar(sintoma, historial)
+        severidad = (caso or {}).get('SeveridadCodigo') or _severidad_mas_frecuente(historial) or 'MEDIA'
+        if caso:
+            causa = 'Similar a un caso previo de esta maquina (%s): %s' % (
+                caso.get('Fecha'), caso.get('CausaRaiz') or caso.get('Descripcion') or 'sin causa raiz registrada'
+            )
+        else:
+            causa = 'No se pudo comparar automaticamente; revisa el historial de esta maquina abajo.'
+
+        return Response({
+            'fuente': 'historial_local',
+            'casos_similares': len(historial),
+            'causa_probable': causa,
+            'severidad': severidad,
+            'justificacion': 'Elipse esta sin conexion a la IA ahorita; esto se calculo con el historial local de la maquina.',
+        })
+
+
+# ─────────────────────────────────────────────────────────
 # Autocompletado del reporte de falla
 # ─────────────────────────────────────────────────────────
 
@@ -1187,10 +1648,9 @@ bloques de codigo) con estas claves exactas:
 
 {
   "mensaje": string, tu respuesta conversacional breve (1-2 oraciones, tono
-    cercano). Si ya tienes lo esencial (asunto, maquina, severidad) confirma
-    y pregunta por lo que falte, ej. "que tan grave dirias que esta? y
-    que estado tiene el reporte?". No repitas literalmente lo que ya dijo
-    el tecnico.
+    cercano). Antes de preguntar algo, revisa "CAMPOS YA CONFIRMADOS": jamas
+    preguntes de nuevo por algo que ya este ahi. Pregunta SOLO por lo que
+    de verdad falte. No repitas literalmente lo que ya dijo el tecnico.
   "asunto": string corto (max 80 caracteres), o null si aun no hay info,
   "descripcion": string tecnica de que sucede (max 500 caracteres), o null,
   "causaRaiz": string, tu mejor hipotesis de causa raiz (max 500
@@ -1205,15 +1665,24 @@ bloques de codigo) con estas claves exactas:
   "tipo_severidad": "codigo" (string) de severidad de la lista de abajo, o
     null,
   "tipo_falla": "numeroRegistro" (numero) del tipo de falla de la lista de
-    abajo, o null
+    abajo, o null,
+  "estado_reporte": "codigo" (string) del estado del reporte, de la lista
+    de abajo. Si el tecnico no dice nada del estado, regresa "ABIER"
+    (Abierto) -- es el default logico de un reporte recien levantado, no
+    lo dejes null ni lo preguntes salvo que el tecnico mencione otra cosa
+    explicitamente (ej. "ya quedo resuelto")
 }
+
+CAMPOS YA CONFIRMADOS EN TURNOS ANTERIORES (no vuelvas a preguntar por
+estos, solo cambialos si el tecnico los corrige explicitamente ahora):
+%s
 
 Reglas estrictas:
 - SOLO puedes usar codigos / numeroRegistro que aparezcan tal cual en las
   listas de abajo. Si ninguno encaja, regresa null. NUNCA inventes uno.
 - No agregues claves extra ni comentarios. Responde unicamente con el JSON.
-- Si un campo ya se lleno en un turno anterior (viene en el historial) y el
-  tecnico no lo contradice, sigue regresandolo con el mismo valor.
+- Si un campo ya aparece en CAMPOS YA CONFIRMADOS y el tecnico no lo
+  contradice, sigue regresandolo con el mismo valor.
 - Nunca inventes datos que el tecnico no haya dado o insinuado.
 
 MAQUINAS DISPONIBLES (codigo | nombre):
@@ -1223,6 +1692,9 @@ SEVERIDADES DISPONIBLES (codigo | nombre):
 %s
 
 TIPOS DE FALLA DISPONIBLES (numeroRegistro | nombre):
+%s
+
+ESTADOS DE REPORTE DISPONIBLES (codigo | nombre):
 %s
 """
 
@@ -1236,11 +1708,14 @@ def _resolver_crear_reporte_falla(pregunta, modelo_key, historial=None):
     _, maquinas = _q("SELECT codigo, nombre FROM MAQUINA")
     _, severidades = _q("SELECT codigo, nombre FROM TIPO_SEVERIDAD")
     _, tipos_falla = _q("SELECT numeroRegistro, nombre FROM TIPO_FALLA")
+    _, estados = _q("SELECT codigo, nombre FROM EDO_REPORTE")
 
     system = AUTOFILL_SYSTEM_TPL % (
+        _texto_campos_confirmados(None),
         _catalogo_texto(maquinas, ['codigo', 'nombre']),
         _catalogo_texto(severidades, ['codigo', 'nombre']),
         _catalogo_texto(tipos_falla, ['numeroRegistro', 'nombre']),
+        _catalogo_texto(estados, ['codigo', 'nombre']),
     )
     crudo, err = _llamar_groq(system, pregunta, modelo_id, historial=historial, max_tokens=500, temperature=0.3)
     if err:
@@ -1291,11 +1766,18 @@ class ElipseAutocompletarFallaAPIView(APIView):
             modelo_k = MODELO_DEFAULT
 
         historial = request.data.get('historial') or []
+        campos_previos = request.data.get('campos_previos') or {}
+        maquinas = request.data.get('maquinas')
+        severidades = request.data.get('severidades')
+        tipos_falla = request.data.get('tipos_falla')
+        estados = request.data.get('estados')
 
         system = AUTOFILL_SYSTEM_TPL % (
-            _catalogo_texto(request.data.get('maquinas'), ['codigo', 'nombre']),
-            _catalogo_texto(request.data.get('severidades'), ['codigo', 'nombre']),
-            _catalogo_texto(request.data.get('tipos_falla'), ['numeroRegistro', 'nombre']),
+            _texto_campos_confirmados(campos_previos, maquinas, severidades, tipos_falla, estados),
+            _catalogo_texto(maquinas, ['codigo', 'nombre']),
+            _catalogo_texto(severidades, ['codigo', 'nombre']),
+            _catalogo_texto(tipos_falla, ['numeroRegistro', 'nombre']),
+            _catalogo_texto(estados, ['codigo', 'nombre']),
         )
 
         modelo_id = MODELOS_IA[modelo_k]['id']
@@ -1315,8 +1797,19 @@ class ElipseAutocompletarFallaAPIView(APIView):
                 status=502,
             )
 
+        # Red de seguridad: si el modelo "olvido" devolver algo que ya
+        # estaba confirmado en un turno anterior, lo rellenamos aqui para
+        # que el campo nunca desaparezca ni se vuelva a preguntar.
+        for k, v in campos_previos.items():
+            if campos.get(k) in (None, '') and v not in (None, ''):
+                campos[k] = v
+
         if not campos.get('fecha'):
             campos['fecha'] = date.today().isoformat()
+        if not campos.get('estado_reporte'):
+            estados_validos = {e.get('codigo') for e in (estados or []) if isinstance(e, dict)}
+            if 'ABIER' in estados_validos:
+                campos['estado_reporte'] = 'ABIER'
 
         return Response({'campos': campos, 'mensaje': mensaje or ''})
 
@@ -1463,6 +1956,28 @@ class ElipseAutocompletarOrdenAPIView(APIView):
 # ─────────────────────────────────────────────────────────
 # Vista principal
 # ─────────────────────────────────────────────────────────
+
+class ElipseEstadoAPIView(APIView):
+    """Chequeo rapido y barato de si Groq (la IA) esta disponible: valida
+    que haya API key y hace un GET a /models (NO genera texto, no gasta
+    tokens de completion como el chat) con timeout corto."""
+
+    def get(self, request):
+        api_key = settings.GROQ_API_KEY
+        if not api_key:
+            return Response({'ok': False, 'motivo': 'sin_api_key'})
+
+        req = urllib.request.Request(
+            'https://api.groq.com/openai/v1/models',
+            headers={'Authorization': 'Bearer ' + api_key},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=4) as res:
+                ok = res.status == 200
+        except Exception:
+            ok = False
+
+        return Response({'ok': ok})
 
 class ElipseSugerenciasAPIView(APIView):
     """Devuelve PREGUNTAS_RAPIDAS para que el client arme los chips."""
