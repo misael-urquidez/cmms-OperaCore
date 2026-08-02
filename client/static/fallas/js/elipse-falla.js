@@ -130,6 +130,25 @@
     return true;
   }
 
+  // ── marca visualmente los selects que Elipse no pudo llenar, para que
+  //    no pasen desapercibidos (sobre todo al importar un documento) ─────
+  function resaltarCamposFaltantes(campos) {
+    ["maquina", "tipo_severidad", "tipo_falla", "estado_reporte"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (!campos[id]) {
+        el.classList.add("campo-sin-coincidencia");
+        var quitar = function () {
+          el.classList.remove("campo-sin-coincidencia");
+          el.removeEventListener("change", quitar);
+        };
+        el.addEventListener("change", quitar);
+      } else {
+        el.classList.remove("campo-sin-coincidencia");
+      }
+    });
+  }
+
   function aplicarCampos(campos) {
     campos = campos || {};
     var aplicados = [];
@@ -146,6 +165,7 @@
       if (set("tipo_falla", String(campos.tipo_falla))) aplicados.push("Tipo de falla");
     }
     if (campos.estado_reporte && set("estado_reporte", String(campos.estado_reporte))) aplicados.push("Estado del reporte");
+    resaltarCamposFaltantes(campos);
     return aplicados;
   }
 
@@ -168,6 +188,12 @@
   })();
 
   if (!btnOpen || !panel || !overlay) return;
+
+  // ── badge de aviso cuando la respuesta vino del modo local (sin IA) ────
+  function badgeFuenteLocal(data) {
+    if (!data || data.fuente !== "local") return "";
+    return '<p style="margin:4px 0 0;font-size:11px;color:#f59e0b">⚠️ Extracción sin IA (modo local)</p>';
+  }
 
   // ── burbujas del chat (definida antes de cambiarModo/abrirPanel) ───────
   function pintarMsg(rol, texto, extraHTML) {
@@ -274,7 +300,7 @@
               : "")
           : "";
 
-        pintarMsg("ai", res.data.mensaje || "Listo, revisa el formulario.", nota);
+        pintarMsg("ai", res.data.mensaje || "Listo, revisa el formulario.", badgeFuenteLocal(res.data) + nota);
         historialRedactar.push({ role: "assistant", content: res.data.mensaje || "" });
       })
       .catch(function () {
@@ -460,7 +486,7 @@
               }
               aplicarCampos(res.data.campos);
               fusionarCampos(res.data.campos);
-              pintarMsg("ai", res.data.mensaje || "Listo, importé lo que encontré en el documento. Revisa el formulario.");
+              pintarMsg("ai", res.data.mensaje || "Listo, importé lo que encontré en el documento. Revisa el formulario.", badgeFuenteLocal(res.data));
               historialRedactar.push({ role: "assistant", content: res.data.mensaje || "" });
             });
         })

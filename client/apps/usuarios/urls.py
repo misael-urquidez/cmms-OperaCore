@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.AuthView.as_view(), name="index"),
     path("login/", views.LoginView.as_view(), name="login"),
     path("registro/", views.RegistroView.as_view(), name="registro"),
+    path("validar-clave/", views.ValidarClaveRolView.as_view(), name="validar_clave"),
     path("logout/", views.LogoutView.as_view(), name="logout"),
     path("perfil/actualizar/", views.ConfigPerfilView.as_view(), name="perfil_actualizar"),
     path("panel/", views.AdminDashboardView.as_view(), name="admin_dashboard"),

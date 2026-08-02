@@ -14,6 +14,7 @@ import base64
 import difflib
 import json
 import re
+import unicodedata
 import urllib.request
 import urllib.error
 from datetime import date
@@ -24,6 +25,189 @@ from django.conf import settings
 from django.db import connection
 from rest_framework.views import APIView
 from rest_framework.response import Response
+
+
+_PLANTILLA_CAMPOS = [
+    # (campo, patron de la etiqueta -- debe ocupar TODO el renglon, texto
+    #  de ejemplo/cursiva de la plantilla que hay que ignorar si aparece)
+    ('asunto', r'^\s*asunto\s*:?\s*$',
+     'resume la falla en una frase corta.'),
+    ('descripcion', r'^\s*descripcion\s*:?\s*$',
+     'que paso? explica la falla con el mayor detalle posible.'),
+    ('causaRaiz', r'^\s*causa\s+raiz\s*:?\s*$',
+     'por que crees que paso? (si aun no lo sabes, dejalo en blanco)'),
+    ('tiempoParo', r'^\s*tiempo\s+que\s+estuvo\s+en\s+paro\s+la\s+maquina\s*(?:\(horas\))?\s*:?\s*$',
+     'ej. 2.5'),
+    ('fecha', r'^\s*fecha\s+de\s+solucion\s*:?\s*$',
+     'formato dd/mm/aaaa, si ya se resolvio.'),
+    ('maquina', r'^\s*maquina\s*:?\s*$',
+     'nombre o codigo de la maquina afectada.'),
+    ('tipo_severidad', r'^\s*severidad\s*:?\s*$',
+     'baja, media, alta o critica.'),
+    ('tipo_falla', r'^\s*tipo\(?s?\)?\s+de\s+falla\s*:?\s*$',
+     'ej. electrica, mecanica, software...'),
+]
+
+
+def _quitar_acentos(s):
+    return ''.join(c for c in unicodedata.normalize('NFKD', s) if not unicodedata.combining(c))
+
+
+def _extraer_por_plantilla(texto):
+    """Si el documento sigue 'plantilla_reporte_falla.docx' (o algo muy
+    parecido), usa sus etiquetas como anclas para cortar el texto en
+    secciones EXACTAS, en vez de adivinar con heuristicas genericas sobre
+    todo el documento junto. Regresa un dict {campo: texto_de_esa_seccion}
+    o None si no reconoce suficientes etiquetas como para confiar en esto."""
+    plano = _quitar_acentos(texto).lower()
+
+    matches = []
+    for campo, patron, _pista in _PLANTILLA_CAMPOS:
+        m = re.search(patron, plano, re.MULTILINE)
+        if m:
+            matches.append((campo, m.start(), m.end()))
+
+    if len(matches) < 3:
+        return None  # no parece la plantilla, mejor el modo generico
+
+    matches.sort(key=lambda t: t[1])
+    pistas = {campo: pista for campo, _p, pista in _PLANTILLA_CAMPOS}
+
+    secciones = {}
+    for i, (campo, _ini, fin) in enumerate(matches):
+        fin_seccion = matches[i + 1][1] if i + 1 < len(matches) else len(texto)
+        crudo = texto[fin:fin_seccion].strip()
+
+        # quita el texto de ejemplo/cursiva de la plantilla si el tecnico
+        # lo dejo intacto (evita confundir "media" del ejemplo de
+        # severidad con una respuesta real, por ejemplo)
+        crudo_plano = _quitar_acentos(crudo).lower()
+        pista = pistas.get(campo, '')
+        if pista and crudo_plano.startswith(pista):
+            crudo = crudo[len(pista):].strip()
+
+        secciones[campo] = crudo
+
+    return secciones
+
+
+def _autofill_local(texto, maquinas, severidades, tipos_falla, estados):
+    """Extraccion basica SIN IA, para cuando Elipse no tiene conexion/API
+    key. Primero intenta reconocer la plantilla oficial (etiquetas fijas,
+    mucho mas confiable); si el documento no la sigue, cae a heuristicas
+    genericas sobre texto libre. En ambos casos es menos precisa que el
+    modelo, asi que siempre avisa que campos no pudo identificar."""
+    campos = {
+        'asunto': None, 'descripcion': None, 'causaRaiz': None,
+        'tiempoParo': None, 'fecha': None, 'maquina': None,
+        'tipo_severidad': None, 'tipo_falla': None, 'estado_reporte': None,
+    }
+    avisos = []
+
+    secciones = _extraer_por_plantilla(texto)
+    usando_plantilla = secciones is not None
+
+    if usando_plantilla:
+        campos['asunto'] = (secciones.get('asunto') or '')[:80] or None
+        campos['descripcion'] = (secciones.get('descripcion') or '')[:500] or None
+        campos['causaRaiz'] = (secciones.get('causaRaiz') or '')[:500] or None
+        texto_maquina = secciones.get('maquina') or ''
+        texto_severidad = secciones.get('tipo_severidad') or ''
+        texto_falla = secciones.get('tipo_falla') or ''
+        texto_tiempo = secciones.get('tiempoParo') or ''
+        texto_fecha = secciones.get('fecha') or ''
+    else:
+        texto_low_completo = (texto or '').lower()
+        primera_linea = next((l.strip() for l in texto.splitlines() if l.strip()), '')
+        campos['asunto'] = primera_linea[:80] or None
+        campos['descripcion'] = texto.strip()[:500] or None
+        texto_maquina = texto_severidad = texto_falla = texto_low_completo
+        texto_tiempo = texto_low_completo
+        texto_fecha = texto
+
+    # tiempo de paro: "N horas"/"N hrs" en cualquier modo; si viene de la
+    # plantilla tambien acepta solo el numero solo (la seccion ya viene
+    # aislada, ej. "2.5")
+    m = re.search(r'(\d+(?:\.\d+)?)\s*(?:horas?|hrs?)\b', texto_tiempo.lower())
+    if not m and usando_plantilla:
+        m = re.match(r'\s*(\d+(?:\.\d+)?)\s*$', texto_tiempo.strip())
+    if m:
+        try:
+            campos['tiempoParo'] = float(m.group(1))
+        except ValueError:
+            pass
+
+    # fecha: dd/mm/aaaa -> YYYY-MM-DD (solo tiene sentido buscarla si vino
+    # de la seccion "Fecha de solucion" de la plantilla)
+    if usando_plantilla:
+        m = re.search(r'(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})', texto_fecha)
+        if m:
+            dd, mm, yyyy = m.groups()
+            try:
+                campos['fecha'] = date(int(yyyy), int(mm), int(dd)).isoformat()
+            except ValueError:
+                pass
+
+    # maquina: coincidencia exacta de codigo/nombre, si no hay -> similitud
+    maquina_low = texto_maquina.lower()
+    mejor_maquina, mejor_score = None, 0.0
+    for maq in (maquinas or []):
+        nombre = (maq.get('nombre') or '').lower()
+        codigo = (maq.get('codigo') or '').lower()
+        if (codigo and codigo in maquina_low) or (nombre and nombre in maquina_low):
+            mejor_maquina, mejor_score = maq.get('codigo'), 1.0
+            break
+        score = difflib.SequenceMatcher(None, nombre, maquina_low).ratio() if nombre else 0.0
+        if score > mejor_score:
+            mejor_maquina, mejor_score = maq.get('codigo'), score
+    # con plantilla la seccion ya viene aislada (solo el nombre de la
+    # maquina), asi que un umbral mas bajo sigue siendo confiable
+    umbral = 0.35 if usando_plantilla else 0.5
+    if mejor_maquina and mejor_score >= umbral:
+        campos['maquina'] = mejor_maquina
+    else:
+        avisos.append('la maquina')
+
+    # severidad: palabras clave -> codigo (solo si ese codigo existe en catalogo)
+    severidad_low = texto_severidad.lower()
+    mapa_severidad = [
+        (('critic', 'parada total', 'linea parada', 'urgente'), 'CRITI'),
+        (('alta', 'grave'), 'ALTA'),
+        (('media', 'moderad'), 'MEDI'),
+        (('baja', 'menor', 'leve'), 'BAJA'),
+    ]
+    codigos_severidad = {s.get('codigo') for s in (severidades or [])}
+    for claves, codigo in mapa_severidad:
+        if codigo in codigos_severidad and any(k in severidad_low for k in claves):
+            campos['tipo_severidad'] = codigo
+            break
+    if not campos['tipo_severidad']:
+        avisos.append('la severidad')
+
+    # tipo de falla: coincidencia de nombre dentro de su seccion
+    falla_low = texto_falla.lower()
+    for tf in (tipos_falla or []):
+        nombre = (tf.get('nombre') or '').lower()
+        if nombre and nombre in falla_low:
+            campos['tipo_falla'] = tf.get('numeroRegistro')
+            break
+
+    # estado: default a ABIER si existe en el catalogo (igual que en modo IA)
+    codigos_estado = {e.get('codigo') for e in (estados or [])}
+    if 'ABIER' in codigos_estado:
+        campos['estado_reporte'] = 'ABIER'
+
+    base = (
+        'Elipse no tiene conexion a la IA ahorita, asi que use una extraccion '
+        + ('basica siguiendo la plantilla' if usando_plantilla else 'basica del texto')
+        + ' (sin IA, menos precisa de lo normal).'
+    )
+    if avisos:
+        mensaje = base + ' No logre identificar %s: revisalo y complementalo a mano antes de guardar.' % ' ni '.join(avisos)
+    else:
+        mensaje = base + ' Revisa todos los campos antes de guardar.'
+
+    return campos, mensaje
 
 
 # ─────────────────────────────────────────────────────────
@@ -1720,8 +1904,16 @@ def _resolver_crear_reporte_falla(pregunta, modelo_key, historial=None):
     crudo, err = _llamar_groq(system, pregunta, modelo_id, historial=historial, max_tokens=500, temperature=0.3)
     if err:
         if _es_error_conexion(err):
-            return _respuesta_sin_internet(pregunta)
-        return '<p class="msg-error">%s</p>' % _esc(err)
+            # Sin internet/API key: en vez de dejar el formulario vacio,
+            # se intenta una extraccion local (sin IA, menos precisa).
+            campos, mensaje = _autofill_local(pregunta, maquinas, severidades, tipos_falla, estados)
+            for k, v in (campos_previos or {}).items():
+                if campos.get(k) in (None, '') and v not in (None, ''):
+                    campos[k] = v
+            if not campos.get('fecha'):
+                campos['fecha'] = date.today().isoformat()
+            return Response({'campos': campos, 'mensaje': mensaje, 'fuente': 'local'})
+        return Response({'error': err}, status=502)
 
     campos, mensaje = _parsear_json_autofill(crudo)
     if campos is None:
@@ -1784,10 +1976,15 @@ class ElipseAutocompletarFallaAPIView(APIView):
         crudo, err = _llamar_groq(system, texto, modelo_id, historial=historial, max_tokens=500, temperature=0.3)
         if err:
             if _es_error_conexion(err):
-                return Response(
-                    {'error': 'Elipse no tiene conexion ahorita. Puedes llenar el formulario a mano mientras tanto.'},
-                    status=503,
-                )
+                # Sin internet/API key: en vez de dejar el formulario vacio,
+                # se intenta una extraccion local (sin IA, menos precisa).
+                campos, mensaje = _autofill_local(texto, maquinas, severidades, tipos_falla, estados)
+                for k, v in campos_previos.items():
+                    if campos.get(k) in (None, '') and v not in (None, ''):
+                        campos[k] = v
+                if not campos.get('fecha'):
+                    campos['fecha'] = date.today().isoformat()
+                return Response({'campos': campos, 'mensaje': mensaje, 'fuente': 'local'})
             return Response({'error': err}, status=502)
 
         campos, mensaje = _parsear_json_autofill(crudo)
@@ -1853,6 +2050,10 @@ Reglas estrictas:
 - Nunca inventes datos que el usuario no haya dado o insinuado.
 - Esto NUNCA crea la orden en la base de datos, solo propone texto para el
   formulario -- el usuario sigue siendo quien da "Crear".
+- IMPORTANTE: si el texto menciona una maquina o tipo de mantenimiento que
+  NO aparece en las listas de abajo, dejalo en null como indica la regla de
+  arriba, PERO avisa brevemente en "mensaje" cual dato no se pudo
+  relacionar para que el usuario lo seleccione manualmente.
 
 MAQUINAS DISPONIBLES (codigo | nombre):
 %s

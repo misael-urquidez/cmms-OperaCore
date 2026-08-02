@@ -236,3 +236,33 @@
 .guias__lista li strong {
     color: var(--color-primary, #38bdf8);
 }
+
+/* ---------------- RESPONSIVE ----------------
+   Sin este bloque el formulario se queda en dos columnas fijas y en
+   pantallas angostas (tablet/celular) el "right-side" se sale del
+   contenedor o queda ilegible. Se apilan verticalmente. */
+@media (max-width: 900px) {
+    .contenedor {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .left-side,
+    .right-side {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .contenedor-botones {
+        flex-direction: column-reverse;
+        gap: 10px;
+    }
+
+    .btn-guardar-maquina,
+    .btn-cancel-custom {
+        width: 100%;
+        text-align: center;
+    }
+}

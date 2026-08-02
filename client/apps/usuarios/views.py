@@ -61,10 +61,30 @@ class AuthView(generic.View):
         if not ok:
             messages.warning(request, "No se pudieron cargar los catálogos de rol/especialidad (¿está corriendo el api/?).")
 
+        # Si venimos de un registro fallido, esto trae los errores por campo
+        # y lo que la persona ya habia escrito (menos las contraseñas). Se
+        # leen UNA sola vez con session.pop (igual que los messages de
+        # Django) para no repoblar el formulario en cargas posteriores.
+        errores_campos = request.session.pop("registro_errores", {})
+        valores_campos = request.session.pop("registro_valores", {})
+
+        # Si el error NO fue en "rol", quiere decir que la clave de
+        # seguridad ya paso la validacion del api/ (si hubiera sido
+        # invalida, el registro se habria rechazado por eso primero). No
+        # tiene caso volver a pedirla: se deja desbloqueado.
+        desbloquear_campos = bool(valores_campos) and "rol" not in errores_campos
+
         return render(
             request,
             self.template_name,
-            {"tab": tab, "roles": roles, "especialidades": especialidades},
+            {
+                "tab": tab,
+                "roles": roles,
+                "especialidades": especialidades,
+                "errores_campos": errores_campos,
+                "valores_campos": valores_campos,
+                "desbloquear_campos": desbloquear_campos,
+            },
         )
 
 
@@ -144,10 +164,60 @@ class RegistroView(generic.View):
         except ValueError:
             errores = {"error": "No se pudo crear la cuenta."}
 
-        for campo, detalle in errores.items():
-            detalle_txt = detalle[0] if isinstance(detalle, list) else detalle
-            messages.error(request, f"{campo}: {detalle_txt}")
+        # Normaliza cada error a lista (el api/ ya los manda asi via DRF,
+        # pero por si acaso), para que el template pueda usar
+        # errores_campos.<campo>.0 sin sorpresas.
+        errores = {
+            campo: (detalle if isinstance(detalle, list) else [detalle])
+            for campo, detalle in errores.items()
+        }
+
+        # Se guardan en sesion (patron "flash", igual que los messages de
+        # Django): el siguiente GET los lee una sola vez y los usa para
+        # marcar en rojo el campo exacto que fallo + no perder lo que la
+        # persona ya habia escrito. Las contraseñas NUNCA se guardan aqui.
+        request.session["registro_errores"] = errores
+        request.session["registro_valores"] = {
+            campo: valor for campo, valor in payload.items()
+            if campo not in ("password", "password2") and valor is not None
+        }
+
+        # "error"/"detail" son claves genericas del api/ (no corresponden a
+        # ningun input del formulario): esas si se muestran completas en el
+        # banner de arriba. El resto ya se ve marcado en su campo, asi que
+        # arriba solo se avisa que hay que revisar.
+        genericos = [errores[k][0] for k in ("error", "detail") if k in errores]
+        if genericos:
+            for msg in genericos:
+                messages.error(request, msg)
+        else:
+            messages.error(request, "Revisa los campos marcados en rojo.")
         return redirect(volver)
+
+
+class ValidarClaveRolView(generic.View):
+    """Proxy AJAX llamado por auth.js mientras el usuario escribe la clave
+    de seguridad en el registro. Reenvia al api/ (roles/validar/) y regresa
+    el mismo JSON tal cual: {"valido": bool, "nombre": str|None}.
+
+    Es un proxy (y no se llama al api/ directo desde el navegador) porque
+    asi el api/ no necesita exponerse publicamente al front, igual que el
+    resto de las vistas de esta app."""
+
+    def get(self, request):
+        codigo = request.GET.get("codigo", "").strip()
+        if not codigo:
+            return JsonResponse({"valido": False, "nombre": None})
+
+        try:
+            response = SESSION.get(
+                f"{API_URL}/roles/validar/", params={"codigo": codigo}, timeout=5
+            )
+            data = response.json()
+        except (requests.exceptions.RequestException, ValueError):
+            return JsonResponse({"valido": False, "nombre": None, "error": True}, status=502)
+
+        return JsonResponse(data)
 
 
 class LogoutView(generic.View):

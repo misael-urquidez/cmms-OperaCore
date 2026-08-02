@@ -1,8 +1,11 @@
+import re
+
 import requests
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
 from django.shortcuts import render, redirect, get_object_or_404
+from django.templatetags.static import static
 from django.views import generic
 from .forms import MaquinaForm
 from django.views.generic import TemplateView
@@ -14,6 +17,10 @@ SESSION = requests.Session()
 
 # Cache de 30 segundos para la verificacion de estado (ping)
 PING_TTL = 30
+
+# Prefijo con el que se autogenera el código si el usuario no captura uno.
+CODIGO_PREFIJO = "MAQ"
+CODIGO_RE = re.compile(rf"^{CODIGO_PREFIJO}(\d+)$")
 
 
 class Index(generic.View):
@@ -44,10 +51,26 @@ class Index(generic.View):
         except requests.exceptions.RequestException:
             maquinas = []
 
+        # El catálogo de estados se necesita ANTES de contar operativas: el
+        # API regresa 'estado_maquina' como el código FK (p. ej. 'OPERA',
+        # 'MANTE', 'FALLO'...), no como el nombre. Comparar el código
+        # directo contra strings como "activo"/"operativa" nunca iba a
+        # coincidir con nada -> el contador de operativos siempre daba 0.
+        edos_maquina = cache.get("maquinaria_edos_list")
+        if edos_maquina is None:
+            try:
+                res_edo = SESSION.get(f"{API_URL}/v1/edo_maquina/list/", timeout=5)
+                edos_maquina = res_edo.json() if res_edo.status_code == 200 else []
+                cache.set("maquinaria_edos_list", edos_maquina, 300)
+            except requests.exceptions.RequestException:
+                edos_maquina = []
+
+        edo_dict = {e["codigo"]: e["nombre"] for e in edos_maquina if "codigo" in e}
+
         total_maquinas = len(maquinas)
         operativas = sum(
-            1 for m in maquinas 
-            if str(m.get("estado_maquina", "")).lower() in ["activo", "operativa", "en linea"]
+            1 for m in maquinas
+            if edo_dict.get(m.get("estado_maquina"), "").strip().lower() == "operativa"
         )
         en_mantenimiento = total_maquinas - operativas
 
@@ -59,15 +82,6 @@ class Index(generic.View):
                 cache.set("maquinaria_lineas_list", lineas, 300)
             except requests.exceptions.RequestException:
                 lineas = []
-
-        edos_maquina = cache.get("maquinaria_edos_list")
-        if edos_maquina is None:
-            try:
-                res_edo = SESSION.get(f"{API_URL}/v1/edo_maquina/list/", timeout=5)
-                edos_maquina = res_edo.json() if res_edo.status_code == 200 else []
-                cache.set("maquinaria_edos_list", edos_maquina, 300)
-            except requests.exceptions.RequestException:
-                edos_maquina = []
 
         tipos_maquina = cache.get("maquinaria_tipos_list")
         if tipos_maquina is None:
@@ -97,7 +111,6 @@ class Index(generic.View):
                 modelos = []
 
         linea_dict = {l["codigo"]: l["nombre"] for l in lineas if "codigo" in l}
-        edo_dict = {e["codigo"]: e["nombre"] for e in edos_maquina if "codigo" in e}
         tipo_dict = {t.get("numeroregistro", t.get("codigo", "")): t["nombre"] for t in tipos_maquina if "nombre" in t}
         marca_dict = {m["clave"]: m["nombre"] for m in marcas if "clave" in m}
         modelo_dict = {m["codigo"]: m["nombre"] for m in modelos if "codigo" in m}
@@ -138,6 +151,27 @@ class ListarMaquinas(generic.View):
             data = []
 
         return render(request, self.template_name, {"maquinas": data})
+
+
+def _resolver_media_url(ruta):
+    """Las máquinas 'de catálogo' (datos de demo, cargados directo en BD)
+    guardan una ruta relativa a static/maquinaria/ del cliente, por ejemplo
+    'images/YamahaYS12.png'. Las máquinas dadas de alta desde el formulario
+    (CrearMaquina) suben el archivo real, que el API guarda bajo su propio
+    MEDIA_ROOT con una ruta que empieza con 'maquinaria/', por ejemplo
+    'maquinaria/imagen_2026-08-01_164746369.png'.
+
+    Son dos ubicaciones físicas distintas (estáticos del cliente vs. media
+    del servidor API), así que hay que armar la URL absoluta distinta según
+    el caso. Antes el template intentaba servir todo desde los estáticos del
+    cliente, por lo que las fotos/modelos subidos de verdad salían rotos."""
+    if not ruta or ruta == "None":
+        return None
+    if ruta.startswith("maquinaria/"):
+        # Archivo real, servido por el API desde su propio MEDIA_ROOT.
+        return f"{settings.API_ROOT_URL}/media/{ruta}"
+    # Ruta de catálogo/demo, vive en los estáticos del cliente.
+    return static(f"maquinaria/{ruta}")
 
 
 class DetalleMaquina(generic.View):
@@ -181,7 +215,49 @@ class DetalleMaquina(generic.View):
             except requests.exceptions.RequestException:
                 ubicacion = None
 
-        return render(request, self.template_name, {"maquina": data, "ubicacion": ubicacion})
+        context = {
+            "maquina": data,
+            "ubicacion": ubicacion,
+            "imagen_url_resuelta": _resolver_media_url(data.get("imagen_url")) if data else None,
+            "modelo_3d_url_resuelta": _resolver_media_url(data.get("modelo_3d")) if data else None,
+        }
+        return render(request, self.template_name, context)
+
+
+def _siguiente_codigo():
+    """Autogenera MAQ001, MAQ002, ... tomando el máximo numérico existente
+    (no la cantidad de máquinas: si se borró una a la mitad, contar por
+    longitud produce códigos duplicados y el API los rechaza por PK
+    repetida sin decir nada claro)."""
+    try:
+        res = SESSION.get(f"{API_URL}/v1/maquina/list/", timeout=5)
+        existentes = res.json() if res.status_code == 200 else []
+    except requests.exceptions.RequestException:
+        existentes = []
+
+    maximo = 0
+    for m in existentes:
+        match = CODIGO_RE.match(str(m.get("codigo", "")))
+        if match:
+            maximo = max(maximo, int(match.group(1)))
+    return f"{CODIGO_PREFIJO}{maximo + 1:03d}"
+
+
+def _detalle_error_api(response):
+    """Convierte el JSON de error de DRF ({'campo': ['msg']}) en un texto
+    legible para mostrarlo con messages.warning."""
+    try:
+        cuerpo = response.json()
+    except ValueError:
+        return f"El API respondió {response.status_code}."
+    if isinstance(cuerpo, dict):
+        partes = []
+        for campo, errores in cuerpo.items():
+            if isinstance(errores, list):
+                errores = ", ".join(str(e) for e in errores)
+            partes.append(f"{campo}: {errores}")
+        return " | ".join(partes)
+    return str(cuerpo)
 
 
 class CrearMaquina(generic.View):
@@ -193,46 +269,64 @@ class CrearMaquina(generic.View):
 
     def post(self, request):
         form = MaquinaForm(request.POST, request.FILES)
-        
-        if form.is_valid():
-            payload = form.cleaned_data.copy()
-            files_payload = {}
 
-            # Autogenerar el código correlativo
-            try:
-                res = SESSION.get(f"{API_URL}/v1/maquina/list/", timeout=5)
-                maquinas_existentes = res.json() if res.status_code == 200 else []
-                siguiente_num = len(maquinas_existentes) + 1
-                payload["codigo"] = f"MAQ{siguiente_num:03d}"
-            except requests.exceptions.RequestException:
-                payload["codigo"] = "MAQ999"
+        if not form.is_valid():
+            messages.warning(request, "Revisa los campos marcados en rojo.")
+            return render(request, self.template_name, {"form": form})
 
-            # Formatear la fecha a ISO string si existe
-            if "fechaInstalacion" in payload and payload["fechaInstalacion"]:
-                payload["fechaInstalacion"] = payload["fechaInstalacion"].isoformat()
+        cleaned = form.cleaned_data
 
-            # Extraer archivos del formulario para multipart/form-data
-            if "imagen_url" in payload and payload["imagen_url"]:
-                imagen_file = payload.pop("imagen_url")
-                files_payload["imagen_url"] = (imagen_file.name, imagen_file.read(), imagen_file.content_type)
+        # Payload de texto: solo se manda lo que sí tiene valor, para no
+        # pisar con "" campos opcionales (numeroserie es UNIQUE en BD;
+        # mandar "" en dos altas distintas choca contra ese unique).
+        payload = {}
+        for campo in ("numeroserie", "nombre", "descripcion", "linea",
+                      "marca", "modelo", "estado_maquina", "tipo_maquina"):
+            valor = cleaned.get(campo)
+            if valor:
+                payload[campo] = valor
 
-            if "modelo_3d" in payload and payload["modelo_3d"]:
-                modelo_file = payload.pop("modelo_3d")
-                files_payload["modelo_3d"] = (modelo_file.name, modelo_file.read(), modelo_file.content_type)
+        payload["codigo"] = cleaned.get("codigo") or _siguiente_codigo()
+        payload["fechainstalacion"] = cleaned["fechainstalacion"].isoformat()
 
-            try:
-                response = SESSION.post(
-                    f"{API_URL}/v1/maquina/create/", 
-                    data=payload, 
-                    files=files_payload if files_payload else None, 
-                    timeout=10
-                )
-                if response.status_code in [200, 201]:
-                    return redirect("maquinaria:index")
-            except requests.exceptions.RequestException:
-                pass
+        files_payload = {}
+        imagen = cleaned.get("imagen_url")
+        if imagen:
+            # El API espera la llave 'imagen' (FileField write-only del
+            # serializer), NO 'imagen_url' (ese es el CharField donde el
+            # API guarda la ruta ya procesada).
+            files_payload["imagen"] = (imagen.name, imagen.read(), imagen.content_type)
 
+        modelo_3d = cleaned.get("modelo_3d")
+        if modelo_3d:
+            # El API guarda esto en MEDIA_ROOT/maquinaria/modelos3d/ y
+            # setea Maquina.modelo_3d con la ruta relativa (ver
+            # apps/maquinaria/serializers.py -> CreateMaquinaSerializer
+            # en el proyecto cmms).
+            files_payload["modelo_3d_archivo"] = (modelo_3d.name, modelo_3d.read(), modelo_3d.content_type)
+
+        try:
+            response = SESSION.post(
+                f"{API_URL}/v1/maquina/create/",
+                data=payload,
+                files=files_payload if files_payload else None,
+                timeout=10,
+            )
+        except requests.exceptions.RequestException:
+            messages.error(request, "No se pudo conectar con el API de maquinaria.")
+            return render(request, self.template_name, {"form": form})
+
+        if response.status_code in (200, 201):
+            for clave in ("maquinaria_lineas_list", "maquinaria_marcas_list",
+                          "maquinaria_modelos_list", "maquinaria_edos_list",
+                          "maquinaria_tipos_list", "maquinaria_registro_ops_list"):
+                cache.delete(clave)
+            messages.success(request, f"Máquina {payload['codigo']} registrada exitosamente.")
+            return redirect("maquinaria:index")
+
+        messages.warning(request, f"El API rechazó el registro. {_detalle_error_api(response)}")
         return render(request, self.template_name, {"form": form})
+
 
 class WikiMaquinasView(TemplateView):
     template_name = "maquinaria/wiki_maquinas.html"

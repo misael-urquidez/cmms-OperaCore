@@ -607,6 +607,18 @@
 
 .inp-wrap { margin-bottom: 18px; position: relative; }
 
+.inp-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.55);
+}
+.auth-body[data-style="plano"] .inp-label {
+  color: rgba(15, 23, 42, 0.6);
+}
+
 .inp-wrap input,
 .inp-wrap select {
   width: 100%;
@@ -671,6 +683,97 @@
   opacity: 0.6;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* Texto de ayuda bajo la clave de seguridad / especialidad */
+.auth-hint {
+  margin: -6px 0 20px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.35);
+}
+.auth-body[data-style="plano"] .auth-hint { color: rgba(15, 23, 42, 0.45); }
+
+/* Campo de clave de seguridad: input + icono de estado a la derecha */
+.inp-wrap--clave { position: relative; }
+.inp-wrap--clave input { padding-right: 42px; }
+
+.clave-status {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  display: none;
+}
+.clave-status::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+/* Validando: anillo girando */
+.clave-status[data-state="checking"] {
+  display: block;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(150, 200, 255, 0.85);
+  border-radius: 50%;
+  animation: clave-spin 0.7s linear infinite;
+}
+.clave-status[data-state="checking"]::before { content: none; }
+@keyframes clave-spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+/* Valida: check verde */
+.clave-status[data-state="valid"] {
+  display: block;
+  color: #4ade80;
+}
+.clave-status[data-state="valid"]::before {
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* Invalida: x roja */
+.clave-status[data-state="invalid"] {
+  display: block;
+  color: #f87171;
+}
+.clave-status[data-state="invalid"]::before {
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+.inp-wrap--clave input.is-valid { border-color: rgba(74, 222, 128, 0.5); }
+.inp-wrap--clave input.is-invalid { border-color: rgba(248, 113, 113, 0.6); }
+
+/* Aviso de que rol quedará asignado (se llena por JS al validar) */
+.clave-rol-preview {
+  margin: -14px 0 20px;
+  font-size: 0.76rem;
+  color: #86efac;
+}
+
+/* Bloque de campos que espera una clave valida: se ve apagado y no
+   reacciona a clicks/tabs mientras el <fieldset> tenga disabled. */
+#reg-campos-bloqueados {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  transition: opacity 0.25s ease;
+}
+#reg-campos-bloqueados:disabled,
+#reg-campos-bloqueados[disabled] {
+  display: none;
+}
+#reg-campos-bloqueados:disabled .inp-wrap input,
+#reg-campos-bloqueados:disabled .inp-wrap select,
+#reg-campos-bloqueados[disabled] .inp-wrap input,
+#reg-campos-bloqueados[disabled] .inp-wrap select {
+  cursor: not-allowed;
 }
 
 /* Enlace para alternar login <-> registro */

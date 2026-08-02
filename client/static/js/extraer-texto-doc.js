@@ -12,7 +12,25 @@ window.extraerTextoDocumento = function (archivo) {
             pdf.getPage(i).then(function (pagina) {
               return pagina.getTextContent();
             }).then(function (contenido) {
-              return contenido.items.map(function (it) { return it.str; }).join(" ");
+              // Reconstruye saltos de linea usando la posicion Y de cada
+              // fragmento: pdf.js no los da directos, solo texto suelto.
+              // Sin esto, todo el texto de la pagina queda en una sola
+              // linea y el reconocimiento de plantilla (que busca cada
+              // etiqueta en su propio renglon) nunca encuentra nada.
+              var lineas = [];
+              var lineaActual = "";
+              var yAnterior = null;
+              contenido.items.forEach(function (it) {
+                var y = it.transform ? it.transform[5] : null;
+                if (yAnterior !== null && y !== null && Math.abs(y - yAnterior) > 2) {
+                  lineas.push(lineaActual);
+                  lineaActual = "";
+                }
+                lineaActual += it.str;
+                yAnterior = y;
+              });
+              if (lineaActual) lineas.push(lineaActual);
+              return lineas.join("\n");
             })
           );
         }
