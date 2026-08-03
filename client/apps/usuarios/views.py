@@ -149,11 +149,18 @@ class RegistroView(generic.View):
             messages.error(request, f"{campo}: {detalle_txt}")
         return redirect(volver)
 
-
 class LogoutView(generic.View):
     def get(self, request):
+        por_inactividad = request.GET.get("inactivo") == "1"
+        
+        # Elimina la sesión actual
         request.session.flush()
-        messages.success(request, "Sesión cerrada.")
+
+        if por_inactividad:
+            messages.warning(request, "Tu sesión ha expirado por inactividad (15 minutos).")
+        else:
+            messages.success(request, "Sesión cerrada correctamente.")
+
         return redirect("usuarios:index")
 
 

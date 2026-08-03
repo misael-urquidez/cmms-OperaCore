@@ -406,4 +406,26 @@ function pintarAvatar(fotoUrl, nombreParaInicial) {
         });
     });
   }
+/* ---------- Cierre de sesión automático por inactividad (15 min) ---------- */
+  const TIEMPO_INACTIVIDAD = 15 * 60 * 1000; // 900,000 ms
+  let temporizadorInactividad;
+
+  function reiniciarTemporizador() {
+    clearTimeout(temporizadorInactividad);
+    temporizadorInactividad = setTimeout(() => {
+      // Intenta usar el enlace de logout del menú si existe, o el fallback directo
+      const logoutBtn = root.querySelector('a[href*="logout"]');
+      const logoutUrl = logoutBtn ? logoutBtn.getAttribute("href") : "/usuarios/logout/";
+      
+      const separador = logoutUrl.includes("?") ? "&" : "?";
+      window.location.href = `${logoutUrl}${separador}inactivo=1`;
+    }, TIEMPO_INACTIVIDAD);
+  }
+
+  const eventosInactividad = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+  eventosInactividad.forEach((evento) => {
+    window.addEventListener(evento, reiniciarTemporizador, { passive: true });
+  });
+
+  reiniciarTemporizador();
 })();
