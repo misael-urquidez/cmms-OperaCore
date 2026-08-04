@@ -9,4 +9,5 @@ urlpatterns = [
     path("crear/", views.CrearMaquina.as_view(), name="crear_maquina"), 
     path("wiki/", views.WikiMaquinasView.as_view(), name="wiki_maquinas"),
     path("<str:codigo>/", views.DetalleMaquina.as_view(), name="detail"), 
+    path("<str:codigo>/eliminar/", views.EliminarMaquina.as_view(), name="eliminar_maquina"), 
 ]

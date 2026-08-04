@@ -145,6 +145,23 @@ class CrearMaquina(generic.View):
 
         return render(request, self.template_name, {"form": form})
 
+class EliminarMaquina(generic.View):
+    """Llama a la API para deshabilitar o eliminar una máquina por su código."""
+
+    def post(self, request, codigo):
+        url = f"{API_URL}/v1/maquina/{codigo}/deshabilitar/"
+        try:
+            # Usamos PATCH según la definición de DeshabilitarMaquinaAPIView
+            res = SESSION.patch(url, timeout=5)
+            if res.status_code == 200:
+                messages.success(request, f"Máquina {codigo} dada de baja correctamente.")
+            else:
+                messages.error(request, "No se pudo procesar la baja de la máquina.")
+        except requests.exceptions.RequestException:
+            messages.error(request, "Error de conexión con el servidor de API.")
+
+        return redirect("maquinaria:index")
+
 class WikiMaquinasView(TemplateView):
     template_name = "maquinaria/wiki_maquinas.html"
 
@@ -153,3 +170,5 @@ class WikiMaquinasView(TemplateView):
         context['seccion'] = 'maquinaria'
         context['subseccion'] = 'wiki'
         return context
+
+    
