@@ -98,6 +98,8 @@ class ListMovimientoSerializer(serializers.ModelSerializer):
 
 
 class CreateMovimientoSerializer(serializers.ModelSerializer):
+    tipoMovimiento = serializers.CharField(source="tipomovimiento")
+
     class Meta:
         model = models.Movimiento
         fields = ["tipoMovimiento", "fecha", "hora", "descripcion",

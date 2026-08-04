@@ -16,10 +16,14 @@
     <div class="contenedor">
         <!-- Columna Izquierda: Campos del formulario filtrados (sin duplicar archivos) -->
         <div class="left-side">
+            <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
             {% for field in form %}
                 {% if field.name != 'imagen_url' and field.name != 'modelo_3d' %}
                     <p style="display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.75rem;">
-                        {{ field.label_tag }}
+                        <label for="{{ field.id_for_label }}">
+                            {{ field.label }}{% if field.field.required %} *{% endif %}
+                            <span id="{{ field.name }}-error"></span>
+                        </label>
                         {{ field }}
                         {{ field.errors }}
                     </p>
@@ -148,4 +152,9 @@
         });
     }
 </script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/validaciones-inputs.js' %}"></script>
+<script src="{% static 'maquinaria/js/validaciones-crear-maquina.js' %}"></script>
 {% endblock %}

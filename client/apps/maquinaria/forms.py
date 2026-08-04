@@ -59,18 +59,21 @@ class MaquinaForm(forms.Form):
         required=False,
         label="Código",
         help_text="Déjalo vacío para autogenerarlo (MAQ001, MAQ002, ...).",
+        widget=forms.TextInput(attrs={"placeholder": "MAQ001"}),
     )
     numeroserie = forms.CharField(
         max_length=30,
         required=False,
         label="Número de Serie",
+        widget=forms.TextInput(attrs={"placeholder": "SN-2024-001"}),
     )
     nombre = forms.CharField(
         max_length=100,
         label="Nombre del Equipo",
+        widget=forms.TextInput(attrs={"placeholder": "Pick & Place 2"}),
     )
     descripcion = forms.CharField(
-        widget=forms.Textarea(attrs={"rows": 3}),
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Descripción breve del equipo..."}),
         required=False,
         label="Descripción",
     )
@@ -105,11 +108,16 @@ class MaquinaForm(forms.Form):
     # Los choices de estos 5 campos se llenan en __init__ jalando los
     # catálogos reales del API (igual que hace apps/gestion/views.py con
     # _fetch_fk_choices). Así nunca se desincronizan de lo que hay en BD.
-    linea = forms.ChoiceField(label="Línea de Producción", required=False)
-    marca = forms.ChoiceField(label="Marca del Fabricante", required=False)
-    modelo = forms.ChoiceField(label="Modelo", required=False)
-    estado_maquina = forms.ChoiceField(label="Estado Operativo", required=False)
-    tipo_maquina = forms.ChoiceField(label="Tipo de Máquina", required=False)
+    linea = forms.ChoiceField(label="Línea de Producción", required=False,
+                              widget=forms.Select(attrs={"placeholder": "Selecciona línea"}))
+    marca = forms.ChoiceField(label="Marca del Fabricante", required=False,
+                              widget=forms.Select(attrs={"placeholder": "Selecciona marca"}))
+    modelo = forms.ChoiceField(label="Modelo", required=False,
+                               widget=forms.Select(attrs={"placeholder": "Selecciona modelo"}))
+    estado_maquina = forms.ChoiceField(label="Estado Operativo", required=False,
+                                       widget=forms.Select(attrs={"placeholder": "Selecciona estado"}))
+    tipo_maquina = forms.ChoiceField(label="Tipo de Máquina", required=False,
+                                     widget=forms.Select(attrs={"placeholder": "Selecciona tipo"}))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -145,7 +153,10 @@ class MaquinaForm(forms.Form):
             str(m["codigo"]): str(m.get("marca", ""))
             for m in modelos if "codigo" in m
         }
-        self.fields["modelo"].widget = ModeloSelect(modelo_a_marca=self._modelo_a_marca)
+        self.fields["modelo"].widget = ModeloSelect(
+            modelo_a_marca=self._modelo_a_marca,
+            attrs={"placeholder": "Selecciona modelo"},
+        )
         # Reasignamos choices porque el widget se reemplazó después de setearlas.
         self.fields["modelo"].widget.choices = self.fields["modelo"].choices
 

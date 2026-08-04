@@ -159,6 +159,22 @@ def _invalidar_cache(config):
     cache.delete_many(config.get("invalidate_cache_keys", []))
 
 
+def _render_form(request, config, valores, pk=None):
+    """Re-render del formulario generico preservando los valores enviados
+    (usado cuando el API rechaza el registro o la edicion)."""
+    campos = _resolver_choices_con_valores(config, valores)
+    context = {
+        "config": config,
+        "campos": campos,
+        "seccion": "gestion",
+        "subseccion": config["slug"],
+    }
+    if pk is not None:
+        context["modo"] = "editar"
+        context["pk"] = pk
+    return render(request, "gestion/form_generic.html", context)
+
+
 # ---------------------------------------------------------------------------
 class GestionIndex(generic.View):
     template_name = "gestion/index.html"
@@ -273,7 +289,7 @@ class GestionCreateView(generic.View):
         if errores:
             for e in errores:
                 messages.warning(request, e)
-            return redirect("gestion:crear", slug=slug)
+            return _render_form(request, config, request.POST)
 
         url = f"{_api_base(config['api_app'])}/{config['create_path']}"
         try:
@@ -293,7 +309,7 @@ class GestionCreateView(generic.View):
         except requests.exceptions.RequestException:
             messages.warning(request, "No se pudo conectar con el servidor.")
 
-        return redirect("gestion:crear", slug=slug)
+        return _render_form(request, config, request.POST)
 
 
 class GestionEditView(generic.View):
@@ -336,7 +352,7 @@ class GestionEditView(generic.View):
         if errores:
             for e in errores:
                 messages.warning(request, e)
-            return redirect("gestion:editar", slug=slug, pk=pk)
+            return _render_form(request, config, request.POST, pk=pk)
 
         metodo = config.get("update_method", "PATCH")
         url = self._url_update(config, pk)
@@ -357,7 +373,7 @@ class GestionEditView(generic.View):
         except requests.exceptions.RequestException:
             messages.warning(request, "No se pudo conectar con el servidor.")
 
-        return redirect("gestion:editar", slug=slug, pk=pk)
+        return _render_form(request, config, request.POST, pk=pk)
 
 
 class GestionDeleteView(generic.View):

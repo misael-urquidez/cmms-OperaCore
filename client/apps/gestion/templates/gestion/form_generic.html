@@ -28,13 +28,13 @@
       </label>
 
       {% if campo.tipo == "textarea" %}
-        <textarea name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" {% if campo.requerido %}required{% endif %}>{{ campo.valor|default:"" }}</textarea>
+        <textarea name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" {% if campo.requerido %}required{% endif %} {% if campo.placeholder %}placeholder="{{ campo.placeholder }}"{% endif %}>{{ campo.valor|default:"" }}</textarea>
 
       {% elif campo.tipo == "select" %}
         <select name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error"
                 {% if campo.fk_parent %}data-parent-field="id_{{ campo.fk_parent }}"{% endif %}
                 {% if campo.requerido %}required{% endif %}>
-          <option value="">Selecciona…</option>
+          <option value="">{% if campo.placeholder %}{{ campo.placeholder }}{% else %}Selecciona…{% endif %}</option>
           {% for opcion in campo.opciones %}
             <option value="{{ opcion.value }}" {% if opcion.value|stringformat:"s" == campo.valor|stringformat:"s" %}selected{% endif %}
                     {% if opcion.parent %}data-parent="{{ opcion.parent }}"{% endif %}>{{ opcion.label }}</option>
@@ -64,7 +64,7 @@
                {% if campo.requerido and modo != "editar" %}required{% endif %}>
 
       {% else %}
-        <input type="text" name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %}>
+        <input type="text" name="{{ campo.name }}" id="id_{{ campo.name }}" data-error-id="{{ campo.name }}-error" value="{{ campo.valor|default:"" }}" {% if campo.requerido %}required{% endif %} {% if campo.placeholder %}placeholder="{{ campo.placeholder }}"{% endif %}>
       {% endif %}
     </div>
   {% endfor %}

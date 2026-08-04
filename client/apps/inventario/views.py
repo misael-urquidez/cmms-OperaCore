@@ -167,7 +167,14 @@ class CrearRefaccion(generic.View):
         except requests.exceptions.RequestException:
             messages.warning(request, "No se pudo conectar con el servidor.")
 
-        return redirect("inventario:crear_refaccion")
+        catalogos, _ = _cargar_catalogos()
+        return render(request, self.template_name, {
+            "catalogos": catalogos,
+            "seccion": "inventario",
+            "subseccion": "crear_refaccion",
+            "base_template": _base_template(request),
+            "datos": dict(request.POST),
+        })
 
 
 # ------------ PIEZAS -------------------------------------------------------
@@ -309,7 +316,14 @@ class CrearPieza(generic.View):
         except requests.exceptions.RequestException:
             messages.warning(request, "No se pudo conectar con el servidor API.")
 
-        return redirect("inventario:crear_pieza")
+        catalogos, _ = _cargar_catalogos()
+        return render(request, self.template_name, {
+            "catalogos": catalogos,
+            "seccion": "inventario",
+            "subseccion": "crear_pieza",
+            "base_template": _base_template(request),
+            "datos": dict(request.POST),
+        })
 
 
 # ------------ HERRAMIENTAS --------------------------------------------------
@@ -373,7 +387,14 @@ class CrearHerramienta(generic.View):
         except requests.exceptions.RequestException:
             messages.warning(request, "No se pudo establecer comunicación con el servicio.")
 
-        return redirect("inventario:crear_herramienta")
+        catalogos, _ = _cargar_catalogos()
+        return render(request, self.template_name, {
+            "catalogos": catalogos,
+            "seccion": "inventario",
+            "subseccion": "crear_herramienta",
+            "base_template": _base_template(request),
+            "datos": dict(request.POST),
+        })
 
 
 # ------------ MOVIMIENTOS --------------------------------------------------
@@ -469,7 +490,14 @@ class CrearMovimiento(generic.View):
                 messages.warning(request, "Error al registrar el movimiento.")
         except requests.exceptions.RequestException:
             messages.warning(request, "No se pudo establecer comunicación con la API.")
-        return redirect("inventario:crear_movimiento")
+        dropdowns = self._cargar_dropdowns()
+        return render(request, self.template_name, {
+            **dropdowns,
+            "seccion": "inventario",
+            "subseccion": "movimientos",
+            "base_template": _base_template(request),
+            "datos": dict(request.POST),
+        })
 
 
 # ------------ PROVEEDORES --------------------------------------------------
@@ -528,7 +556,12 @@ class CrearProveedor(generic.View):
         except requests.exceptions.RequestException:
             messages.warning(request, "No se pudo comunicar con el servidor API.")
 
-        return redirect("inventario:crear_proveedor")
+        return render(request, self.template_name, {
+            "seccion": "inventario",
+            "subseccion": "crear_proveedor",
+            "base_template": _base_template(request),
+            "datos": dict(request.POST),
+        })
 
 
 # ------------ CLASIFICACIONES ----------------------------------------------
@@ -585,7 +618,12 @@ class CrearClasificacion(generic.View):
         except requests.exceptions.RequestException:
             messages.warning(request, "Error de comunicación con el servicio.")
 
-        return redirect("inventario:crear_clasificacion")
+        return render(request, self.template_name, {
+            "seccion": "inventario",
+            "subseccion": "crear_clasificacion",
+            "base_template": _base_template(request),
+            "datos": dict(request.POST),
+        })
 
 
 # ------------ ESTADOS (HERRAMIENTA, PIEZA, REFACCIÓN) --------------------
@@ -621,9 +659,11 @@ class CrearEstadoHerramienta(generic.View):
                 cache.delete("inventario_catalogos")
                 messages.success(request, "Estado de herramienta registrado.")
                 return redirect("inventario:lista_estados_herramienta")
+            else:
+                messages.warning(request, "Error al registrar el estado de herramienta.")
         except requests.exceptions.RequestException:
             messages.warning(request, "Error de red con la API.")
-        return redirect("inventario:crear_estado_herramienta")
+        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_estado_herramienta", "base_template": _base_template(request), "datos": dict(request.POST)})
 
 
 class ListaEstadosPieza(generic.View):
@@ -658,9 +698,11 @@ class CrearEstadoPieza(generic.View):
                 cache.delete("inventario_catalogos")
                 messages.success(request, "Estado de pieza registrado.")
                 return redirect("inventario:lista_estados_pieza")
+            else:
+                messages.warning(request, "Error al registrar el estado de pieza.")
         except requests.exceptions.RequestException:
             messages.warning(request, "Error de red con la API.")
-        return redirect("inventario:crear_estado_pieza")
+        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_estado_pieza", "base_template": _base_template(request), "datos": dict(request.POST)})
 
 
 class ListaEstadosRefaccion(generic.View):
@@ -695,9 +737,11 @@ class CrearEstadoRefaccion(generic.View):
                 cache.delete("inventario_catalogos")
                 messages.success(request, "Estado de refacción registrado.")
                 return redirect("inventario:lista_estados_refaccion")
+            else:
+                messages.warning(request, "Error al registrar el estado de refacción.")
         except requests.exceptions.RequestException:
             messages.warning(request, "Error de red con la API.")
-        return redirect("inventario:crear_estado_refaccion")
+        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_estado_refaccion", "base_template": _base_template(request), "datos": dict(request.POST)})
 
 
 # ------------ TIPOS (HERRAMIENTA, PIEZA, REFACCIÓN) ----------------------
@@ -733,9 +777,11 @@ class CrearTipoHerramienta(generic.View):
                 cache.delete("inventario_catalogos")
                 messages.success(request, "Tipo de herramienta creado.")
                 return redirect("inventario:lista_tipos_herramienta")
+            else:
+                messages.warning(request, "Error al crear el tipo de herramienta.")
         except requests.exceptions.RequestException:
             messages.warning(request, "Error de conexión con la API.")
-        return redirect("inventario:crear_tipo_herramienta")
+        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_tipo_herramienta", "base_template": _base_template(request), "datos": dict(request.POST)})
 
 
 class ListaTiposPieza(generic.View):
@@ -770,9 +816,11 @@ class CrearTipoPieza(generic.View):
                 cache.delete("inventario_catalogos")
                 messages.success(request, "Tipo de pieza creado.")
                 return redirect("inventario:lista_tipos_pieza")
+            else:
+                messages.warning(request, "Error al crear el tipo de pieza.")
         except requests.exceptions.RequestException:
             messages.warning(request, "Error de conexión con la API.")
-        return redirect("inventario:crear_tipo_pieza")
+        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_tipo_pieza", "base_template": _base_template(request), "datos": dict(request.POST)})
 
 
 class ListaTiposRefaccion(generic.View):
@@ -807,9 +855,11 @@ class CrearTipoRefaccion(generic.View):
                 cache.delete("inventario_catalogos")
                 messages.success(request, "Tipo de refacción creado.")
                 return redirect("inventario:lista_tipos_refaccion")
+            else:
+                messages.warning(request, "Error al crear el tipo de refacción.")
         except requests.exceptions.RequestException:
             messages.warning(request, "Error de conexión con la API.")
-        return redirect("inventario:crear_tipo_refaccion")
+        return render(request, self.template_name, {"seccion": "inventario", "subseccion": "crear_tipo_refaccion", "base_template": _base_template(request), "datos": dict(request.POST)})
 
 
 # ------------ MODALES (fragmentos HTML) ------------------------------------
