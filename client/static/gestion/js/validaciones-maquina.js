@@ -3,21 +3,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
   setupInputValidation(
     document.getElementById("id_codigo"),
-    { required: true, maxLength: 10, alphanumeric: true },
+    { required: true, maxLength: 10, pattern: /^[a-zA-Z0-9#_\-]+$/ },
     document.getElementById("codigo-error"),
     estadoElement,
   );
 
   setupInputValidation(
     document.getElementById("id_numeroserie"),
-    { required: false, maxLength: 30 },
+    { required: true, maxLength: 30, pattern: /^[a-zA-Z0-9#_\-]+$/ },
     document.getElementById("numeroserie-error"),
     estadoElement,
   );
 
   setupInputValidation(
     document.getElementById("id_nombre"),
-    { required: true, maxLength: 100, pattern: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/ },
+    { required: true, maxLength: 100, pattern: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s#_\-]+$/ },
     document.getElementById("nombre-error"),
     estadoElement,
   );
@@ -38,4 +38,9 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("fechainstalacion-error"),
     estadoElement,
   );
+
+  ["id_numeroserie", "id_linea", "id_marca", "id_modelo", "id_estado_maquina", "id_tipo_maquina"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.required = true;
+  });
 });

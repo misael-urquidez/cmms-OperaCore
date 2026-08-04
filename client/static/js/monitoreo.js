@@ -445,6 +445,7 @@ refrescar();
     el.hidden = false;
     el.textContent = texto;
     el.className = "feedback-msg " + (ok ? "is-ok" : "is-error");
+    if (window.mostrarToast) mostrarToast(texto, ok ? "success" : "error");
   }
 
   drawerModoGuardar.addEventListener("click", function () {
@@ -718,11 +719,11 @@ drawerReparacionForm.addEventListener("submit", function (ev) {
   function cargarCatalogos() {
     fetch(CATALOGOS_URL).then(function (r) { return r.json(); }).then(function (data) {
       catalogosCargados = true;
-      llenarSelect(document.getElementById("fLinea"), data.lineas || [], "codigo", "nombre", "Sin línea");
-      llenarSelect(document.getElementById("fTipo"), data.tipos_maquina || [], "numeroRegistro", "nombre", "Sin especificar");
-      llenarSelect(document.getElementById("fMarca"), data.marcas || [], "clave", "nombre", "Sin especificar");
-      llenarSelect(document.getElementById("fEstado"), data.estados_maquina || [], "codigo", "nombre");
-      llenarSelect(document.getElementById("fModo"), data.modos_monitoreo || [], "valor", "etiqueta");
+      llenarSelect(document.getElementById("fLinea"), data.lineas || [], "codigo", "nombre", "Selecciona línea");
+      llenarSelect(document.getElementById("fTipo"), data.tipos_maquina || [], "numeroRegistro", "nombre", "Selecciona tipo");
+      llenarSelect(document.getElementById("fMarca"), data.marcas || [], "clave", "nombre", "Selecciona marca");
+      llenarSelect(document.getElementById("fEstado"), data.estados_maquina || [], "codigo", "nombre", "Selecciona estado");
+      llenarSelect(document.getElementById("fModo"), data.modos_monitoreo || [], "valor", "etiqueta", "Selecciona modo");
       todosLosModelos = data.modelos || [];
       filtrarModelos("");
     }).catch(function () {

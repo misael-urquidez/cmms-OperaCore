@@ -79,6 +79,13 @@
     background-color: #0ea5e9 !important;
 }
 
+.btn-guardar-maquina:disabled,
+.btn-guardar-maquina:disabled:hover {
+    background-color: rgba(51, 51, 51, 0.9) !important;
+    color: #fff !important;
+    cursor: not-allowed !important;
+}
+
 /* Botón exclusivo de Cancelar */
 .btn-cancel-custom {
     background: transparent !important;

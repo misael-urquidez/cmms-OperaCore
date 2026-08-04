@@ -22,9 +22,11 @@
 
   function mostrarMsg(texto, ok) {
     var el = document.getElementById("ordenTrabajoMsg");
-    if (!el) return;
-    el.textContent = texto;
-    el.className = ok ? "ok" : "error";
+    if (el) {
+      el.textContent = texto;
+      el.className = ok ? "ok" : "error";
+    }
+    if (window.mostrarToast) mostrarToast(texto, ok ? "success" : "error");
   }
 
   // ---------------------------------------------------- marcar en progreso

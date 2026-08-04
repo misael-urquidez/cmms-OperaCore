@@ -327,13 +327,16 @@
           if (!res.ok) {
             errorEl.hidden = false;
             errorEl.textContent = typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo crear la orden.";
+            if (window.mostrarToast) mostrarToast(errorEl.textContent, "error");
             return;
           }
           cerrarModal();
           cargarOrdenes();
+          if (window.mostrarToast) mostrarToast(res.data.folio ? "Orden " + res.data.folio + " creada." : "Orden creada.", "success");
         }).catch(function () {
           errorEl.hidden = false;
           errorEl.textContent = "No fue posible conectar con el servidor.";
+          if (window.mostrarToast) mostrarToast(errorEl.textContent, "error");
         });
     });
   }
@@ -348,9 +351,11 @@
   var formCerrar = document.getElementById("ordenCerrarForm");
 
   function mostrarMsg(texto, ok) {
-    if (!msgEl) return;
-    msgEl.textContent = texto;
-    msgEl.className = ok ? "ok" : "error";
+    if (msgEl) {
+      msgEl.textContent = texto;
+      msgEl.className = ok ? "ok" : "error";
+    }
+    if (window.mostrarToast) mostrarToast(texto, ok ? "success" : "error");
   }
   function limpiarMsg() {
     if (!msgEl) return;

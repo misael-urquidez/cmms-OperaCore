@@ -67,16 +67,12 @@ class ReporteFalla(generic.View):
     response = None
     payload = {}
 
-    def get(self, request):
+    def _contexto_base(self, request):
         usuario = request.session.get("usuario")
-        if not usuario:
-            messages.warning(request, "Inicia sesión para continuar.")
-            return redirect("usuarios:index")
-
         severidades, tipos_falla, maquinas, estados, trabajadores, ok = _cargar_catalogos()
         if not ok:
             messages.warning(request, "No se pudo conectar con la API para cargar los catálogos.")
-        self.context = {
+        return {
             "severidades": severidades,
             "tipos_falla": tipos_falla,
             "maquinas": maquinas,
@@ -87,6 +83,14 @@ class ReporteFalla(generic.View):
             "usuario": usuario,
             "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
         }
+
+    def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
+        self.context = self._contexto_base(request)
         return render(request, self.template_name, self.context)
 
     def post(self, request):
@@ -129,7 +133,7 @@ class ReporteFalla(generic.View):
             self.response = SESSION.post(url=self.url_create, data=self.payload, files=files, timeout=10)
         except requests.exceptions.RequestException:
             messages.warning(request, "No se pudo conectar con la API para registrar el reporte")
-            return redirect("fallas:reporte")
+            return self._render_error(request)
         if self.response.status_code == 201:
             # invalidar el cache de la lista: el reporte recien creado debe
             # aparecer de inmediato en "Ver reportes" y en el dashboard.
@@ -146,7 +150,12 @@ class ReporteFalla(generic.View):
             )
         else:
             messages.warning(request, "Error al registrar el reporte")
-            return redirect("fallas:reporte")
+            return self._render_error(request)
+
+    def _render_error(self, request):
+        context = self._contexto_base(request)
+        context["datos"] = self.payload
+        return render(request, self.template_name, context)
 
 #---------------------------------------------------------------------------
 #------------TIPO FALLA ----------------------------------------------------
@@ -219,40 +228,47 @@ class DetailReporte(generic.View):
 class ActualizarReporte(generic.View):
     template_name = "fallas/actualizar_reporte.html"
 
-    def get(self, request, pk):
-        usuario = request.session.get("usuario")
-        if not usuario:
-            messages.warning(request, "Inicia sesión para continuar.")
-            return redirect("usuarios:index")
-
+    def _cargar_reporte(self, request, pk):
         cache_key = f"fallas_reporte_{pk}"
         reporte = cache.get(cache_key)
+        if reporte is not None:
+            return reporte
+        try:
+            resp = SESSION.get(f"{API_URL}/v1/reportes/{pk}/", timeout=5)
+            if resp.status_code != 200:
+                messages.warning(request, "No se pudo cargar el reporte.")
+                return None
+            reporte = resp.json()
+            cache.set(cache_key, reporte, 30)
+            return reporte
+        except (requests.exceptions.RequestException, ValueError):
+            messages.warning(request, "No se pudo conectar con la API.")
+            return None
 
-        if reporte is None:
-            try:
-                resp = SESSION.get(f"{API_URL}/v1/reportes/{pk}/", timeout=5)
-                if resp.status_code != 200:
-                    messages.warning(request, "No se pudo cargar el reporte.")
-                    return redirect("fallas:lista")
-                reporte = resp.json()
-                cache.set(cache_key, reporte, 30)
-            except (requests.exceptions.RequestException, ValueError):
-                messages.warning(request, "No se pudo conectar con la API.")
-                return redirect("fallas:lista")
-
+    def _contexto(self, request, reporte):
         severidades, tipos_falla, maquinas, estados, trabajadores, _ = _cargar_catalogos()
-
-        context = {
+        return {
             "reporte": reporte,
             "severidades": severidades,
             "tipos_falla": tipos_falla,
             "maquinas": maquinas,
             "estados": estados,
             "trabajadores": trabajadores,
-            "usuario": usuario,
-            "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
+            "usuario": request.session.get("usuario"),
+            "base_template": "base_tecni.html" if request.session.get("usuario", {}).get("rol") == "TECNI" else "base_admin.html",
         }
-        return render(request, self.template_name, context)
+
+    def get(self, request, pk):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
+        reporte = self._cargar_reporte(request, pk)
+        if reporte is None:
+            return redirect("fallas:lista")
+
+        return render(request, self.template_name, self._contexto(request, reporte))
 
     def post(self, request, pk):
         usuario = request.session.get("usuario")
@@ -294,8 +310,7 @@ class ActualizarReporte(generic.View):
             response = SESSION.patch(url=api_url, data=payload, files=files, timeout=10)
         except requests.exceptions.RequestException:
             messages.warning(request, "No se pudo conectar con la API para actualizar el reporte.")
-            return redirect("fallas:actualizar_reporte", pk=pk)
-
+            return self._render_error(request, pk, payload)
         if response.status_code == 200:
             cache.delete(f"fallas_reporte_{pk}")
             cache.delete("fallas_reportes_list")
@@ -303,7 +318,29 @@ class ActualizarReporte(generic.View):
             return redirect("fallas:lista")
         else:
             messages.warning(request, "Error al actualizar el reporte.")
-            return redirect("fallas:actualizar_reporte", pk=pk)
+            return self._render_error(request, pk, payload)
+
+    def _render_error(self, request, pk, payload):
+        reporte = self._cargar_reporte(request, pk)
+        if reporte is None:
+            return redirect("fallas:lista")
+
+        reporte = dict(reporte)
+        for campo in ("asunto", "descripcion", "causaRaiz", "tiempoParo",
+                      "fechaResolucion", "maquina", "trabajador",
+                      "tipo_severidad", "estado_reporte"):
+            if campo in payload:
+                reporte[campo] = payload[campo]
+
+        fallas_ids = payload.get("tipo_falla_ids", [])
+        reporte["fallas_asociadas"] = []
+        severidades, tipos_falla, maquinas, estados, trabajadores, _ = _cargar_catalogos()
+        for fid in fallas_ids:
+            coincidencia = [t for t in tipos_falla if t.get("numeroRegistro") == fid]
+            if coincidencia:
+                reporte["fallas_asociadas"].append({"id": fid, "nombre": coincidencia[0].get("nombre")})
+
+        return render(request, self.template_name, self._contexto(request, reporte))
 
 
 class InvalidarCacheReportes(generic.View):

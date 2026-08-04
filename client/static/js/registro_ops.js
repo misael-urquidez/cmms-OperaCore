@@ -13,6 +13,7 @@
     msg.className = 'feedback-msg is-' + type;
     msg.hidden = false;
     setTimeout(function () { msg.hidden = true; }, 4000);
+    if (window.mostrarToast) mostrarToast(text, type === 'is-ok' ? 'success' : 'error');
   }
 
   function buildRow(r) {
