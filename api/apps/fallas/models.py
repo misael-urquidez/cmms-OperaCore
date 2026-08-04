@@ -174,7 +174,7 @@ class ReporteFalla(models.Model):
     fechaResolucion = models.DateField(null=True, blank=True)
     fechaCreacion = models.DateField()
     horaCreacion = models.TimeField()
-    tiempoParo = models.IntegerField(null=True, blank=True)
+    tiempoParo = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     causaRaiz = models.CharField(max_length=500)
     descripcion = models.CharField(max_length=500, null=True, blank=True)
     imagen = models.ImageField(upload_to='fallas_images/')

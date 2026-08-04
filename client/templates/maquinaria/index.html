@@ -126,7 +126,9 @@
             <p>Monitoreo en tiempo real del estado general de la planta</p>
         </div>
         <div class="nav-actions">
-            <a href="{% url 'maquinaria:crear_maquina' %}">+ Registrar Nueva Máquina</a>
+            {% if usuario.rol == "ADMIN" %}
+                <a href="{% url 'maquinaria:crear_maquina' %}">+ Registrar Nueva Máquina</a>
+            {% endif %}
         </div>
     </div>
 
