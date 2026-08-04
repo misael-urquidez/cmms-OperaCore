@@ -91,12 +91,16 @@ class CatalogosMaquinaAPIView(View):
 
 class CrearMaquinaAPIView(View):
     def post(self, request):
+        payload = {k: v for k, v in request.POST.items() if v != ""}
+        files = {}
+        if "imagen" in request.FILES:
+            files["imagen"] = request.FILES["imagen"]
+        if "modelo_3d_archivo" in request.FILES:
+            files["modelo_3d_archivo"] = request.FILES["modelo_3d_archivo"]
         try:
-            payload = json.loads(request.body.decode("utf-8") or "{}")
-        except ValueError:
-            return JsonResponse({"detail": "JSON inválido."}, status=400)
-        try:
-            respuesta = SESSION.post(f"{API_URL}/maquinas/crear/", json=payload, timeout=5)
+            respuesta = SESSION.post(
+                f"{API_URL}/maquinas/crear/", data=payload, files=files or None, timeout=5,
+            )
         except requests.RequestException:
             return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
         try:

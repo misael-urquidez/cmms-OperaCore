@@ -216,6 +216,8 @@ GESTION_REGISTRY = {
              "placeholder": "Descripción breve del equipo..."},
             {"name": "imagen_url", "label": "Imagen", "tipo": "file", "requerido": False, "columna": False,
              "file_api_name": "imagen"},
+            {"name": "modelo_3d", "label": "Modelo 3D (.glb)", "tipo": "file3d", "requerido": False, "columna": False,
+             "file_api_name": "modelo_3d_archivo"},
             {"name": "fechainstalacion", "label": "Fecha de instalación", "tipo": "date", "requerido": True, "columna": True},
             {"name": "linea", "label": "Línea", "tipo": "select", "requerido": False, "columna": False,
              "fk": "linea", "fk_value": "codigo", "fk_label": "nombre",
