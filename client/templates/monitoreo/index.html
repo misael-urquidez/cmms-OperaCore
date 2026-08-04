@@ -219,13 +219,9 @@
         <label>Estado inicial<select name="estado_maquina" id="fEstado"><option value="">Selecciona estado</option></select></label>
         <label>Modo de monitoreo<select name="modo_monitoreo" id="fModo"><option value="">Selecciona modo</option></select></label>
         <label>Umbral de vibración<input type="number" name="umbral_vibracion" id="fUmbral" step="0.1" min="0" value="4.0"></label>
-<<<<<<< HEAD
-        <label>N° de serie<input type="text" name="numeroSerie" id="fSerie" maxlength="30" placeholder="Opcional"></label>
+        <label>N° de serie<span id="serie-error"></span><input type="text" name="numeroSerie" id="fSerie" data-error-id="serie-error" maxlength="30" required placeholder="MAQ007-SN001"></label>
         <label>Imagen<input type="file" name="imagen" id="fImagen" accept="image/*"></label>
         <label>Modelo 3D (.glb)<input type="file" name="modelo_3d_archivo" id="fModelo3d" accept=".glb,model/gltf-binary"></label>
-=======
-        <label>N° de serie<span id="serie-error"></span><input type="text" name="numeroSerie" id="fSerie" data-error-id="serie-error" maxlength="30" required placeholder="MAQ007-SN001"></label>
->>>>>>> 0a1c7139b72142f363f3a03b735f3c748fb03921
       </div>
       <label class="new-machine-form__full">Descripción<span id="descripcion-error"></span><textarea name="descripcion" id="fDescripcion" data-error-id="descripcion-error" maxlength="255" rows="2" placeholder="Descripción breve del equipo..."></textarea></label>
       <div class="new-machine-form__actions">
