@@ -392,6 +392,22 @@ class EliminarMaquina(generic.View):
 
         return redirect("maquinaria:index")
 
+class ReactivarMaquina(generic.View):
+    """Llama a la API para reactivar una máquina que estaba deshabilitada (DESHA -> OPERA)."""
+
+    def post(self, request, codigo):
+        url = f"{API_URL}/v1/maquina/{codigo}/reactivar/"
+        try:
+            res = SESSION.patch(url, timeout=5)
+            if res.status_code == 200:
+                messages.success(request, f"Máquina {codigo} reincorporada a estado OPERATIVA.")
+            else:
+                messages.error(request, "No se pudo reactivar la máquina.")
+        except requests.exceptions.RequestException:
+            messages.error(request, "Error de conexión con el servidor de API.")
+
+        return redirect("maquinaria:detail", codigo=codigo)
+
 class WikiMaquinasView(TemplateView):
     template_name = "maquinaria/wiki_maquinas.html"
 
