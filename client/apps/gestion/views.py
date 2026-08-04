@@ -130,9 +130,9 @@ def _resolver_choices_con_valores(config, valores=None):
 def _build_payload(config, post_data, es_edicion=False, archivos=None):
     payload = {}
     errores = []
-    file_names = {c["name"] for c in config["campos"] if c.get("tipo") == "file"}
+    file_names = {c["name"] for c in config["campos"] if c.get("tipo") in ("file", "file3d")}
     for campo in config["campos"]:
-        if campo.get("tipo") == "file":
+        if campo.get("tipo") in ("file", "file3d"):
             continue
         valor = post_data.get(campo["name"], "").strip()
         requerido = campo.get("requerido") and not (es_edicion and campo.get("tipo") == "password")
@@ -148,7 +148,7 @@ def _extraer_archivos(config, archivos):
     Usa 'file_api_name' como key si existe, si no usa el name del campo."""
     files = {}
     for campo in config["campos"]:
-        if campo.get("tipo") == "file" and campo["name"] in archivos:
+        if campo.get("tipo") in ("file", "file3d") and campo["name"] in archivos:
             api_name = campo.get("file_api_name") or campo["name"]
             files[api_name] = archivos[campo["name"]]
     return files or None
@@ -184,7 +184,7 @@ class GestionListView(generic.View):
             messages.warning(request, "No se pudo conectar con la API.")
 
         todas_las = [c for c in config["campos"]
-                     if c.get("tipo") not in ("password", "file")]
+                     if c.get("tipo") not in ("password", "file", "file3d")]
 
         todas_las_con_archivos = [c for c in config["campos"]
                                   if c.get("tipo") != "password"]
@@ -195,7 +195,7 @@ class GestionListView(generic.View):
         restantes = MAX_COLUMNAS - len(requeridos[:MAX_COLUMNAS])
         visibles = requeridos[:MAX_COLUMNAS] + opcionales[:restantes]
 
-        tiene_imagen = any(c.get("tipo") == "file" for c in config["campos"])
+        tiene_imagen = any(c.get("tipo") in ("file", "file3d") for c in config["campos"])
         necesita_modal = len(todas_las) > MAX_COLUMNAS or tiene_imagen
 
         EXCLUDED_FK_SLUGS = {"tarea-orden", "herra-orden", "trabajador-orden"}

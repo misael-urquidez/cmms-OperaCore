@@ -739,23 +739,38 @@ drawerReparacionForm.addEventListener("submit", function (ev) {
   form.addEventListener("submit", function (ev) {
     ev.preventDefault();
     errorBox.hidden = true;
-    var payload = {
+
+    var campos = {
       codigo: document.getElementById("fCodigo").value.trim(),
       nombre: document.getElementById("fNombre").value.trim(),
       descripcion: document.getElementById("fDescripcion").value.trim(),
       numeroSerie: document.getElementById("fSerie").value.trim(),
-      linea: document.getElementById("fLinea").value || null,
-      marca: document.getElementById("fMarca").value || null,
-      modelo: document.getElementById("fModelo").value || null,
-      tipo_maquina: document.getElementById("fTipo").value || null,
-      estado_maquina: document.getElementById("fEstado").value || null,
+      linea: document.getElementById("fLinea").value,
+      marca: document.getElementById("fMarca").value,
+      modelo: document.getElementById("fModelo").value,
+      tipo_maquina: document.getElementById("fTipo").value,
+      estado_maquina: document.getElementById("fEstado").value,
       modo_monitoreo: document.getElementById("fModo").value,
       umbral_vibracion: parseFloat(document.getElementById("fUmbral").value) || 4.0,
     };
+
+    var formData = new FormData();
+    Object.keys(campos).forEach(function (key) {
+      var valor = campos[key];
+      if (valor !== "" && valor !== null && valor !== undefined) {
+        formData.append(key, valor);
+      }
+    });
+
+    var imagenFile = document.getElementById("fImagen").files[0];
+    if (imagenFile) formData.append("imagen", imagenFile);
+    var modelo3dFile = document.getElementById("fModelo3d").files[0];
+    if (modelo3dFile) formData.append("modelo_3d_archivo", modelo3dFile);
+
     fetch(CREAR_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
-      body: JSON.stringify(payload),
+      headers: { "X-CSRFToken": getCookie("csrftoken") },
+      body: formData,
     }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok) {

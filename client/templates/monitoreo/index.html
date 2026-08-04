@@ -206,7 +206,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
     </div>
-    <form id="newMachineForm" class="new-machine-form">
+    <form id="newMachineForm" class="new-machine-form" enctype="multipart/form-data">
       <p class="new-machine-form__error" id="newMachineError" hidden></p>
       <div class="new-machine-form__grid">
         <label>Código<input type="text" name="codigo" id="fCodigo" maxlength="10" required placeholder="MAQ007"></label>
@@ -219,6 +219,8 @@
         <label>Modo de monitoreo<select name="modo_monitoreo" id="fModo"></select></label>
         <label>Umbral de vibración<input type="number" name="umbral_vibracion" id="fUmbral" step="0.1" min="0" value="4.0"></label>
         <label>N° de serie<input type="text" name="numeroSerie" id="fSerie" maxlength="30" placeholder="Opcional"></label>
+        <label>Imagen<input type="file" name="imagen" id="fImagen" accept="image/*"></label>
+        <label>Modelo 3D (.glb)<input type="file" name="modelo_3d_archivo" id="fModelo3d" accept=".glb,model/gltf-binary"></label>
       </div>
       <label class="new-machine-form__full">Descripción<textarea name="descripcion" id="fDescripcion" maxlength="255" rows="2" placeholder="Opcional"></textarea></label>
       <div class="new-machine-form__actions">
