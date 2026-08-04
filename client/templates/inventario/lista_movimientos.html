@@ -14,12 +14,12 @@
   <a class="btn-primary-sm" href="{% url 'inventario:crear_movimiento' %}">+ Registrar</a>
 </div>
 
-<div class="inv-search">
+<div class="inv-search" data-buscador-target="#data-table">
   <svg class="inv-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
   </svg>
-  <input type="text" id="buscador" placeholder="Buscar en la tabla...">
-  <select class="inv-search__select" data-filter="tipo">
+  <input type="text" class="buscador-input" placeholder="Buscar en la tabla...">
+  <select class="filter-select" data-filter="tipo">
     <option value="">Todos los tipos</option>
     {% for tipo in tipos_movimiento %}
       <option value="{{ tipo.codigo }}">{{ tipo.descripcion }}</option>

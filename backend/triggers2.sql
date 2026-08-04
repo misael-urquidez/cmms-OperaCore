@@ -109,12 +109,17 @@ BEGIN
         WHERE om.maquina = NEW.maquina
           AND om.fechaCierre IS NOT NULL;
 
-        -- 2. número de reparaciones = órdenes cerradas de esa máquina
+        -- 2. número de reparaciones = ordenes CORRECTIVAS cerradas de esa
+        -- máquina (mismo criterio que el numerador arriba: solo cuentan
+        -- las que de verdad vienen de un reporte_falla, si no el MTTR se
+        -- diluye con cierres de preventivo/predictivo/emergencia que
+        -- nunca aportaron tiempoParo)
         SELECT COUNT(*)
         INTO numReparaciones
         FROM ORDEN_MANTENIMIENTO
         WHERE maquina = NEW.maquina
-          AND fechaCierre IS NOT NULL;
+          AND fechaCierre IS NOT NULL
+          AND reporte_falla IS NOT NULL;
 
         -- 3. MTTR = tiempo total de paro / número de reparaciones
         IF numReparaciones > 0 THEN

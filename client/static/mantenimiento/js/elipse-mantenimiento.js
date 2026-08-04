@@ -19,7 +19,6 @@
 
   var btnOpen = document.getElementById("btnElipseOrden");
   var panel = document.getElementById("elipseOrdenPanel");
-  var overlay = document.getElementById("elipseOrdenOverlay");
   var btnClose = document.getElementById("elipseOrdenClose");
   var input = document.getElementById("elipseOrdenInput");
   var btnEnviar = document.getElementById("elipseOrdenBtn");
@@ -118,13 +117,19 @@
     } catch (e) { /* link corrupto, se ignora */ }
   })();
 
-  if (!btnOpen || !panel || !overlay) return;
+  if (!btnOpen || !panel) return;
 
   // ── abrir / cerrar ──────────────────────────────────────
+  // El panel vive DENTRO de <dialog id="newOrdenModal"> (ver index.html),
+  // como hermano de <form>, con su propio CSS para abrirse "junto" al
+  // formulario en vez de superponerse. Asi evitamos el problema de que un
+  // <aside> normal quede atrapado detras del "top layer" del <dialog>
+  // (mismo caso que resolvieron para oReporteFallaVer mas arriba, pero aqui
+  // ni siquiera hace falta cerrar el modal: ambos comparten el top layer
+  // porque el panel esta anidado adentro).
   function abrirPanel() {
     panel.classList.add("is-open");
     panel.setAttribute("aria-hidden", "false");
-    overlay.hidden = false;
     if (chatEl && !chatEl.children.length) {
       pintarMsg("ai", "¡Hola! Cuéntame qué necesita la máquina y te ayudo a llenar la orden.");
     }
@@ -134,7 +139,6 @@
   function cerrarPanel() {
     panel.classList.remove("is-open");
     panel.setAttribute("aria-hidden", "true");
-    overlay.hidden = true;
   }
 
   btnOpen.addEventListener("click", function (ev) {
@@ -142,7 +146,8 @@
     abrirPanel();
   });
   if (btnClose) btnClose.addEventListener("click", cerrarPanel);
-  overlay.addEventListener("click", cerrarPanel);
+  // Nota: ya no hay overlay propio que cerrar con clic-afuera; el <dialog>
+  // padre ya tiene su ::backdrop, y Escape sigue cerrando el panel primero.
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && panel.classList.contains("is-open")) cerrarPanel();
   });

@@ -59,6 +59,28 @@ class RolDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = "codigo"
 
 
+class RolValidarAPIView(APIView):
+    """Valida en vivo la 'clave de seguridad' que se escribe en el registro
+    (form-registro): es el mismo texto que el 'codigo' de un ROL. Se usa
+    para desbloquear el resto del formulario apenas coincida con un rol
+    real.
+
+    A proposito NUNCA regresa la lista de codigos existentes ni un 404 que
+    delate si "casi" era un codigo valido: solo {"valido": true/false} (y el
+    nombre del rol, solo si valido, para mostrarlo en pantalla)."""
+
+    def get(self, request):
+        codigo = (request.query_params.get("codigo") or "").strip()
+        if not codigo:
+            return Response({"valido": False, "nombre": None})
+
+        rol = models.Rol.objects.filter(codigo__iexact=codigo).first()
+        if rol is None:
+            return Response({"valido": False, "nombre": None})
+
+        return Response({"valido": True, "nombre": rol.nombre})
+
+
 class EspecialidadListAPIView(generics.ListAPIView):
     """Catalogo de especialidades, para llenar el <select> del formulario de registro."""
 

@@ -1,3 +1,19 @@
+/* Cualquier clase que fije "display" explícito (ej. .btn-orden-secondary)
+   le gana en CSS al [hidden] nativo del navegador, porque una regla de
+   autor siempre pesa más que el display:none por defecto del user-agent.
+   Esta regla obliga a que [hidden] SIEMPRE oculte, sin importar qué otras
+   clases traiga el elemento (botones, selects, forms, etc.). */
+/* El fondo oscuro detras del drawer: antes SOLO vivia en tecni-inventario.css
+   (una hoja que solo carga el lado del tecnico), asi que en el admin
+   (base_admin.html, que no la incluye) el drawer se abria sin ningun
+   backdrop y quedaba mezclado visualmente con el contenido de atras
+   (ej. el calendario). Se declara aqui, en la hoja que SI cargan ambos
+   lados, con z-index justo debajo del drawer (300) para que siempre
+   quede entre el contenido de la pagina y el panel.  */
+.orden-drawer-scrim { position:fixed; inset:0; background:rgba(2,6,15,.55); z-index:290; }
+
+[hidden] { display: none !important; }
+
 .ordenes { display:grid; gap:1.25rem; }
 .ordenes__head { display:flex; justify-content:space-between; align-items:end; gap:1rem; border-bottom:1px solid var(--line); padding-bottom:1rem; flex-wrap:wrap; }
 .ordenes__head p { color:var(--color-primary); font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; margin:0; }
@@ -8,8 +24,13 @@
 .btn-orden-secondary, #newOrdenCancel { display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--line); border-radius:.5rem; padding:.55rem 1rem; background:transparent; color:var(--color-text); font-size:.85rem; cursor:pointer; }
 .btn-orden-secondary:hover, #newOrdenCancel:hover { border-color:var(--color-primary); color:var(--color-primary); }
 
-.ordenes > label { display:flex; align-items:center; gap:.6rem; font-size:.78rem; color:var(--color-muted); }
-.ordenes > label select { background:var(--input-bg); border:1px solid var(--line); border-radius:.45rem; padding:.45rem .6rem; color:var(--color-text); font-size:.85rem; font-family:inherit; min-width:200px; }
+.ordenes__filters { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+.ordenes__filters label { display:flex; align-items:center; gap:.5rem; font-size:.78rem; font-weight:600; color:var(--color-muted); text-transform:uppercase; letter-spacing:.04em; }
+.ordenes__filters select,
+.ordenes__filters input { background:var(--input-bg); border:1px solid var(--line); border-radius:.45rem; padding:.4rem .6rem; color:var(--color-text); font-size:.85rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0; }
+.ordenes__filters select { min-width:200px; }
+.ordenes__filters input[type="search"] { min-width:200px; }
+.ordenes__filters input[type="date"] { min-width:150px; cursor:text; }
 
 .ordenes-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:.9rem; }
 .ordenes-list p#ordenesEmpty { grid-column:1 / -1; color:var(--color-muted); font-size:.9rem; text-align:center; padding:2rem 0; }
@@ -35,48 +56,94 @@ dialog#newOrdenModal, dialog#ordenDrawer {
 /* reset universal: cualquier botón/texto suelto dentro de los diálogos hereda el tema oscuro,
    así no dependemos de que el HTML traiga la clase correcta en cada botón */
 dialog#newOrdenModal *, dialog#ordenDrawer * { color:inherit; box-sizing:border-box; }
-dialog#newOrdenModal button:not(#newOrdenCancel),
-dialog#ordenDrawer button:not(#ordenDrawerClose) {
+dialog#newOrdenModal button:not(#newOrdenCancel):not(#elipseOrdenClose):not(#elipseOrdenBtn),
+dialog#ordenDrawer button:not(#ordenDrawerClose):not(.orden-mov__item-del):not(.btn-orden-secondary) {
   font:inherit; cursor:pointer; border-radius:.5rem; border:1px solid var(--line);
   background:var(--color-primary); color:#04121c; font-weight:700; font-size:.85rem;
   padding:.6rem 1rem; width:100%; transition:filter .12s ease, opacity .12s ease;
 }
-dialog#newOrdenModal button:not(#newOrdenCancel):hover,
-dialog#ordenDrawer button:not(#ordenDrawerClose):hover { filter:brightness(1.08); }
+dialog#newOrdenModal button:not(#newOrdenCancel):not(#elipseOrdenClose):not(#elipseOrdenBtn):hover,
+dialog#ordenDrawer button:not(#ordenDrawerClose):not(.orden-mov__item-del):hover { filter:brightness(1.08); }
 dialog#newOrdenModal button:disabled, dialog#ordenDrawer button:disabled { opacity:.5; cursor:not-allowed; filter:none; }
+dialog#ordenDrawer .orden-mov__item-del {
+  width:auto; background:transparent; border:none; color:var(--color-muted);
+  font-weight:400; padding:0 .3rem; border-radius:.3rem;
+}
+dialog#ordenDrawer .orden-mov__item-del:hover { color:#ef4444; filter:none; }
+dialog#ordenDrawer .btn-orden-secondary { width:100%; }
 
 dialog#newOrdenModal::backdrop, dialog#ordenDrawer::backdrop {
   background:rgba(2,6,15,.72); backdrop-filter:blur(2px);
 }
 
 dialog#newOrdenModal { position:fixed; inset:0; margin:auto; }
-dialog#newOrdenModal form {
+
+/* Layout: form + panel de Elipse lado a lado dentro del mismo dialog (evita
+   el problema de un <aside> normal quedando atrapado detras del "top layer"
+   del <dialog>). En pantallas angostas se apilan en columna. */
+dialog#newOrdenModal .new-orden-layout {
+  display:flex; align-items:stretch; gap:0; max-width:96vw;
+}
+dialog#newOrdenModal #newOrdenForm {
   width:min(520px,92vw); background:var(--color-surface); border:1px solid var(--line);
   border-radius:.75rem; padding:1.25rem; box-shadow:0 20px 50px rgba(0,0,0,.45);
-  display:grid; gap:.75rem;
+  display:grid; gap:.75rem; max-height:88vh; overflow-y:auto;
+}
+
+/* Panel de Elipse embebido: pisa las reglas de posicion fija/slide-in de
+   elipse-falla.css (misma especificidad de clase pero combinando ambas
+   clases en el selector gana igual sin depender del orden de los <link>). */
+.elipse-falla-panel.elipse-falla-panel--embedded {
+  position:static; transform:none; box-shadow:none;
+  top:auto; right:auto; bottom:auto; z-index:auto;
+  width:0; max-width:0; padding:0; margin:0; opacity:0; pointer-events:none;
+  overflow:hidden; border-left:none; max-height:88vh;
+  transition:width .2s ease, opacity .15s ease, padding .2s ease, margin .2s ease;
+}
+.elipse-falla-panel.elipse-falla-panel--embedded.is-open {
+  width:min(380px,42vw); max-width:380px; min-width:280px; padding:1.1rem 1.1rem 1.4rem;
+  margin-left:.9rem; opacity:1; pointer-events:auto; border-left:1px solid var(--line);
+}
+.elipse-falla-panel--embedded .elipse-falla-panel__head { flex-wrap:nowrap; gap:.5rem; }
+.elipse-falla-panel--embedded .elipse-falla-panel__title { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.elipse-falla-panel--embedded .elipse-falla-panel__close { flex:0 0 auto; }
+
+.elipse-falla-panel--embedded .elipse-falla-panel__hint,
+.elipse-falla-panel--embedded .elipse-falla-panel__footnote,
+.elipse-falla-panel--embedded .elipse-falla-panel__msg--ai ul { color:var(--color-muted); }
+.elipse-falla-panel--embedded .elipse-falla-panel__msg--user { color:#04121c; }
+
+@media (max-width:900px) {
+  dialog#newOrdenModal .new-orden-layout { flex-direction:column; max-height:92vh; overflow-y:auto; }
+  dialog#newOrdenModal #newOrdenForm { max-height:none; }
+  .elipse-falla-panel.elipse-falla-panel--embedded.is-open {
+    width:100%; max-width:100%; min-width:0; margin-left:0; margin-top:.9rem; max-height:60vh;
+  }
 }
 dialog#newOrdenModal h2 { margin:0 0 .25rem; font-size:1.1rem; }
 dialog#newOrdenModal label { display:flex; flex-direction:column; gap:.3rem; font-size:.78rem; color:var(--color-muted); }
-dialog#newOrdenModal input, dialog#newOrdenModal select, dialog#newOrdenModal textarea {
+dialog#newOrdenModal #newOrdenForm input, dialog#newOrdenModal #newOrdenForm select, dialog#newOrdenModal #newOrdenForm textarea {
   background:var(--input-bg); border:1px solid var(--line); border-radius:.45rem; padding:.5rem .6rem;
   color:var(--color-text); font-size:.85rem; font-family:inherit;
 }
 dialog#newOrdenModal textarea { resize:vertical; min-height:4.5rem; }
 #newOrdenError { color:#fca5a5; font-size:.8rem; margin:0; }
 #newOrdenError:empty { display:none; }
-dialog#newOrdenModal form > div:last-of-type,
+dialog#newOrdenModal form > div:last-of-type:not(.orden-reporte),
 dialog#newOrdenModal .new-orden-form__actions { display:flex; justify-content:flex-end; gap:.6rem; margin-top:.25rem; }
 
-dialog#ordenDrawer { position:fixed; inset:0 0 0 auto; margin:0; height:100%; }
+dialog#ordenDrawer { position:fixed; inset:0 0 0 auto; margin:0; height:100%; z-index:300; }
 dialog#ordenDrawer section {
   height:100%; width:min(420px,92vw); background:var(--color-surface); border-left:1px solid var(--line);
   padding:1.25rem; overflow-y:auto; box-shadow:-12px 0 30px rgba(0,0,0,.35); display:grid; gap:.75rem;
   align-content:start;
 }
 dialog#ordenDrawer #ordenDrawerClose {
-  justify-self:end; background:transparent; border:none; color:var(--color-muted); cursor:pointer; font-size:1.2rem; line-height:1;
+  justify-self:end; width:2rem; height:2rem; display:flex; align-items:center; justify-content:center;
+  background:rgba(148,163,184,.15); border:1px solid var(--line); border-radius:50%;
+  color:var(--color-text); cursor:pointer; font-size:1.2rem; line-height:1;
 }
-dialog#ordenDrawer #ordenDrawerClose:hover { color:var(--color-text); }
+dialog#ordenDrawer #ordenDrawerClose:hover { background:rgba(239,68,68,.15); border-color:#ef4444; color:#ef4444; }
 dialog#ordenDrawer #ordenDrawerFolio { color:var(--color-primary); font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin:0; }
 dialog#ordenDrawer #ordenDrawerTitle { margin:0; font-size:1.15rem; }
 dialog#ordenDrawer #ordenDrawerInfo { font-size:.8rem; color:var(--color-muted); margin:0; }
@@ -87,6 +154,7 @@ dialog#ordenDrawer select, dialog#ordenDrawer input, dialog#ordenDrawer textarea
   color:var(--color-text); font-size:.85rem; font-family:inherit;
 }
 dialog#ordenDrawer form { display:grid; gap:.6rem; border-top:1px solid var(--line); padding-top:.9rem; margin-top:.25rem; }
+dialog#ordenDrawer form[hidden] { display:none; }
 dialog#ordenDrawer #ordenAsignarBtn, dialog#ordenDrawer #ordenIniciarBtn { align-self:start; }
 dialog#ordenDrawer #ordenMsg { font-size:.8rem; margin:0; }
 dialog#ordenDrawer #ordenMsg:empty { display:none; }
@@ -121,6 +189,14 @@ dialog#reporteFallaPickerModal[open] {
   border-radius:.75rem; padding:1.25rem; box-shadow:0 20px 50px rgba(0,0,0,.45); display:grid; gap:.75rem;
 }
 dialog#reporteFallaPickerModal h2 { margin:0; font-size:1.05rem; }
+dialog#confirmFallaPdfModal { border:none; padding:0; background:transparent; position:fixed; inset:0; margin:auto; color:var(--color-text); }
+dialog#confirmFallaPdfModal::backdrop { background:rgba(2,6,15,.72); backdrop-filter:blur(2px); }
+dialog#confirmFallaPdfModal[open] {
+  width:min(420px,92vw); background:var(--color-surface); border:1px solid var(--line);
+  border-radius:.75rem; padding:1.25rem; box-shadow:0 20px 50px rgba(0,0,0,.45); display:grid; gap:.75rem;
+}
+dialog#confirmFallaPdfModal h2 { margin:0; font-size:1.05rem; }
+#confirmFallaPdfTexto { margin:0; font-size:.85rem; color:var(--color-muted); }
 #rfPickerHint { margin:0; font-size:.78rem; color:var(--color-muted); }
 .orden-reporte__lista { display:grid; gap:.5rem; max-height:50vh; overflow-y:auto; }
 .orden-reporte__item {
@@ -149,5 +225,8 @@ dialog#ordenDrawer #ordenMsg.error { color:#fca5a5; }
 .orden-mov__label { font-size:.78rem; color:var(--color-muted); margin:0; }
 .orden-mov__item { display:flex; justify-content:space-between; align-items:center; font-size:.82rem; background:var(--input-bg); border:1px solid var(--line); border-radius:.4rem; padding:.4rem .6rem; }
 .orden-mov__item-del { background:transparent; border:none; color:var(--color-muted); cursor:pointer; width:auto; padding:0 .3rem; }
-.orden-mov__form { display:grid; gap:.5rem; }
+.orden-mov__form { display:grid; gap:.6rem; background:var(--input-bg); border:1px solid var(--line); border-radius:.5rem; padding:.75rem; }
+.orden-mov__form label { display:flex; flex-direction:column; gap:.3rem; font-size:.8rem; color:var(--color-muted); }
+.orden-mov__form select { background:var(--input-bg); border:1px solid var(--line); border-radius:.4rem; padding:.5rem .6rem; color:inherit; font:inherit; }
+.orden-mov__error { font-size:.8rem; color:#fca5a5; margin:0; }
 .orden-mov__form-actions { display:flex; gap:.5rem; justify-content:flex-end; }

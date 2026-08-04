@@ -125,7 +125,7 @@
     grid-template-rows: 0fr;
     transition: grid-template-rows 0.24s ease;
 }
-.tecni-sidebar__submenu > a { overflow: hidden; }
+.tecni-sidebar__submenu-inner { overflow: hidden; min-height: 0; }
 .tecni-sidebar__group.is-open .tecni-sidebar__submenu { grid-template-rows: 1fr; }
 .tecni-sidebar__submenu a {
     display: block;
@@ -170,7 +170,10 @@
     box-shadow: 0 0 6px rgba(52, 211, 153, 0.8);
     flex-shrink: 0;
 }
-
+.tecni-sidebar__foot-dot.is-offline {
+    background: #f87171;
+    box-shadow: 0 0 6px rgba(248, 113, 113, 0.8);
+}
 /* colapsado */
 .tecni-shell.is-collapsed .tecni-sidebar { width: var(--tecni-sidebar-w-collapsed); }
 .tecni-shell.is-collapsed .tecni-sidebar__brand-text,

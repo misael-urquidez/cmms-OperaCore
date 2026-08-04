@@ -146,6 +146,7 @@ class Maquina(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.CharField(max_length=255, null=True, blank=True)
     imagen_url = models.CharField(max_length=255, null=True, blank=True)
+    modelo_3d = models.CharField(max_length=255, null=True, blank=True)
     fechaInstalacion = models.DateField()
     linea = models.ForeignKey(
         Linea, on_delete=models.DO_NOTHING, db_column="linea", null=True, blank=True

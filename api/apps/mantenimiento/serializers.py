@@ -98,6 +98,8 @@ class ListMovimientoSerializer(serializers.ModelSerializer):
 
 
 class CreateMovimientoSerializer(serializers.ModelSerializer):
+    tipoMovimiento = serializers.CharField(source="tipomovimiento")
+
     class Meta:
         model = models.Movimiento
         fields = ["tipoMovimiento", "fecha", "hora", "descripcion",
@@ -255,3 +257,9 @@ class CerrarOrdenSerializer(serializers.Serializer):
     # mezclando ambos datos; ahora viaja en la misma peticion de cierre y
     # se crea todo dentro de la misma transaccion atomica.
     movimientos = MovimientoCierreItemSerializer(many=True, required=False)
+
+
+class UpdateOrdenMantenimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.OrdenMantenimiento
+        fields = ["descripcion", "fechaprogramada", "tipo_mantenimiento", "notas", "diagnostico"]

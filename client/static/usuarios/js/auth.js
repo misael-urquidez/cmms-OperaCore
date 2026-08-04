@@ -447,6 +447,13 @@
     const passInput = formRegistro.querySelector("#reg-password");
     const soloDigitos = (v) => v.replace(/\D/g, "");
 
+    const telInput = formRegistro.querySelector('[name="telefono"]');
+    if (telInput) {
+      telInput.addEventListener("input", () => {
+        telInput.value = soloDigitos(telInput.value).slice(0, 10);
+      });
+    }
+
     const reglas = {
       nombre: (v) =>
         !v ? "El nombre es obligatorio."
@@ -534,7 +541,81 @@
       });
     }
 
+    // ── Clave de seguridad: desbloquea el resto del formulario solo si el
+    // servidor confirma que coincide con un ROL real. Nunca se valida "a
+    // ojo" en el navegador: siempre se pregunta al servidor. ──
+    const claveInput = document.getElementById("reg-clave");
+    const claveStatus = document.getElementById("reg-clave-status");
+    const claveHint = document.getElementById("reg-clave-hint");
+    const claveHintDefault = claveHint ? claveHint.textContent : "";
+    const fieldsetBloqueado = document.getElementById("reg-campos-bloqueados");
+    const validarClaveUrl = formRegistro.dataset.validarClaveUrl;
+
+    if (claveInput && claveStatus && fieldsetBloqueado && validarClaveUrl) {
+      let debounceId = null;
+      let abortCtrl = null;
+
+      function fijarEstado(estado) {
+        claveStatus.dataset.state = estado; // "", "checking", "valid", "invalid"
+        claveInput.classList.toggle("is-valid", estado === "valid");
+        claveInput.classList.toggle("is-invalid", estado === "invalid");
+      }
+
+      function bloquear(mensaje) {
+        fieldsetBloqueado.disabled = true;
+        if (claveHint) claveHint.textContent = mensaje || claveHintDefault;
+      }
+
+      function desbloquear(nombreRol) {
+        fieldsetBloqueado.disabled = false;
+        if (claveHint) claveHint.textContent = `Clave válida — te registrarás como "${nombreRol}".`;
+      }
+
+      claveInput.addEventListener("input", () => {
+        const valor = claveInput.value.trim();
+        bloquear(claveHintDefault);
+
+        if (abortCtrl) abortCtrl.abort();
+        if (debounceId) clearTimeout(debounceId);
+
+        if (!valor) {
+          fijarEstado("");
+          return;
+        }
+
+        fijarEstado("checking");
+        debounceId = setTimeout(() => {
+          abortCtrl = new AbortController();
+          fetch(`${validarClaveUrl}?codigo=${encodeURIComponent(valor)}`, {
+            signal: abortCtrl.signal,
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          })
+            .then((r) => r.json())
+            .then((data) => {
+              if (data && data.valido) {
+                fijarEstado("valid");
+                desbloquear(data.nombre);
+              } else {
+                fijarEstado("invalid");
+                bloquear("Esa clave no coincide con ningún rol. Verifícala con tu administrador.");
+              }
+            })
+            .catch((err) => {
+              if (err.name === "AbortError") return; // el usuario siguio escribiendo
+              fijarEstado("invalid");
+              bloquear("No se pudo verificar la clave. Intenta de nuevo.");
+            });
+        }, 350);
+      });
+    }
+
     formRegistro.addEventListener("submit", (e) => {
+      if (fieldsetBloqueado && fieldsetBloqueado.disabled) {
+        e.preventDefault();
+        if (claveInput) claveInput.focus();
+        return;
+      }
+
       let ok = true;
       let primerError = null;
       campos.forEach((input) => {

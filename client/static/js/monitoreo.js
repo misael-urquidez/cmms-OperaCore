@@ -16,6 +16,8 @@
   var SIMULAR_TPL = root.dataset.simularUrlBase;
   var REGISTRO_OPS_TPL = root.dataset.registroOpsUrlBase;
   var REPARACION_MANUAL_TPL = root.dataset.reparacionManualUrlBase;
+  var MANTENIMIENTO_URL = root.dataset.mantenimientoUrl;
+  var REPORTAR_FALLA_URL = root.dataset.reportarFallaUrl;
 
 
   var canvas = document.getElementById("plantCanvas");
@@ -187,6 +189,7 @@ function render(maquinas) {
     var arrastrando = false, offX = 0, offY = 0;
 
     node.addEventListener("pointerdown", function (ev) {
+      if (ev.button !== 0) return;   // solo click izquierdo mueve el nodo; derecho es para la cámara
       arrastrando = true;
       node.dataset.dragged = "0";
       node.classList.add("is-dragging");
@@ -216,6 +219,42 @@ function render(maquinas) {
     }
     node.addEventListener("pointerup", soltar);
     node.addEventListener("pointercancel", soltar);
+  }
+
+  // -------------------------------------------------- pan de cámara con click derecho
+  var plantWrap = document.querySelector(".plant-wrap");
+  if (plantWrap) {
+    var isPanning = false;
+    var startX, startY, scrollLeft, scrollTop;
+
+    plantWrap.addEventListener("pointerdown", function (ev) {
+      if (ev.button !== 2) return;   // solo click derecho
+      isPanning = true;
+      startX = ev.clientX;
+      startY = ev.clientY;
+      scrollLeft = plantWrap.scrollLeft;
+      scrollTop = plantWrap.scrollTop;
+      plantWrap.classList.add("is-panning");
+      ev.preventDefault();
+    });
+
+    plantWrap.addEventListener("pointermove", function (ev) {
+      if (!isPanning) return;
+      var x = ev.clientX;
+      var y = ev.clientY;
+      plantWrap.scrollLeft = scrollLeft - (x - startX);
+      plantWrap.scrollTop = scrollTop - (y - startY);
+    });
+
+    plantWrap.addEventListener("pointerup", function () {
+      isPanning = false;
+      plantWrap.classList.remove("is-panning");
+    });
+
+    plantWrap.addEventListener("pointerleave", function () {
+      isPanning = false;
+      plantWrap.classList.remove("is-panning");
+    });
   }
 
   // ------------------------------------------------------------- feed
@@ -267,6 +306,8 @@ refrescar();
   var drawerMttr = document.getElementById("drawerMttr");
   var drawerDispo = document.getElementById("drawerDispo");
   var drawerDispoFill = document.getElementById("drawerDispoFill");
+  var drawerNumeroFallas = document.getElementById("drawerNumeroFallas");
+  var drawerTiempoInactividad = document.getElementById("drawerTiempoInactividad");
   var drawerVibracion = document.getElementById("drawerVibracion");
   var drawerUmbral = document.getElementById("drawerUmbral");
   var drawerTemperatura = document.getElementById("drawerTemperatura");
@@ -292,6 +333,7 @@ refrescar();
   var drawerAccionEstadoSection = document.getElementById("drawerAccionEstadoSection");
   var drawerAccionEstadoBtn = document.getElementById("drawerAccionEstadoBtn");
   var drawerAccionEstadoMsg = document.getElementById("drawerAccionEstadoMsg");
+  var drawerAccionFallaMantBtn = document.getElementById("drawerAccionFallaMantBtn");
 
   // estado actual -> qué acción se ofrece y a qué endpoint de maquinaria pega
   var ACCIONES_POR_ESTADO = {
@@ -367,6 +409,13 @@ refrescar();
       drawerAccionEstadoSection.hidden = true;
     }
     drawerAccionEstadoMsg.hidden = true;
+    if (estadoClase === "FALLO") {
+      drawerAccionFallaMantBtn.textContent = "⛔ Reportar falla";
+      drawerAccionFallaMantBtn.dataset.tipo = "falla";
+    } else {
+      drawerAccionFallaMantBtn.textContent = "🛠 Programar mantenimiento preventivo";
+      drawerAccionFallaMantBtn.dataset.tipo = "preventivo";
+    }
     drawerAlert.hidden = !m.requiere_revision_preventiva;
     document.getElementById("drawerOrdenMsg").hidden = true;
     drawerVibracion.textContent = m.ultima_lectura ? m.ultima_lectura.vibracion : "Sin datos";
@@ -396,6 +445,7 @@ refrescar();
     el.hidden = false;
     el.textContent = texto;
     el.className = "feedback-msg " + (ok ? "is-ok" : "is-error");
+    if (window.mostrarToast) mostrarToast(texto, ok ? "success" : "error");
   }
 
   drawerModoGuardar.addEventListener("click", function () {
@@ -426,6 +476,14 @@ refrescar();
     if (!estado.seleccionada) return;
     var codigo = estado.seleccionada;
     var accion = drawerAccionEstadoBtn.dataset.accion;
+
+    // Redirigir a Mantenimiento para programar mantenimiento preventivo si la acción es "deshabilitar"
+    if (accion === "deshabilitar") {
+      var fechaActual = new Date().toISOString().split('T')[0];
+      window.location.href = "/mantenimiento/?maquina=" + encodeURIComponent(codigo) + "&tipo=PREVE&fecha=" + fechaActual;
+      return;
+    }
+
     drawerAccionEstadoBtn.disabled = true;
     fetch(urlPara(ESTADO_ACCION_TPL, codigo), {
       method: "POST",
@@ -444,6 +502,18 @@ refrescar();
         drawerAccionEstadoBtn.disabled = false;
         mostrarMsg(drawerAccionEstadoMsg, "No fue posible conectar con el servidor.", false);
       });
+  });
+
+  drawerAccionFallaMantBtn.addEventListener("click", function () {
+    if (!estado.seleccionada) return;
+    var codigo = estado.seleccionada;
+    var fechaActual = new Date().toISOString().split("T")[0];
+
+    if (drawerAccionFallaMantBtn.dataset.tipo === "falla") {
+      window.location.href = REPORTAR_FALLA_URL + "?maquina=" + encodeURIComponent(codigo);
+    } else {
+      window.location.href = MANTENIMIENTO_URL + "?maquina=" + encodeURIComponent(codigo) + "&tipo=PREVE&fecha=" + fechaActual;
+    }
   });
 
   drawerManualForm.addEventListener("submit", function (ev) {
@@ -571,6 +641,8 @@ drawerReparacionForm.addEventListener("submit", function (ev) {
     var dispo = data.disponibilidad;
     drawerDispo.textContent = dispo != null ? dispo + " %" : "Sin datos aún";
     drawerDispoFill.style.width = (dispo != null ? dispo : 0) + "%";
+    drawerNumeroFallas.textContent = data.numero_fallas != null ? String(data.numero_fallas) : "—";
+    drawerTiempoInactividad.textContent = data.tiempo_inactividad != null ? Number(data.tiempo_inactividad).toFixed(1) : "—";
   }
 
   function pintarTendencia(data) {
@@ -647,11 +719,11 @@ drawerReparacionForm.addEventListener("submit", function (ev) {
   function cargarCatalogos() {
     fetch(CATALOGOS_URL).then(function (r) { return r.json(); }).then(function (data) {
       catalogosCargados = true;
-      llenarSelect(document.getElementById("fLinea"), data.lineas || [], "codigo", "nombre", "Sin línea");
-      llenarSelect(document.getElementById("fTipo"), data.tipos_maquina || [], "numeroRegistro", "nombre", "Sin especificar");
-      llenarSelect(document.getElementById("fMarca"), data.marcas || [], "clave", "nombre", "Sin especificar");
-      llenarSelect(document.getElementById("fEstado"), data.estados_maquina || [], "codigo", "nombre");
-      llenarSelect(document.getElementById("fModo"), data.modos_monitoreo || [], "valor", "etiqueta");
+      llenarSelect(document.getElementById("fLinea"), data.lineas || [], "codigo", "nombre", "Selecciona línea");
+      llenarSelect(document.getElementById("fTipo"), data.tipos_maquina || [], "numeroRegistro", "nombre", "Selecciona tipo");
+      llenarSelect(document.getElementById("fMarca"), data.marcas || [], "clave", "nombre", "Selecciona marca");
+      llenarSelect(document.getElementById("fEstado"), data.estados_maquina || [], "codigo", "nombre", "Selecciona estado");
+      llenarSelect(document.getElementById("fModo"), data.modos_monitoreo || [], "valor", "etiqueta", "Selecciona modo");
       todosLosModelos = data.modelos || [];
       filtrarModelos("");
     }).catch(function () {
@@ -668,23 +740,38 @@ drawerReparacionForm.addEventListener("submit", function (ev) {
   form.addEventListener("submit", function (ev) {
     ev.preventDefault();
     errorBox.hidden = true;
-    var payload = {
+
+    var campos = {
       codigo: document.getElementById("fCodigo").value.trim(),
       nombre: document.getElementById("fNombre").value.trim(),
       descripcion: document.getElementById("fDescripcion").value.trim(),
       numeroSerie: document.getElementById("fSerie").value.trim(),
-      linea: document.getElementById("fLinea").value || null,
-      marca: document.getElementById("fMarca").value || null,
-      modelo: document.getElementById("fModelo").value || null,
-      tipo_maquina: document.getElementById("fTipo").value || null,
-      estado_maquina: document.getElementById("fEstado").value || null,
+      linea: document.getElementById("fLinea").value,
+      marca: document.getElementById("fMarca").value,
+      modelo: document.getElementById("fModelo").value,
+      tipo_maquina: document.getElementById("fTipo").value,
+      estado_maquina: document.getElementById("fEstado").value,
       modo_monitoreo: document.getElementById("fModo").value,
       umbral_vibracion: parseFloat(document.getElementById("fUmbral").value) || 4.0,
     };
+
+    var formData = new FormData();
+    Object.keys(campos).forEach(function (key) {
+      var valor = campos[key];
+      if (valor !== "" && valor !== null && valor !== undefined) {
+        formData.append(key, valor);
+      }
+    });
+
+    var imagenFile = document.getElementById("fImagen").files[0];
+    if (imagenFile) formData.append("imagen", imagenFile);
+    var modelo3dFile = document.getElementById("fModelo3d").files[0];
+    if (modelo3dFile) formData.append("modelo_3d_archivo", modelo3dFile);
+
     fetch(CREAR_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
-      body: JSON.stringify(payload),
+      headers: { "X-CSRFToken": getCookie("csrftoken") },
+      body: formData,
     }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok) {

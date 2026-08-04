@@ -96,6 +96,7 @@ function pintarAvatar(fotoUrl, nombreParaInicial) {
     trigger.setAttribute("aria-expanded", "false");
   }
   function abrirDropdown() {
+    cerrarTray();
     dropdown.classList.add("is-open");
     trigger.setAttribute("aria-expanded", "true");
   }
@@ -406,7 +407,141 @@ function pintarAvatar(fotoUrl, nombreParaInicial) {
         });
     });
   }
-/* ---------- Cierre de sesión automático por inactividad (15 min) ---------- */
+
+  /* ---------- campana de notificaciones ---------- */
+  const notifWrapper = document.querySelector(".notif-wrapper");
+  const notifBell = document.getElementById("notifBell");
+  const notifTray = document.getElementById("notifTray");
+  const notifTrayClose = document.getElementById("notifTrayClose");
+  const notifTrayList = document.getElementById("notifTrayList");
+  const notifBadge = document.getElementById("notifBadge");
+  const notifUrl = notifWrapper ? notifWrapper.dataset.notifUrl : null;
+
+  function tiempoRelativo(iso) {
+    if (!iso) return "";
+    var partes = iso.split("T");
+    var fechaStr = partes[0];
+    var ahora = new Date();
+    var fecha = new Date(fechaStr + "T00:00:00");
+    var diffMs = ahora - fecha;
+    if (diffMs < 0) return "Próximamente";
+    var diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDias === 0) return "Hoy";
+    if (diffDias === 1) return "Ayer";
+    if (diffDias < 7) return "Hace " + diffDias + " días";
+    if (diffDias < 30) return "Hace " + Math.floor(diffDias / 7) + " sem";
+    return "Hace " + Math.floor(diffDias / 30) + " mes";
+  }
+
+  function mostrarEstadoCarga(visible) {
+    if (!notifTrayList) return;
+    if (visible) {
+      notifTrayList.innerHTML = '<div class="notif-tray__loading">Cargando...</div>';
+    }
+  }
+
+  function mostrarError() {
+    if (!notifTrayList) return;
+    notifTrayList.innerHTML = '<div class="notif-tray__error">No se pudieron cargar las notificaciones.</div>';
+  }
+
+  function pintarNotificaciones(items) {
+    if (!notifTrayList) return;
+    if (!items || items.length === 0) {
+      notifTrayList.innerHTML = '<div class="notif-tray__empty">Sin notificaciones</div>';
+      if (notifBadge) {
+        notifBadge.textContent = "0";
+        notifBadge.hidden = true;
+      }
+      return;
+    }
+
+    var html = "";
+    for (var i = 0; i < items.length; i++) {
+      var n = items[i];
+      html += '<a class="notif-tray__item notif-tray__item--' + n.gravedad + '" href="' + n.url + '">';
+      html += '<div class="notif-tray__item-bar"></div>';
+      html += '<div class="notif-tray__item-body">';
+      html += '<div class="notif-tray__item-msg">' + n.mensaje + '</div>';
+      html += '<div class="notif-tray__item-detail">' + (n.detalle || "") + '</div>';
+      html += '<div class="notif-tray__item-time">' + tiempoRelativo(n.fecha) + '</div>';
+      html += '</div></a>';
+    }
+    notifTrayList.innerHTML = html;
+
+    if (notifBadge) {
+      var total = items.length;
+      notifBadge.textContent = total > 99 ? "99+" : String(total);
+      notifBadge.hidden = false;
+    }
+  }
+
+  function cargarNotificaciones() {
+    if (!notifUrl) return;
+    if (notifBell) notifBell.classList.add("is-loading");
+
+    fetch(notifUrl)
+      .then(function (r) {
+        if (!r.ok) throw new Error("Error " + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        pintarNotificaciones(data);
+      })
+      .catch(function () {
+        mostrarError();
+      })
+      .finally(function () {
+        if (notifBell) notifBell.classList.remove("is-loading");
+      });
+  }
+
+  function cerrarTray() {
+    if (!notifTray) return;
+    notifTray.classList.remove("is-open");
+    if (notifBell) notifBell.removeAttribute("aria-expanded");
+  }
+  function abrirTray() {
+    if (!notifTray) return;
+    cerrarDropdown();
+    notifTray.classList.add("is-open");
+    if (notifBell) notifBell.setAttribute("aria-expanded", "true");
+  }
+
+  if (notifBell) {
+    notifBell.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (notifTray && notifTray.classList.contains("is-open")) {
+        cerrarTray();
+      } else {
+        abrirTray();
+        cargarNotificaciones();
+      }
+    });
+  }
+  if (notifTrayClose) {
+    notifTrayClose.addEventListener("click", function (e) {
+      e.stopPropagation();
+      cerrarTray();
+    });
+  }
+
+  document.addEventListener("click", function (e) {
+    var trayRoot = notifWrapper;
+    if (trayRoot && !trayRoot.contains(e.target)) {
+      cerrarTray();
+    }
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") cerrarTray();
+  });
+
+  // Carga inicial + polling cada 30s
+  cargarNotificaciones();
+  setInterval(cargarNotificaciones, 30000);
+
+  /* ---------- Cierre de sesión automático por inactividad (15 min) ---------- */
   const TIEMPO_INACTIVIDAD = 15 * 60 * 1000; // 900,000 ms
   let temporizadorInactividad;
 

@@ -13,7 +13,7 @@ from apps.fallas.models import (
 from apps.usuarios.models import Trabajador
 
 from . import services
-from .models import Indicador, LecturaSensor
+from .models import Indicador, LecturaSensor, RegistroOps
 from .serializers import (
     CrearMaquinaSerializer, LecturaSensorSerializer, ModoMonitoreoSerializer, ReparacionManualSerializer,
     RegistroOpsSerializer, ReporteFallaManualSerializer,
@@ -58,10 +58,22 @@ class MaquinaListAPIView(APIView):
 
 class IndicadoresMaquinaAPIView(APIView):
     def get(self, request, codigo):
+        from django.db.models import Count, Sum
+
         indicador = Indicador.objects.filter(maquina_id=codigo).order_by("-fechaInicio", "-numeroRegistro").first()
-        if not indicador:
-            return Response({"mtbf": None, "mttr": None, "disponibilidad": None})
-        return Response({"mtbf": indicador.mtbf, "mttr": indicador.mttr, "disponibilidad": indicador.porcentajeDispo})
+
+        fallas_qs = ReporteFalla.objects.filter(maquina_id=codigo)
+        total_fallas = fallas_qs.count()
+        total_tiempo_paro = fallas_qs.aggregate(total=Sum("tiempoParo"))["total"] or 0
+
+        response = {
+            "mtbf": indicador.mtbf if indicador else None,
+            "mttr": indicador.mttr if indicador else None,
+            "disponibilidad": indicador.porcentajeDispo if indicador else None,
+            "numero_fallas": total_fallas,
+            "tiempo_inactividad": total_tiempo_paro,
+        }
+        return Response(response)
 
 
 class HistorialLecturasAPIView(APIView):
@@ -240,9 +252,26 @@ class ReparacionManualAPIView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 class RegistroOpsAPIView(APIView):
-    """Registra un periodo de horas de operación de la máquina.
+    """Lista y crea periodos de horas de operación de una máquina.
     No recibe ni escribe mtbf/mttr/disponibilidad -- eso lo calculan
     los triggers de MySQL en cuanto se inserta el registro."""
+
+    def get(self, request, codigo):
+        try:
+            maquina = Maquina.objects.get(codigo=codigo)
+        except Maquina.DoesNotExist as exc:
+            raise NotFound("Máquina no encontrada.") from exc
+        registros = RegistroOps.objects.filter(maquina=maquina).order_by("-fechaInicio")
+        return Response([
+            {
+                "numeroRegistro": r.numeroRegistro,
+                "fechaInicio": r.fechaInicio.isoformat(),
+                "fechaFin": r.fechaFin.isoformat(),
+                "horasOperacion": r.horasOperacion,
+                "maquina": r.maquina_id,
+            }
+            for r in registros
+        ])
 
     def post(self, request, codigo):
         try:
@@ -257,6 +286,42 @@ class RegistroOpsAPIView(APIView):
             "maquina": maquina.codigo,
             "horasOperacion": registro.horasOperacion,
         }, status=status.HTTP_201_CREATED)
+
+
+class RegistroOpsUpdateAPIView(APIView):
+    """Actualiza un periodo de horas de operación existente y
+    recalcula el MTBF."""
+
+    def patch(self, request, pk):
+        try:
+            registro = RegistroOps.objects.get(pk=pk)
+        except RegistroOps.DoesNotExist as exc:
+            raise NotFound("Registro no encontrado.") from exc
+        serializer = RegistroOpsSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        for attr, val in serializer.validated_data.items():
+            setattr(registro, attr, val)
+        registro.save()
+        services.recalcular_mtbf_maquina(registro.maquina_id)
+        return Response({
+            "numeroRegistro": registro.numeroRegistro,
+            "maquina": registro.maquina_id,
+            "horasOperacion": registro.horasOperacion,
+        })
+
+
+class RegistroOpsDeleteAPIView(APIView):
+    """Elimina un periodo de horas de operación y recalcula el MTBF."""
+
+    def delete(self, request, pk):
+        try:
+            registro = RegistroOps.objects.get(pk=pk)
+        except RegistroOps.DoesNotExist as exc:
+            raise NotFound("Registro no encontrado.") from exc
+        maquina_codigo = registro.maquina_id
+        registro.delete()
+        services.recalcular_mtbf_maquina(maquina_codigo)
+        return Response({"detail": "Registro eliminado."}, status=status.HTTP_200_OK)
 
 
 class ReparacionIotAPIView(APIView):
