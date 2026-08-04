@@ -12,9 +12,9 @@ from .models import HistorialEstadoMaquina, Maquina
 # DESHA -> OPERA (admin reactiva)
 TRANSICIONES_VALIDAS = {
     "OPERA": {"FALLO", "DESHA"},
-    "FALLO": {"MANTE"},
-    "MANTE": {"ESPER"},
-    "ESPER": {"OPERA", "FALLO"},
+    "FALLO": {"MANTE", "DESHA"},
+    "MANTE": {"ESPER", "DESHA"},
+    "ESPER": {"OPERA", "FALLO", "DESHA"},
     "DESHA": {"OPERA"},
 }
 
