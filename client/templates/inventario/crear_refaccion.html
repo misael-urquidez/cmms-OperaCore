@@ -1,4 +1,4 @@
-{% extends "base_admin.html" %}
+{% extends base_template %}
 {% load static %}
 
 {% block title %}Nueva Refacción · OperaCore{% endblock %}
@@ -25,36 +25,36 @@
     <div class="contenedor">
       <div class="left-side">
         <label for="codigo">Código / SKU</label>
-        <input type="text" name="codigo" id="codigo" required maxlength="100" />
+        <input type="text" name="codigo" id="codigo" required maxlength="100" value="{{ datos.codigo|default:'' }}" />
 
         <label for="nombre">Nombre de la refacción</label>
-        <input type="text" name="nombre" id="nombre" required maxlength="255" />
+        <input type="text" name="nombre" id="nombre" required maxlength="255" value="{{ datos.nombre|default:'' }}" />
 
         <label for="descripcion">Descripción</label>
-        <textarea name="descripcion" id="descripcion" rows="3"></textarea>
+        <textarea name="descripcion" id="descripcion" rows="3">{{ datos.descripcion|default:'' }}</textarea>
 
         <label for="ubicacion_almacen">Ubicación en almacén</label>
-        <input type="text" name="ubicacion_almacen" id="ubicacion_almacen" placeholder="Ej. Anaquel A-3" maxlength="100" />
+        <input type="text" name="ubicacion_almacen" id="ubicacion_almacen" placeholder="Ej. Anaquel A-3" maxlength="100" value="{{ datos.ubicacion_almacen|default:'' }}" />
 
         <label for="costounitario">Costo unitario ($)</label>
-        <input type="number" step="0.01" name="costounitario" id="costounitario" required min="0" placeholder="0.00" />
+        <input type="number" step="0.01" name="costounitario" id="costounitario" required min="0" placeholder="0.00" value="{{ datos.costounitario|default:'' }}" />
       </div>
 
       <div class="right-side">
         <label for="stockactual">Stock actual</label>
-        <input type="number" name="stockactual" id="stockactual" value="0" min="0" required />
+        <input type="number" name="stockactual" id="stockactual" value="{{ datos.stockactual|default:'0' }}" min="0" required />
 
         <label for="stockminimo">Stock mínimo</label>
-        <input type="number" name="stockminimo" id="stockminimo" value="0" min="0" required />
+        <input type="number" name="stockminimo" id="stockminimo" value="{{ datos.stockminimo|default:'0' }}" min="0" required />
 
         <label for="stockmaximo">Stock máximo</label>
-        <input type="number" name="stockmaximo" id="stockmaximo" value="0" min="0" />
+        <input type="number" name="stockmaximo" id="stockmaximo" value="{{ datos.stockmaximo|default:'0' }}" min="0" />
 
         <label for="idproveedor">Proveedor</label>
         <select name="idproveedor" id="idproveedor">
           <option value="">Seleccione...</option>
           {% for p in catalogos.proveedores %}
-            <option value="{{ p.idproveedor }}">{{ p.nombre }}</option>
+            <option value="{{ p.idproveedor }}" {% if datos.idproveedor == p.idproveedor %}selected{% endif %}>{{ p.nombre }}</option>
           {% endfor %}
         </select>
 
@@ -62,7 +62,7 @@
         <select name="idclasificacion" id="idclasificacion">
           <option value="">Seleccione...</option>
           {% for c in catalogos.clasificaciones %}
-            <option value="{{ c.idclasificacion }}">{{ c.nombre }}</option>
+            <option value="{{ c.idclasificacion }}" {% if datos.idclasificacion == c.idclasificacion %}selected{% endif %}>{{ c.nombre }}</option>
           {% endfor %}
         </select>
 
@@ -70,7 +70,7 @@
         <select name="tipo_refaccion" id="tipo_refaccion" required>
           <option value="">Seleccione...</option>
           {% for tr in catalogos.tipos_refaccion %}
-            <option value="{{ tr.numeroregistro }}">{{ tr.nombre }}</option>
+            <option value="{{ tr.numeroregistro }}" {% if datos.tipo_refaccion == tr.numeroregistro %}selected{% endif %}>{{ tr.nombre }}</option>
           {% endfor %}
         </select>
 
@@ -78,7 +78,7 @@
         <select name="edo_refaccion" id="edo_refaccion" required>
           <option value="">Seleccione...</option>
           {% for er in catalogos.estados_refaccion %}
-            <option value="{{ er.codigo }}">{{ er.nombre }}</option>
+            <option value="{{ er.codigo }}" {% if datos.edo_refaccion == er.codigo %}selected{% endif %}>{{ er.nombre }}</option>
           {% endfor %}
         </select>
 

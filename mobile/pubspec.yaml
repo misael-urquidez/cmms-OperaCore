@@ -1,0 +1,22 @@
+name:  mobile
+description: Sensor IoT por celular para OperaCore (equivalente al Wiimote)
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  sensors_plus: ^6.0.0
+  shared_preferences: ^2.2.2
+  vibration: ^2.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

@@ -7,7 +7,18 @@ from django.shortcuts import render
 from django.views import View
 
 API_URL = f"{settings.API_BASE_URL}/monitoreo"
+# Los cambios de estado (validar/deshabilitar/reactivar) viven en la API de
+# maquinaria (apps/maquinaria/views.py), que es la que pasa siempre por
+# cambiar_estado_maquina() -> HISTORIAL_ESTADO_MAQUINA / REGISTRO_OPS.
+MAQUINARIA_URL = f"{settings.API_BASE_URL}/maquinaria/v1/maquina"
 SESSION = requests.Session()
+
+# accion (lo que manda el botón del drawer) -> path del endpoint en maquinaria
+ACCIONES_ESTADO = {
+    "validar": "validar",
+    "deshabilitar": "deshabilitar",
+    "reactivar": "reactivar",
+}
 
 
 def consultar_maquinas():
@@ -80,12 +91,16 @@ class CatalogosMaquinaAPIView(View):
 
 class CrearMaquinaAPIView(View):
     def post(self, request):
+        payload = {k: v for k, v in request.POST.items() if v != ""}
+        files = {}
+        if "imagen" in request.FILES:
+            files["imagen"] = request.FILES["imagen"]
+        if "modelo_3d_archivo" in request.FILES:
+            files["modelo_3d_archivo"] = request.FILES["modelo_3d_archivo"]
         try:
-            payload = json.loads(request.body.decode("utf-8") or "{}")
-        except ValueError:
-            return JsonResponse({"detail": "JSON inválido."}, status=400)
-        try:
-            respuesta = SESSION.post(f"{API_URL}/maquinas/crear/", json=payload, timeout=5)
+            respuesta = SESSION.post(
+                f"{API_URL}/maquinas/crear/", data=payload, files=files or None, timeout=5,
+            )
         except requests.RequestException:
             return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
         try:
@@ -143,7 +158,62 @@ class SimularLecturaAPIView(View):
         return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
 
 
+class AccionEstadoMaquinaAPIView(View):
+    """Botón de acción del drawer (Validar / Deshabilitar / Reactivar).
+    Reenvía a los endpoints de apps.maquinaria, que son los únicos que
+    llaman a cambiar_estado_maquina() y por lo tanto los únicos que dejan
+    registro en HISTORIAL_ESTADO_MAQUINA."""
+
+    def post(self, request, codigo):
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except ValueError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+
+        accion = payload.get("accion")
+        path = ACCIONES_ESTADO.get(accion)
+        if not path:
+            return JsonResponse({"detail": f"Acción '{accion}' no reconocida."}, status=400)
+
+        try:
+            respuesta = SESSION.patch(f"{MAQUINARIA_URL}/{codigo}/{path}/", timeout=5)
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        try:
+            cuerpo = respuesta.json()
+        except ValueError:
+            cuerpo = {"detail": "Respuesta inválida del API."}
+        return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
+
+class ReparacionManualAPIView(View):
+    def post(self, request, codigo):
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except ValueError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+        try:
+            respuesta = SESSION.post(f"{API_URL}/maquinas/{codigo}/reparacion-manual/", json=payload, timeout=5)
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        try:
+            cuerpo = respuesta.json()
+        except ValueError:
+            cuerpo = {"detail": "Respuesta inválida del API."}
+        return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
+
+
 class RegistroOpsAPIView(View):
+    def get(self, request, codigo):
+        try:
+            respuesta = SESSION.get(f"{API_URL}/maquinas/{codigo}/registro-ops/", timeout=5)
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        try:
+            cuerpo = respuesta.json()
+        except ValueError:
+            cuerpo = {"detail": "Respuesta inválida del API."}
+        return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
+
     def post(self, request, codigo):
         try:
             payload = json.loads(request.body.decode("utf-8") or "{}")
@@ -151,6 +221,36 @@ class RegistroOpsAPIView(View):
             return JsonResponse({"detail": "JSON inválido."}, status=400)
         try:
             respuesta = SESSION.post(f"{API_URL}/maquinas/{codigo}/registro-ops/", json=payload, timeout=5)
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        try:
+            cuerpo = respuesta.json()
+        except ValueError:
+            cuerpo = {"detail": "Respuesta inválida del API."}
+        return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
+
+
+class RegistroOpsUpdateAPIView(View):
+    def patch(self, request, pk):
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except ValueError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+        try:
+            respuesta = SESSION.patch(f"{API_URL}/registro-ops/{pk}/", json=payload, timeout=5)
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        try:
+            cuerpo = respuesta.json()
+        except ValueError:
+            cuerpo = {"detail": "Respuesta inválida del API."}
+        return JsonResponse(cuerpo, status=respuesta.status_code, safe=False)
+
+
+class RegistroOpsDeleteAPIView(View):
+    def delete(self, request, pk):
+        try:
+            respuesta = SESSION.delete(f"{API_URL}/registro-ops/{pk}/delete/", timeout=5)
         except requests.RequestException:
             return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
         try:

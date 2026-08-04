@@ -20,6 +20,7 @@ urlpatterns = [
     path("api/indicadores/", include("apps.indicadores.urls")),
     path("api/elipse/", include("apps.elipse.urls")),
     path("api/monitoreo/", include("apps.monitoreo.urls")),
+    path("api/notificaciones/", include("apps.notificaciones.urls")),
 ]
 
 if settings.DEBUG:

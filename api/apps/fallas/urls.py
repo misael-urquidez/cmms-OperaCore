@@ -22,6 +22,10 @@ urlpatterns = [
     path("v2/tipos-falla/<str:numeroRegistro>/", views.TipoFallaDetailAPIView.as_view(), name="tipos-falla-detail"),
     path("v2/reportes/create/", views.ReporteFallaCreateAPIView.as_view(), name="reportes-create"),
     path("v2/reportes/update/<int:pk>/", views.ReporteFallaUpdateAPIView.as_view(), name="reportes-update"),
+    # exportaciones
+    path("v1/reportes/<int:pk>/export/csv/", views.ExportarReporteCSVAPIView.as_view(), name="reportes-export-csv"),
+    path("v1/reportes/<int:pk>/export/xlsx/", views.ExportarReporteXLSXAPIView.as_view(), name="reportes-export-xlsx"),
+    path("v1/reportes/<int:pk>/export/pdf/", views.ExportarReportePDFAPIView.as_view(), name="reportes-export-pdf"),
     # tipo-reporte (llave compuesta)
     path("v1/tipo-reporte/list/", views.TipoReporteListAPIView.as_view(), name="tipo-reporte-list"),
     path("v2/tipo-reporte/create/", views.TipoReporteCreateAPIView.as_view(), name="tipo-reporte-create"),

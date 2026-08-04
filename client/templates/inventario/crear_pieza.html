@@ -1,4 +1,4 @@
-{% extends "base_admin.html" %}
+{% extends base_template %}
 {% load static %}
 
 {% block title %}Nueva Pieza · OperaCore{% endblock %}
@@ -25,42 +25,42 @@
     <div class="contenedor">
       <div class="left-side">
         <label for="numeroserie">Número de serie</label>
-        <input type="text" name="numeroserie" id="numeroserie" required maxlength="100" />
+        <input type="text" name="numeroserie" id="numeroserie" required maxlength="100" value="{{ datos.numeroserie|default:'' }}" />
 
         <label for="codigoetiqueta">Código de etiqueta / QR</label>
-        <input type="text" name="codigoetiqueta" id="codigoetiqueta" required maxlength="100" />
+        <input type="text" name="codigoetiqueta" id="codigoetiqueta" required maxlength="100" value="{{ datos.codigoetiqueta|default:'' }}" />
 
         <label for="nombre">Nombre de la pieza</label>
-        <input type="text" name="nombre" id="nombre" required maxlength="255" />
+        <input type="text" name="nombre" id="nombre" required maxlength="255" value="{{ datos.nombre|default:'' }}" />
 
         <label for="costoinicial">Costo inicial ($)</label>
-        <input type="number" step="0.01" name="costoinicial" id="costoinicial" required min="0" placeholder="0.00" />
+        <input type="number" step="0.01" name="costoinicial" id="costoinicial" required min="0" placeholder="0.00" value="{{ datos.costoinicial|default:'' }}" />
 
         <label for="horasoperacion">Horas acumuladas de operación</label>
-        <input type="number" name="horasoperacion" id="horasoperacion" value="0" min="0" />
+        <input type="number" name="horasoperacion" id="horasoperacion" value="{{ datos.horasoperacion|default:'0' }}" min="0" />
 
         <label for="tiempovidautil">Tiempo de vida útil estimado (Horas)</label>
-        <input type="number" name="tiempovidautil" id="tiempovidautil" required min="0" />
+        <input type="number" name="tiempovidautil" id="tiempovidautil" required min="0" value="{{ datos.tiempovidautil|default:'' }}" />
       </div>
 
       <div class="right-side">
         <label for="depresacionanual">Depreciación anual (%)</label>
-        <input type="number" step="0.01" name="depresacionanual" id="depresacionanual" value="0" min="0" />
+        <input type="number" step="0.01" name="depresacionanual" id="depresacionanual" value="{{ datos.depresacionanual|default:'0' }}" min="0" />
 
         <label for="valorresidual">Valor residual ($)</label>
-        <input type="number" step="0.01" name="valorresidual" id="valorresidual" value="0" min="0" />
+        <input type="number" step="0.01" name="valorresidual" id="valorresidual" value="{{ datos.valorresidual|default:'0' }}" min="0" />
 
         <label for="fechainstalacion">Fecha de instalación</label>
-        <input type="date" name="fechainstalacion" id="fechainstalacion" />
+        <input type="date" name="fechainstalacion" id="fechainstalacion" value="{{ datos.fechainstalacion|default:'' }}" />
 
         <label for="fechagarantia">Fecha fin de garantía</label>
-        <input type="date" name="fechagarantia" id="fechagarantia" />
+        <input type="date" name="fechagarantia" id="fechagarantia" value="{{ datos.fechagarantia|default:'' }}" />
 
         <label for="tipo_pieza">Tipo de pieza</label>
         <select name="tipo_pieza" id="tipo_pieza" required>
           <option value="">Seleccione...</option>
           {% for tp in catalogos.tipos_pieza %}
-            <option value="{{ tp.numeroregistro }}">{{ tp.nombre }}</option>
+            <option value="{{ tp.numeroregistro }}" {% if datos.tipo_pieza == tp.numeroregistro %}selected{% endif %}>{{ tp.nombre }}</option>
           {% endfor %}
         </select>
 
@@ -68,7 +68,7 @@
         <select name="edo_pieza" id="edo_pieza" required>
           <option value="">Seleccione...</option>
           {% for ep in catalogos.estados_pieza %}
-            <option value="{{ ep.codigo }}">{{ ep.nombre }}</option>
+            <option value="{{ ep.codigo }}" {% if datos.edo_pieza == ep.codigo %}selected{% endif %}>{{ ep.nombre }}</option>
           {% endfor %}
         </select>
 

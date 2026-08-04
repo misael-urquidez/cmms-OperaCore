@@ -146,6 +146,7 @@ class Maquina(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.CharField(max_length=255, null=True, blank=True)
     imagen_url = models.CharField(max_length=255, null=True, blank=True)
+    modelo_3d = models.CharField(max_length=255, null=True, blank=True)
     fechaInstalacion = models.DateField()
     linea = models.ForeignKey(
         Linea, on_delete=models.DO_NOTHING, db_column="linea", null=True, blank=True
@@ -154,7 +155,7 @@ class Maquina(models.Model):
     modelo = models.CharField(max_length=10, null=True, blank=True)
     estado_maquina = models.CharField(max_length=5, null=True, blank=True)
     tipo_maquina = models.IntegerField(null=True, blank=True)
-    modo_monitoreo = models.CharField(max_length=10, default="simulado")
+    modo_monitoreo = models.CharField(max_length=10, default="manual")
     umbral_vibracion = models.FloatField(default=4.0)
     requiere_revision_preventiva = models.BooleanField(default=False)
 

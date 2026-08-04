@@ -1,4 +1,8 @@
 from django.utils import timezone
+import os
+
+from django.conf import settings
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.fallas.models import EstadoMaquina, Linea, Maquina, Marca, Modelo, TipoMaquina, TipoMaquinaArea
@@ -21,10 +25,13 @@ class LecturaSensorSerializer(serializers.ModelSerializer):
         self.context["requiere_revision"] = requiere_revision
         return lectura
 
-    def validate_origen(self, origen):
-        if origen == LecturaSensor.ORIGEN_IOT:
-            raise serializers.ValidationError("El origen IoT se habilitará en una fase posterior.")
-        return origen
+    def validate(self, datos):
+        origen = datos.get("origen")
+        maquina = datos.get("maquina")
+        if origen == LecturaSensor.ORIGEN_IOT and maquina is not None:
+            if maquina.modo_monitoreo != LecturaSensor.ORIGEN_IOT:
+                raise serializers.ValidationError({"origen": "La máquina no está en modo IoT."})
+        return datos
 
 
 class CrearMaquinaSerializer(serializers.Serializer):
@@ -45,6 +52,8 @@ class CrearMaquinaSerializer(serializers.Serializer):
     estado_maquina = serializers.PrimaryKeyRelatedField(queryset=EstadoMaquina.objects.all(), required=False, allow_null=True)
     modo_monitoreo = serializers.ChoiceField(choices=LecturaSensor.ORIGENES, default=LecturaSensor.ORIGEN_SIMULADO)
     umbral_vibracion = serializers.FloatField(default=4.0, min_value=0)
+    imagen = serializers.FileField(required=False, allow_null=True)
+    modelo_3d_archivo = serializers.FileField(required=False, allow_null=True)
 
     def validate_codigo(self, valor):
         codigo = valor.strip().upper()
@@ -69,6 +78,27 @@ class CrearMaquinaSerializer(serializers.Serializer):
         modelo = datos.get("modelo")
         tipo_maquina = datos.get("tipo_maquina")
         estado_maquina = datos.get("estado_maquina")
+
+        imagen_url = None
+        imagen_file = datos.get("imagen")
+        if imagen_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "maquinaria")
+            os.makedirs(carpeta, exist_ok=True)
+            with open(os.path.join(carpeta, imagen_file.name), "wb+") as dest:
+                for chunk in imagen_file.chunks():
+                    dest.write(chunk)
+            imagen_url = f"maquinaria/{imagen_file.name}"
+
+        modelo_3d = None
+        modelo_3d_file = datos.get("modelo_3d_archivo")
+        if modelo_3d_file:
+            carpeta = os.path.join(settings.MEDIA_ROOT, "maquinaria", "modelos3d")
+            os.makedirs(carpeta, exist_ok=True)
+            with open(os.path.join(carpeta, modelo_3d_file.name), "wb+") as dest:
+                for chunk in modelo_3d_file.chunks():
+                    dest.write(chunk)
+            modelo_3d = f"maquinaria/modelos3d/{modelo_3d_file.name}"
+
         return Maquina.objects.create(
             codigo=datos["codigo"],
             nombre=datos["nombre"],
@@ -82,6 +112,8 @@ class CrearMaquinaSerializer(serializers.Serializer):
             estado_maquina=estado_maquina.codigo if estado_maquina else "OPERA",
             modo_monitoreo=datos["modo_monitoreo"],
             umbral_vibracion=datos["umbral_vibracion"],
+            imagen_url=imagen_url,
+            modelo_3d=modelo_3d,
         )
 
 
@@ -96,17 +128,13 @@ class ReporteFallaManualSerializer(serializers.Serializer):
 
 
 class ModoMonitoreoSerializer(serializers.Serializer):
-    """Cambia el modo de monitoreo de una máquina (manual/simulado/iot).
-    iot queda bloqueado hasta que el puente del Wiimote / app móvil exista."""
+    """Cambia el modo de monitoreo de una máquina (manual/simulado/iot)."""
     modo_monitoreo = serializers.ChoiceField(choices=LecturaSensor.ORIGENES)
 
-    def validate_modo_monitoreo(self, valor):
-        if valor == LecturaSensor.ORIGEN_IOT:
-            raise serializers.ValidationError(
-                "El modo IoT aún no está habilitado en este entorno."
-            )
-        return valor
-
+class ReparacionManualSerializer(serializers.Serializer):
+    """Alimenta el MTTR a mano (para pruebas/expo). No expone mttr:
+    lo calcula el trigger tg_actualizar_mttr_orden."""
+    horas_reparacion = serializers.IntegerField(min_value=0)
 
 class RegistroOpsSerializer(serializers.Serializer):
     """Registra un periodo de horas de operación de la máquina.

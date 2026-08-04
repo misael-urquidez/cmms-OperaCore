@@ -11,6 +11,14 @@
     <span class="elipse-bolt">⚡</span> Ayúdame a redactar con Elipse
   </button>
 
+  <button type="button" class="btn-elipse-falla" id="btnImportarDocx" title="Sube un reporte llenado en Word o PDF y Elipse lo lee por ti" onclick="document.getElementById('inputImportarDocx').click()">
+    📄 Importar Word o PDF
+  </button>
+  <input type="file" id="inputImportarDocx" accept=".docx,.pdf" hidden>
+  <a class="btn-elipse-falla" href="{% static 'fallas/plantillas/plantilla_reporte_falla.docx' %}" download style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">
+    ⬇️ Descargar plantilla
+  </a>
+
   <div class="guias">
     <details open>
       <summary>¿Que hacer en un reporte de falla?</summary>
@@ -35,25 +43,25 @@
     <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
 
         <label for="asunto">Asunto  <span id="asunto-error"></span></label>
-        <input type="text" name="asunto" id="asunto" data-error-id="asunto-error"  required maxlength="500" />
+        <input type="text" name="asunto" id="asunto" data-error-id="asunto-error"  required maxlength="500" value="{{ datos.asunto|default:'' }}" />
 
         <label for="descripcion">Descripcion <span id="descripcion-error"></span></label>
-        <textarea name="descripcion" id="descripcion" maxlength="500" data-error-id="descripcion-error"></textarea>
+        <textarea name="descripcion" id="descripcion" maxlength="500" data-error-id="descripcion-error">{{ datos.descripcion|default:'' }}</textarea>
 
         <label for="causaRaiz">Causa raiz <span id="causaRaiz-error"></span></label>
-        <input type="text" name="causaRaiz" id="causaRaiz" required maxlength="500" data-error-id="causaRaiz-error" />
+        <input type="text" name="causaRaiz" id="causaRaiz" required maxlength="500" data-error-id="causaRaiz-error" value="{{ datos.causaRaiz|default:'' }}" />
 
         <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas) <span id="horas-error"></span></label>
-        <input type="number" name="tiempoParo" id="tiempoParo" min="0" step="any" data-error-id="horas-error"  />
+        <input type="number" name="tiempoParo" id="tiempoParo" min="0" step="any" data-error-id="horas-error" value="{{ datos.tiempoParo|default:'' }}" />
 
         <label for="fechaSolucion">Fecha de solucion</label>
-        <input type="date" name="fechaSolucion" id="fechaSolucion" />
+        <input type="date" name="fechaSolucion" id="fechaSolucion" value="{{ datos.fechaSolucion|default:'' }}" />
 
         <label for="maquina">Maquina</label>
         <select name="maquina" id="maquina" required>
           <option value="">Seleccione...</option>
           {% for m in maquinas %}
-            <option value="{{ m.codigo }}">{{ m.nombre }}</option>
+            <option value="{{ m.codigo }}" {% if datos.maquina == m.codigo %}selected{% endif %}>{{ m.nombre }}</option>
           {% endfor %}
         </select>
 
@@ -61,15 +69,28 @@
         <select name="tipo_severidad" id="tipo_severidad" required>
           <option value="">Seleccione...</option>
           {% for s in severidades %}
-            <option value="{{ s.codigo }}">{{ s.nombre }}</option>
+            <option value="{{ s.codigo }}" {% if datos.tipo_severidad == s.codigo %}selected{% endif %}>{{ s.nombre }}</option>
           {% endfor %}
         </select>
+
+        <div class="sugerencia-ia" id="sugerenciaIA" hidden>
+          <div class="sugerencia-ia__head">
+            <span class="sugerencia-ia__icono">🔎</span>
+            <span id="sugerenciaIATitulo">Analizando historial de la máquina…</span>
+          </div>
+          <p class="sugerencia-ia__causa" id="sugerenciaIACausa"></p>
+          <p class="sugerencia-ia__justif" id="sugerenciaIAJustif"></p>
+          <div class="sugerencia-ia__acciones">
+            <button type="button" class="sugerencia-ia__usar" id="sugerenciaIAUsar">Usar esta sugerencia</button>
+            <button type="button" class="sugerencia-ia__cerrar" id="sugerenciaIACerrar">Ignorar</button>
+          </div>
+        </div>
 
         <label for="tipo_falla">Selecione una o mas fallas encontradas</label>
         <select name="tipo_falla" id="tipo_falla" required>
           <option value="">Seleccione...</option>
           {% for tf in tipos_falla %}
-            <option value="{{ tf.numeroRegistro }}">{{ tf.nombre }}</option>
+            <option value="{{ tf.numeroRegistro }}" {% if datos.tipo_falla == tf.numeroRegistro %}selected{% endif %}>{{ tf.nombre }}</option>
           {% endfor %}
         </select>
         <div class="contenedor-tipo-fallas" id="nuevas-fallas">
@@ -85,7 +106,7 @@
         <select name="estado_reporte" id="estado_reporte" required>
           <option value="">Seleccione...</option>
           {% for e in estados %}
-            <option value="{{ e.codigo }}">{{ e.nombre }}</option>
+            <option value="{{ e.codigo }}" {% if datos.estado_reporte == e.codigo %}selected{% endif %}>{{ e.nombre }}</option>
           {% endfor %}
         </select>
 
@@ -93,7 +114,7 @@
         <select name="trabajador" id="trabajador" required>
           <option value="">Seleccione...</option>
           {% for t in trabajadores %}
-            <option value="{{ t.numeroNomina }}" {% if usuario.numeroNomina == t.numeroNomina %}selected{% endif %}>{{ t.nombre }} {{ t.apellidoPat }}</option>
+            <option value="{{ t.numeroNomina }}" {% if datos.trabajador == t.numeroNomina %}selected{% elif not datos and usuario.numeroNomina == t.numeroNomina %}selected{% endif %}>{{ t.nombre }} {{ t.apellidoPat }}</option>
           {% endfor %}
         </select>
 
@@ -132,6 +153,7 @@
   {{ maquinas|json_script:"elipseMaquinasData" }}
   {{ severidades|json_script:"elipseSeveridadesData" }}
   {{ tipos_falla|json_script:"elipseTiposFallaData" }}
+  {{ estados|json_script:"elipseEstadosData" }}
 
   {# ---- panel lateral de Elipse: no toca la BD, solo propone texto ---- #}
   <div class="elipse-falla-overlay" id="elipseFallaOverlay" hidden></div>
@@ -140,7 +162,17 @@
       <div class="elipse-falla-panel__title"><span class="elipse-bolt">⚡</span> Elipse</div>
       <button type="button" class="elipse-falla-panel__close" id="elipseFallaClose" aria-label="Cerrar panel">✕</button>
     </div>
-    <p class="elipse-falla-panel__hint">
+
+    <div class="elipse-falla-panel__tabs" role="tablist">
+      <button type="button" class="elipse-falla-panel__tab is-active" id="elipseTabRedactar" data-modo="redactar" role="tab" aria-selected="true">
+        ✍️ Redactar
+      </button>
+      <button type="button" class="elipse-falla-panel__tab" id="elipseTabDiagnosticar" data-modo="diagnosticar" role="tab" aria-selected="false">
+        🩺 Diagnosticar
+      </button>
+    </div>
+
+    <p class="elipse-falla-panel__hint" id="elipseFallaHint">
       Cuéntame qué pasó con la máquina. Voy preguntando lo que falte
       (severidad, estado, fecha…) y lleno el formulario contigo.
     </p>
@@ -149,7 +181,7 @@
       <textarea id="elipseFallaInput" rows="2" placeholder="Ej. la banda del pick and place se trabó, lleva 2 horas parada..."></textarea>
       <button type="button" class="elipse-falla-panel__btn" id="elipseFallaBtn">➤</button>
     </form>
-    <p class="elipse-falla-panel__footnote">Elipse solo propone texto; nada se guarda hasta que tú das "Reportar falla".</p>
+    <p class="elipse-falla-panel__footnote" id="elipseFallaFootnote">Elipse solo propone texto; nada se guarda hasta que tú das "Reportar falla".</p>
   </aside>
 
 {% endblock %}
@@ -157,11 +189,57 @@
 <script>
   window.ELIPSE_FALLA_CONFIG = {
       csrf: "{{ csrf_token }}",
-      urlAutocompletar: "{% url 'elipse:autocompletar_falla' %}"
+      urlAutocompletar: "{% url 'elipse:autocompletar_falla' %}",
+      urlDiagnostico: "{% url 'elipse:sugerencia_diagnostico' %}"
   };
+</script>
+<script>
+  window.SUGERENCIA_IA_CONFIG = {
+      csrf: "{{ csrf_token }}",
+      url: "{% url 'elipse:sugerencia_diagnostico' %}"
+  };
+</script>
+<script>
+  // Si llegamos desde el mapa de máquinas con ?maquina=CODIGO, la
+  // dejamos ya seleccionada en el formulario.
+  (function () {
+    var codigo = new URLSearchParams(window.location.search).get("maquina");
+    if (!codigo) return;
+    var select = document.getElementById("maquina");
+    if (select) select.value = codigo;
+    window.history.replaceState({}, "", window.location.pathname);
+  })();
 </script>
 <script src="{% static 'fallas/js/preview-imagenes.js' %}"></script>
 <script src="{% static 'fallas/js/añadir-elementos.js' %}"></script>
 <script src="{% static 'js/validaciones-inputs.js' %}"></script>
+<script>
+  // Si el registro fallo y volvimos a renderizar con datos, restauramos
+  // los selects dinamicos de tipo de falla.
+  (function () {
+    {% if datos %}
+    var ids = {{ datos.tipo_falla_ids|safe }};
+    var base = document.getElementById("tipo_falla");
+    if (base && ids && ids.length) {
+      base.value = ids[0];
+      base.dispatchEvent(new Event("change"));
+    }
+    for (var i = 1; i < ids.length; i++) {
+      anadirFalla();
+      var dynamic = document.querySelectorAll("#nuevas-fallas select");
+      var last = dynamic[dynamic.length - 1];
+      if (last) {
+        last.value = ids[i];
+        last.dispatchEvent(new Event("change"));
+      }
+    }
+    {% endif %}
+  })();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
+<script src="{% static 'js/extraer-texto-doc.js' %}"></script>
 <script src="{% static 'fallas/js/elipse-falla.js' %}"></script>
+<script src="{% static 'fallas/js/sugerencia-diagnostico.js' %}"></script>
 {% endblock %}

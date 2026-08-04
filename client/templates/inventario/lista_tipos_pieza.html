@@ -1,4 +1,4 @@
-{% extends "base_admin.html" %}
+{% extends base_template %}
 {% load static %}
 
 {% block title %} Tipos Pieza · OperaCore{% endblock %}
@@ -16,8 +16,14 @@
       </a>
     </div>
 
+    <div class="inv-search" data-buscador-target="#data-table">
+      <svg class="inv-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" class="buscador-input" placeholder="Buscar en la tabla...">
+    </div>
     <div style="overflow-x: auto; width: 100%;">
-      <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+      <table id="data-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
         <thead>
           <tr style="border-bottom: 1px solid var(--admin-border); color: var(--color-muted);">
             <th style="padding: 0.75rem;">Clave / ID</th>
@@ -43,4 +49,7 @@
       </table>
     </div>
   </div>
+{% block extra_js %}
+<script src="{% static 'js/buscador.js' %}"></script>
+{% endblock %}
 {% endblock %}

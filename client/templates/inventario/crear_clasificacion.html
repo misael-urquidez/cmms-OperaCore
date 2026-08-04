@@ -1,4 +1,4 @@
-{% extends "base_admin.html" %}
+{% extends base_template %}
 {% load static %}
 
 {% block title %}Nueva Clasificación · OperaCore{% endblock %}
@@ -13,10 +13,10 @@
     <div class="contenedor">
       <div class="left-side">
         <label for="nombre">Nombre de la clasificación</label>
-        <input type="text" name="nombre" id="nombre" required maxlength="100" placeholder="Ej. Neumática, Eléctrica, Rodamientos" />
+        <input type="text" name="nombre" id="nombre" required maxlength="100" placeholder="Ej. Neumática, Eléctrica, Rodamientos" value="{{ datos.nombre|default:'' }}" />
 
         <label for="descripcion">Descripción</label>
-        <textarea name="descripcion" id="descripcion" rows="3"></textarea>
+        <textarea name="descripcion" id="descripcion" rows="3">{{ datos.descripcion|default:'' }}</textarea>
 
         <div class="contenedor-botones">
           <button type="submit">Guardar clasificación</button>

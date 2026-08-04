@@ -3,16 +3,75 @@
 {% block title %}Mantenimiento · OperaCore{% endblock %}
 {% block breadcrumb %}Mantenimiento{% endblock %}
 {% block page_title %}{% if es_tecnico %}Mis órdenes{% else %}Órdenes de mantenimiento{% endif %}{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'mantenimiento/css/mantenimiento.css' %}"><link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}"><link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'mantenimiento/css/mantenimiento.css' %}"><link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}"><link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}"><link rel="stylesheet" href="{% static 'fallas/css/elipse-falla.css' %}"><style>
+  .export-options { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; }
+  .export-btn { display:inline-flex; align-items:center; gap:0.5rem; padding:0.75rem 1.5rem; border-radius:0.5rem; font-weight:600; font-size:0.9rem; text-decoration:none; transition:background 0.2s, transform 0.15s, box-shadow 0.15s; cursor:pointer; border:none; }
+  .export-btn:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.25); }
+  .export-btn--csv { background:#10b981; color:#fff; }
+  .export-btn--xlsx { background:#22c55e; color:#fff; }
+  .export-btn--pdf { background:#ef4444; color:#fff; }
+</style>{% endblock %}
 {% block content %}
-<section class="ordenes" data-datos-url="{% url 'mantenimiento:ordenes-datos' %}" data-crear-url="{% url 'mantenimiento:ordenes-crear' %}" data-asignar-url-base="{% url 'mantenimiento:ordenes-asignar' folio='__FOLIO__' %}" data-iniciar-url-base="{% url 'mantenimiento:ordenes-iniciar' folio='__FOLIO__' %}" data-cerrar-url-base="{% url 'mantenimiento:ordenes-cerrar' folio='__FOLIO__' %}" data-reportes-disponibles-url="{% url 'mantenimiento:reportes-disponibles' %}" data-es-tecnico="{{ es_tecnico|yesno:'1,0' }}" data-numero-nomina="{{ usuario.numeroNomina|default:'' }}">
-{{ trabajadores|json_script:"trabajadores-data" }}{{ maquinas|json_script:"maquinas-data" }}
-<header class="ordenes__head"><div><p>Mantenimiento</p><h1>{% if es_tecnico %}Mis órdenes{% else %}Órdenes de mantenimiento{% endif %}</h1></div>{% if not es_tecnico %}<button class="btn-orden-new" id="btnNuevaOrden" type="button">Nueva orden</button>{% endif %}</header>
-{% if not es_tecnico %}<label>Estado <select id="filtroEstado"><option value="">Todos</option>{% for e in estados %}<option value="{{ e.codigo }}">{{ e.nombre }}</option>{% endfor %}</select></label>{% endif %}
+<section class="ordenes" data-buscador-cartas data-datos-url="{% url 'mantenimiento:ordenes-datos' %}" data-crear-url="{% url 'mantenimiento:ordenes-crear' %}" data-asignar-url-base="{% url 'mantenimiento:ordenes-asignar' folio='__FOLIO__' %}" data-iniciar-url-base="{% url 'mantenimiento:ordenes-iniciar' folio='__FOLIO__' %}" data-cerrar-url-base="{% url 'mantenimiento:ordenes-cerrar' folio='__FOLIO__' %}" data-actualizar-url-base="{% url 'mantenimiento:ordenes-update' folio='__FOLIO__' %}" data-reportes-disponibles-url="{% url 'mantenimiento:reportes-disponibles' %}" data-es-tecnico="{{ es_tecnico|yesno:'1,0' }}" data-numero-nomina="{{ usuario.numeroNomina|default:'' }}" data-exportar-csv-base="{% url 'mantenimiento:exportar_csv' folio='__FOLIO__' %}" data-exportar-xlsx-base="{% url 'mantenimiento:exportar_xlsx' folio='__FOLIO__' %}" data-exportar-pdf-base="{% url 'mantenimiento:exportar_pdf' folio='__FOLIO__' %}" data-documento-url-base="{% url 'mantenimiento:documento_orden' folio='__FOLIO__' %}">
+{{ trabajadores|json_script:"trabajadores-data" }}{{ maquinas|json_script:"maquinas-data" }}{{ piezas|json_script:"piezas-data" }}{{ refacciones|json_script:"refacciones-data" }}{{ tipos_mantenimiento|json_script:"elipseTiposMantenimientoData" }}
+<header class="ordenes__head"><div><p>Mantenimiento</p><h1>{% if es_tecnico %}Mis órdenes{% else %}Órdenes de mantenimiento{% endif %}</h1></div><div style="display:flex;gap:0.5rem;align-items:center;">{% if not es_tecnico %}<button class="btn-orden-new" id="btnNuevaOrden" type="button">Nueva orden</button>{% endif %}<a class="btn-orden-secondary" href="{% url 'mantenimiento:calendario' %}">Calendario</a></div></header>
+<div class="ordenes__filters"><label>Estado <select id="filtroEstado"><option value="">Todos</option>{% for e in estados %}<option value="{{ e.codigo }}">{{ e.nombre }}</option>{% endfor %}</select></label><label>Buscar <input type="search" class="buscador-cartas-input" placeholder="Folio, máquina, descripción…"></label><label>Fecha <input type="date" class="buscador-cartas-fecha"></label></div>
 <div class="ordenes-list" id="ordenesList"><p id="ordenesEmpty" hidden>No hay órdenes para mostrar.</p></div>
 </section>
-{% if not es_tecnico %}<dialog id="newOrdenModal"><form id="newOrdenForm"><h2>Nueva orden</h2><label>Máquina <select id="oMaquina" required></select></label><label>Tipo <select id="oTipo"><option value="PREVE">Preventivo</option><option value="CORRE">Correctivo</option></select></label><div id="oReporteFallaWrap" class="orden-reporte" hidden><span class="orden-reporte__label">Reporte de falla (opcional)</span><div id="oReporteFallaEmpty"><button type="button" id="oReporteFallaBtn">+ Adjuntar reporte de falla</button></div><div id="oReporteFallaChip" class="orden-reporte__chip" hidden><span id="oReporteFallaTexto"></span><button type="button" id="oReporteFallaVer">Ver</button><button type="button" id="oReporteFallaQuitar">Quitar</button></div></div><label>Asignar a <select id="oTrabajador"><option value="">Sin asignar</option></select></label><label>Fecha <input id="oFecha" type="date"></label><label>Descripción <textarea id="oDescripcion" required></textarea></label><p id="newOrdenError" hidden></p><button class="btn-orden-new">Crear</button><button type="button" id="newOrdenCancel">Cancelar</button></form></dialog>
+{% if not es_tecnico %}<dialog id="newOrdenModal"><div class="new-orden-layout"><form id="newOrdenForm"><h2>Nueva orden</h2><button type="button" class="btn-elipse-falla" id="btnElipseOrden" title="Describe lo que necesita la maquina y Elipse te ayuda a llenar el formulario"><span class="elipse-bolt">⚡</span> Ayúdame a redactar con Elipse</button><label>Máquina <select id="oMaquina" required></select></label><label>Tipo <select id="oTipo"><option value="PREVE">Preventivo</option><option value="CORRE">Correctivo</option></select></label><div id="oReporteFallaWrap" class="orden-reporte" hidden><span class="orden-reporte__label">Reporte de falla (opcional)</span><div id="oReporteFallaEmpty"><button type="button" id="oReporteFallaBtn">+ Adjuntar reporte de falla</button></div><div id="oReporteFallaChip" class="orden-reporte__chip" hidden><span id="oReporteFallaTexto"></span><button type="button" id="oReporteFallaVer">Ver</button><button type="button" id="oReporteFallaQuitar">Quitar</button></div></div><label>Asignar a <select id="oTrabajador"><option value="">Sin asignar</option></select></label><label>Fecha <input id="oFecha" type="date"></label><label>Descripción <textarea id="oDescripcion" required></textarea></label><p id="newOrdenError" hidden></p><button class="btn-orden-new">Crear</button><button type="button" id="newOrdenCancel">Cancelar</button></form><aside class="elipse-falla-panel elipse-falla-panel--embedded" id="elipseOrdenPanel" aria-hidden="false"><div class="elipse-falla-panel__head"><div class="elipse-falla-panel__title"><span class="elipse-bolt">⚡</span> Elipse</div><button type="button" class="elipse-falla-panel__close" id="elipseOrdenClose" aria-label="Cerrar panel">✕</button></div><p class="elipse-falla-panel__hint">Cuéntame qué necesita la máquina y te ayudo a llenar la orden.</p><div class="elipse-falla-panel__chat" id="elipseOrdenChat"></div><form class="elipse-falla-panel__form" id="elipseOrdenForm" onsubmit="return false;"><textarea id="elipseOrdenInput" rows="2" placeholder="Ej. hay que revisar la banda de MAQ003, esta rechinando..."></textarea><button type="button" class="elipse-falla-panel__btn" id="elipseOrdenBtn">➤</button></form><p class="elipse-falla-panel__footnote">Elipse solo propone texto; nada se guarda hasta que tú das "Crear".</p></aside></div></dialog>
 <dialog id="reporteFallaPickerModal"><h2>Adjuntar reporte de falla</h2><p id="rfPickerHint">Reportes abiertos de la máquina seleccionada, sin orden vinculada.</p><div id="rfLista" class="orden-reporte__lista"></div><p id="rfEmpty" hidden>No hay reportes disponibles para esta máquina.</p><button type="button" id="rfCancelar">Cerrar</button></dialog>{% endif %}
+{% if not es_tecnico %}
+<dialog id="confirmFallaPdfModal">
+  <h2>Reporte de falla asociado</h2>
+  <p id="confirmFallaPdfTexto"></p>
+  <div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;">
+    <button type="button" id="btnConfirmFallaSi" class="btn-orden-new">Sí, incluir ambos</button>
+    <button type="button" id="btnConfirmFallaSolo" class="btn-orden-secondary">Solo la orden</button>
+    <button type="button" id="btnConfirmFallaCancelar" class="btn-orden-secondary">Cancelar</button>
+  </div>
+</dialog>
+{% endif %}
 <div class="fallas-modal" id="detalle-falla"></div>
-<dialog id="ordenDrawer"><section><button type="button" id="ordenDrawerClose">×</button><p id="ordenDrawerFolio"></p><h2 id="ordenDrawerTitle"></h2><p id="ordenDrawerInfo"></p><p id="ordenDrawerDescripcion"></p><div id="ordenDrawerReporte" hidden><button type="button" id="ordenDrawerVerReporte">📄 Ver reporte de falla adjunto</button></div>{% if not es_tecnico %}<label>Asignar <select id="ordenAsignarSelect"></select></label><button id="ordenAsignarBtn" type="button">Asignar</button>{% endif %}<button id="ordenIniciarBtn" type="button" hidden>Marcar en progreso</button><form id="ordenCerrarForm" hidden><label>Diagnóstico <textarea id="cDiagnostico"></textarea></label><label>Notas <textarea id="cNotas"></textarea></label><label>Horas <input id="cHoras" type="number" min="0" step=".1" required></label><button>Cerrar orden</button></form><p id="ordenMsg"></p></section></dialog>
-{% endblock %}{% block extra_js %}<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script><script src="{% static 'fallas/js/modal.js' %}"></script><script src="{% static 'js/mantenimiento.js' %}"></script>{% endblock %}
+<div class="orden-drawer-scrim" id="ordenDrawerScrim" hidden></div>
+<dialog id="ordenDrawer"><section><button type="button" id="ordenDrawerClose">×</button><p id="ordenDrawerFolio"></p><h2 id="ordenDrawerTitle"></h2><p id="ordenDrawerInfo"></p><p id="ordenDrawerDescripcion"></p><div id="ordenDrawerEdit" hidden><label>Descripción <textarea id="edDescripcion"></textarea></label><label>Tipo <select id="edTipo">{% for t in tipos_mantenimiento %}<option value="{{ t.codigo }}">{{ t.nombre }}</option>{% endfor %}</select></label><label>Fecha programada <input id="edFecha" type="date"></label><label>Notas <textarea id="edNotas"></textarea></label><label>Diagnóstico <textarea id="edDiagnostico"></textarea></label><div style="margin-top:10px;display:flex;flex-direction:column;gap:.5rem;"><button type="button" id="ordenGuardarBtn" class="btn-orden-new">Guardar</button><button type="button" id="ordenCancelarEditBtn" class="btn-orden-secondary">Cancelar</button></div></div><div id="ordenDrawerReporte" hidden><button type="button" id="ordenDrawerVerReporte">📄 Ver reporte de falla adjunto</button></div>{% if not es_tecnico %}<button type="button" id="ordenEditarBtn" class="btn-orden-secondary">Editar</button><label><span id="ordenAsignarLabel">Asignar</span> <select id="ordenAsignarSelect"></select></label><button id="ordenAsignarBtn" type="button"><span id="ordenAsignarBtnTexto">Asignar</span></button>{% endif %}<button id="ordenIniciarBtn" type="button" hidden>Marcar en progreso</button><button id="ordenVistaCompletaBtn" type="button" class="btn-orden-secondary" hidden>Vista completa</button><form id="ordenCerrarForm" hidden><label>Diagnóstico <textarea id="cDiagnostico"></textarea></label><label>Notas <textarea id="cNotas"></textarea></label><label>Horas <input id="cHoras" type="number" min="0" step=".1" required></label><div class="orden-mov" id="ordenMovSection"><p class="orden-mov__label">Refacciones / piezas usadas</p><div class="orden-mov__list" id="ordenMovList"></div><button type="button" class="btn-orden-secondary" id="ordenMovAddBtn">+ Agregar pieza</button><div class="orden-mov__form" id="ordenMovForm" hidden><label>Refacción a instalar <select id="ordenMovRefaccion"><option value="">Seleccionar refacción...</option></select></label><label>Pieza que reemplaza (opcional) <select id="ordenMovPieza"><option value="">Sin pieza previa registrada...</option></select></label><p class="orden-mov__error" id="ordenMovError" hidden>Selecciona una refacción antes de agregar.</p><div class="orden-mov__form-actions"><button type="button" id="ordenMovCancelar" class="btn-orden-secondary">Cancelar</button><button type="button" id="ordenMovConfirmar">Guardar pieza</button></div></div></div><button>Cerrar orden</button></form><p id="ordenMsg"></p><div style="margin-top:1rem;text-align:center;"><button type="button" id="ordenExportarBtn" class="btn-orden-secondary">Exportar</button></div></section></dialog>
+<div class="fallas-modal" id="exportar-orden" role="dialog">
+  <div class="fallas-modal__backdrop" data-dismiss="modal-export-orden"></div>
+  <div class="fallas-modal__dialog">
+    <div class="fallas-modal__content">
+      <div class="fallas-modal__header">
+        <h3 class="fallas-modal__title">Exportar orden</h3>
+        <button class="fallas-modal__close" data-dismiss="modal-export-orden">&times;</button>
+      </div>
+      <div class="fallas-modal__body" style="text-align:center;padding:2rem;">
+        <p style="margin-bottom:1.5rem;color:var(--color-muted);">
+          Orden <strong id="export-orden-folio"></strong> &mdash; Selecciona el formato
+        </p>
+        <div class="export-options">
+          <a class="export-btn export-btn--csv" id="export-orden-csv-link" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            CSV
+          </a>
+          <a class="export-btn export-btn--xlsx" id="export-orden-xlsx-link" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="6" y1="10" x2="18" y2="10"/><line x1="6" y1="14" x2="18" y2="14"/><line x1="6" y1="18" x2="12" y2="18"/></svg>
+            Excel
+          </a>
+          <a class="export-btn export-btn--pdf" id="export-orden-pdf-link" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h6"/><path d="M12 12v6"/></svg>
+            PDF
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if not es_tecnico %}
+{# ---- config de Elipse para "Nueva orden": el panel ahora vive DENTRO de #newOrdenModal (ver arriba), embebido junto al formulario ---- #}
+<script>
+  window.ELIPSE_ORDEN_CONFIG = {
+    csrf: "{{ csrf_token }}",
+    urlAutocompletar: "{% url 'elipse:autocompletar_orden' %}"
+  };
+</script>
+{% endif %}
+{% endblock %}{% block extra_js %}<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script><script src="{% static 'fallas/js/modal.js' %}"></script><script src="{% static 'js/mantenimiento.js' %}"></script><script src="{% static 'js/buscador-cartas.js' %}"></script>{% if not es_tecnico %}<script src="{% static 'mantenimiento/js/elipse-mantenimiento.js' %}"></script>{% endif %}{% endblock %}

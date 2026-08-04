@@ -99,10 +99,12 @@
             {% csrf_token %}
             <h2>Inicio de Sesión</h2>
             <div class="inp-wrap">
-              <input type="text" name="identificador" placeholder="Usuario o correo" required {% if tab != 'registro' %}autofocus{% endif %}>
+              <label class="inp-label" for="login-identificador">Usuario o correo</label>
+              <input type="text" id="login-identificador" name="identificador" placeholder="Usuario o correo" required {% if tab != 'registro' %}autofocus{% endif %}>
             </div>
             <div class="inp-wrap">
-              <input type="password" name="password" placeholder="Contraseña" required>
+              <label class="inp-label" for="login-password">Contraseña</label>
+              <input type="password" id="login-password" name="password" placeholder="Contraseña" required>
             </div>
             <button type="submit" class="btn-login">Entrar</button>
             <p class="auth-switch">¿No tienes cuenta? <a href="#" data-tab="registro">Crear una</a></p>
@@ -110,53 +112,96 @@
 
           <!-- ── Crear cuenta ── -->
           <form class="auth-form {% if tab == 'registro' %}auth-form--active{% endif %}"
-                id="form-registro" method="post" action="{% url 'usuarios:registro' %}" novalidate>
+                id="form-registro" method="post" action="{% url 'usuarios:registro' %}" novalidate
+                data-validar-clave-url="{% url 'usuarios:validar_clave' %}">
             {% csrf_token %}
             <h2>Crear Cuenta</h2>
-            <div class="inp-row">
-              <div class="inp-wrap"><input type="text" name="nombre" placeholder="Nombre" maxlength="50" autocomplete="given-name" required></div>
-              <div class="inp-wrap"><input type="text" name="apellidoPat" placeholder="Apellido paterno" maxlength="50" autocomplete="family-name" required></div>
+
+            <div class="inp-wrap inp-wrap--clave">
+              <input type="password" name="rol" id="reg-clave" placeholder="Clave de seguridad"
+                     maxlength="5" autocomplete="off" required
+                     value="{{ valores_campos.rol|default:'' }}"
+                     class="{% if errores_campos.rol %}is-invalid{% elif desbloquear_campos %}is-valid{% endif %}">
+              <span id="reg-clave-status" class="clave-status" aria-live="polite"
+                    {% if desbloquear_campos %}data-state="valid"{% endif %}></span>
             </div>
-            <div class="inp-wrap">
-              <input type="text" name="apellidoMat" placeholder="Apellido materno (opcional)" maxlength="50" autocomplete="additional-name">
-            </div>
-            <div class="inp-wrap">
-              <input type="tel" name="telefono" placeholder="Teléfono (10 dígitos)" maxlength="15" inputmode="numeric" autocomplete="tel" required>
-            </div>
-            <div class="inp-wrap">
-              <input type="email" name="correo" placeholder="Correo" maxlength="100" inputmode="email" autocomplete="email" required>
-            </div>
-            <div class="inp-wrap">
-              <input type="text" name="usuario" placeholder="Usuario" maxlength="30" autocomplete="username" required>
-            </div>
-            <div class="inp-row">
+            {% if errores_campos.rol %}
+              <p class="auth-hint" id="reg-clave-hint" style="color:#fca5a5;">{{ errores_campos.rol.0 }}</p>
+            {% else %}
+              <p class="auth-hint" id="reg-clave-hint">Pídele la clave de seguridad a tu administrador. El resto del formulario se desbloquea al escribir una clave válida.</p>
+            {% endif %}
+
+            <fieldset id="reg-campos-bloqueados" {% if not desbloquear_campos %}disabled{% endif %}>
+              <div class="inp-row">
+                <div class="inp-wrap">
+                  <label class="inp-label" for="reg-nombre">Nombre</label>
+                  <input type="text" id="reg-nombre" name="nombre" placeholder="Nombre" maxlength="50" autocomplete="given-name" required
+                         value="{{ valores_campos.nombre|default:'' }}"
+                         class="{% if errores_campos.nombre %}is-invalid{% endif %}">
+                  {% if errores_campos.nombre %}<span class="inp-error">{{ errores_campos.nombre.0 }}</span>{% endif %}
+                </div>
+                <div class="inp-wrap">
+                  <label class="inp-label" for="reg-apellidoPat">Apellido paterno</label>
+                  <input type="text" id="reg-apellidoPat" name="apellidoPat" placeholder="Apellido paterno" maxlength="50" autocomplete="family-name" required
+                         value="{{ valores_campos.apellidoPat|default:'' }}"
+                         class="{% if errores_campos.apellidoPat %}is-invalid{% endif %}">
+                  {% if errores_campos.apellidoPat %}<span class="inp-error">{{ errores_campos.apellidoPat.0 }}</span>{% endif %}
+                </div>
+              </div>
               <div class="inp-wrap">
-                <select name="rol">
-                  <option value="">Rol...</option>
-                  {% for rol in roles %}
-                    <option value="{{ rol.codigo }}">{{ rol.nombre }}</option>
-                  {% endfor %}
-                </select>
+                <label class="inp-label" for="reg-apellidoMat">Apellido materno</label>
+                <input type="text" id="reg-apellidoMat" name="apellidoMat" placeholder="Apellido materno (opcional)" maxlength="50" autocomplete="additional-name"
+                       value="{{ valores_campos.apellidoMat|default:'' }}"
+                       class="{% if errores_campos.apellidoMat %}is-invalid{% endif %}">
+                {% if errores_campos.apellidoMat %}<span class="inp-error">{{ errores_campos.apellidoMat.0 }}</span>{% endif %}
+              </div>
+              <div class="inp-wrap">
+                <label class="inp-label" for="reg-telefono">Teléfono</label>
+                <input type="tel" id="reg-telefono" name="telefono" placeholder="Teléfono (10 dígitos)" maxlength="10" inputmode="numeric" autocomplete="tel" required
+                       value="{{ valores_campos.telefono|default:'' }}"
+                       class="{% if errores_campos.telefono %}is-invalid{% endif %}">
+                {% if errores_campos.telefono %}<span class="inp-error">{{ errores_campos.telefono.0 }}</span>{% endif %}
+              </div>
+              <div class="inp-wrap">
+                <label class="inp-label" for="reg-correo">Correo</label>
+                <input type="email" id="reg-correo" name="correo" placeholder="Correo" maxlength="100" inputmode="email" autocomplete="email" required
+                       value="{{ valores_campos.correo|default:'' }}"
+                       class="{% if errores_campos.correo %}is-invalid{% endif %}">
+                {% if errores_campos.correo %}<span class="inp-error">{{ errores_campos.correo.0 }}</span>{% endif %}
+              </div>
+              <div class="inp-wrap">
+                <label class="inp-label" for="reg-usuario">Usuario</label>
+                <input type="text" id="reg-usuario" name="usuario" placeholder="Usuario" maxlength="30" autocomplete="username" required
+                       value="{{ valores_campos.usuario|default:'' }}"
+                       class="{% if errores_campos.usuario %}is-invalid{% endif %}">
+                {% if errores_campos.usuario %}<span class="inp-error">{{ errores_campos.usuario.0 }}</span>{% endif %}
               </div>
               <div class="inp-wrap">
                 <select name="especialidad">
                   <option value="">Especialidad...</option>
                   {% for esp in especialidades %}
-                    <option value="{{ esp.codigo }}">{{ esp.nombre }}</option>
+                    <option value="{{ esp.codigo }}" {% if valores_campos.especialidad == esp.codigo %}selected{% endif %}>{{ esp.nombre }}</option>
                   {% endfor %}
                 </select>
               </div>
-            </div>
-            <div class="inp-wrap">
-              <input type="password" name="password" id="reg-password" placeholder="Contraseña (mín. 8)" autocomplete="new-password" required>
-            </div>
-            <div class="inp-wrap">
-              <input type="password" name="password2" id="reg-password2" placeholder="Confirmar contraseña" autocomplete="new-password" required>
-            </div>
-            <button type="submit" class="btn-login">Crear cuenta</button>
+              <div class="inp-wrap">
+                <input type="password" name="password" id="reg-password" placeholder="Contraseña (mín. 8)" autocomplete="new-password" required
+                       class="{% if errores_campos.password %}is-invalid{% endif %}">
+                {% if errores_campos.password %}<span class="inp-error">{{ errores_campos.password.0 }}</span>{% endif %}
+              </div>
+              <div class="inp-wrap">
+                <input type="password" name="password2" id="reg-password2" placeholder="Confirmar contraseña" autocomplete="new-password" required
+                       class="{% if errores_campos.password2 %}is-invalid{% endif %}">
+                {% if errores_campos.password2 %}<span class="inp-error">{{ errores_campos.password2.0 }}</span>{% endif %}
+              </div>
+              <button type="submit" class="btn-login">Crear cuenta</button>
+            </fieldset>
+
             <p class="auth-switch">¿Ya tienes cuenta? <a href="#" data-tab="login">Inicia sesión</a></p>
           </form>
+
         </div>
+
       </section>
 
       <aside class="flow-panel" aria-labelledby="flow-panel-title">

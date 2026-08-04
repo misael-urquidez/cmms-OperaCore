@@ -53,12 +53,34 @@ class RegistroTrabajadorSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, label="Confirmar contraseña")
 
+    # "rol" ya NO se manda como select con el ID del rol: ahora es una
+    # clave de seguridad de texto libre. Si coincide con el "codigo" de
+    # algun registro en ROL, esa persona se registra con ese rol. Si viene
+    # vacia, se registra sin rol (igual que antes al dejar el select en
+    # "Rol..."). Si viene con algo que NO coincide con ningun codigo, se
+    # rechaza el registro completo (ver validate_rol).
+    rol = serializers.CharField(
+        write_only=True, required=False, allow_blank=True, allow_null=True,
+        max_length=5, label="Clave de seguridad",
+    )
+
     class Meta:
         model = Trabajador
         fields = [
             "nombre", "apellidoPat", "apellidoMat", "telefono",
             "correo", "usuario", "password", "password2", "rol", "especialidad",
         ]
+
+    def validate_rol(self, value):
+        """value es la clave de seguridad escrita por el usuario (texto
+        plano). Se compara contra ROL.codigo (case-insensitive) y se
+        regresa la instancia de Rol para que create() la asigne tal cual."""
+        if not value:
+            return None
+        try:
+            return Rol.objects.get(codigo__iexact=value.strip())
+        except Rol.DoesNotExist:
+            raise serializers.ValidationError("Clave de seguridad inválida.")
 
     def validate_usuario(self, value):
         if Trabajador.objects.filter(usuario__iexact=value).exists():

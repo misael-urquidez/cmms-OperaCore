@@ -8,12 +8,17 @@
   var INDICADORES_TPL = root.dataset.indicadoresUrlBase;
   var HISTORIAL_TPL = root.dataset.historialUrlBase;
   var ESTADO_TPL = root.dataset.estadoUrlBase;
+  var ESTADO_ACCION_TPL = root.dataset.estadoAccionUrlBase;
   var CATALOGOS_URL = root.dataset.catalogosUrl;
   var CREAR_URL = root.dataset.crearUrl;
   var MODO_TPL = root.dataset.modoUrlBase;
   var LECTURA_MANUAL_URL = root.dataset.lecturaManualUrl;
   var SIMULAR_TPL = root.dataset.simularUrlBase;
   var REGISTRO_OPS_TPL = root.dataset.registroOpsUrlBase;
+  var REPARACION_MANUAL_TPL = root.dataset.reparacionManualUrlBase;
+  var MANTENIMIENTO_URL = root.dataset.mantenimientoUrl;
+  var REPORTAR_FALLA_URL = root.dataset.reportarFallaUrl;
+
 
   var canvas = document.getElementById("plantCanvas");
   var linksSvg = document.getElementById("plantLinks");
@@ -53,7 +58,7 @@
     return valor;
   }
   function urlPara(tpl, codigo) { return tpl.replace("__CODIGO__", encodeURIComponent(codigo)); }
-  function estadoValido(codigo) { return ["OPERA", "MANTE", "FALLO"].indexOf(codigo) !== -1 ? codigo : "sin"; }
+  function estadoValido(codigo) { return ["OPERA", "MANTE", "FALLO", "ESPER", "DESHA"].indexOf(codigo) !== -1 ? codigo : "sin"; }
 
   // -------------------------------------------------------- layout inicial
   function posicionPorDefecto(codigo, index, lineaIndex, indexEnLinea) {
@@ -120,12 +125,22 @@ function render(maquinas) {
     node.style.top = pos.y + "px";
 
     var estadoClase = estadoValido(m.estado_maquina);
-    var ledClase = m.requiere_revision_preventiva ? "ALERT" : estadoClase;
+    var ESTADOS_PRIORITARIOS = ["FALLO", "MANTE", "ESPER", "DESHA"];
+    var ledClase = (m.requiere_revision_preventiva && ESTADOS_PRIORITARIOS.indexOf(estadoClase) === -1)
+      ? "ALERT"
+      : estadoClase;
 
     var vibracion = m.ultima_lectura ? m.ultima_lectura.vibracion : null;
     var umbral = m.umbral_vibracion || 4.0;
     var pct = vibracion !== null ? Math.min(100, Math.round((vibracion / umbral) * 100)) : 0;
     var esAlta = vibracion !== null && vibracion > umbral;
+
+    var flagHtml = "";
+    if (estadoClase === "FALLO") {
+      flagHtml = '<span class="machine-node__flag machine-node__flag--falla">⛔ Máquina en falla</span>';
+    } else if (m.requiere_revision_preventiva) {
+      flagHtml = '<span class="machine-node__flag">⚠ Revisar preventivo</span>';
+    }
 
     node.innerHTML =
       '<div class="machine-node__card">' +
@@ -137,7 +152,7 @@ function render(maquinas) {
           '<div class="machine-node__vib-track"><div class="machine-node__vib-fill' + (esAlta ? " is-high" : "") + '" style="width:' + pct + '%"></div></div>' +
           '<span class="machine-node__vib-val">' + (vibracion !== null ? vibracion : "—") + '</span>' +
         '</div>' +
-        (m.requiere_revision_preventiva ? '<span class="machine-node__flag">⚠ Revisar preventivo</span>' : '') +
+        flagHtml +
       '</div>';
 
     hacerArrastrable(node);
@@ -174,6 +189,7 @@ function render(maquinas) {
     var arrastrando = false, offX = 0, offY = 0;
 
     node.addEventListener("pointerdown", function (ev) {
+      if (ev.button !== 0) return;   // solo click izquierdo mueve el nodo; derecho es para la cámara
       arrastrando = true;
       node.dataset.dragged = "0";
       node.classList.add("is-dragging");
@@ -205,13 +221,53 @@ function render(maquinas) {
     node.addEventListener("pointercancel", soltar);
   }
 
+  // -------------------------------------------------- pan de cámara con click derecho
+  var plantWrap = document.querySelector(".plant-wrap");
+  if (plantWrap) {
+    var isPanning = false;
+    var startX, startY, scrollLeft, scrollTop;
+
+    plantWrap.addEventListener("pointerdown", function (ev) {
+      if (ev.button !== 2) return;   // solo click derecho
+      isPanning = true;
+      startX = ev.clientX;
+      startY = ev.clientY;
+      scrollLeft = plantWrap.scrollLeft;
+      scrollTop = plantWrap.scrollTop;
+      plantWrap.classList.add("is-panning");
+      ev.preventDefault();
+    });
+
+    plantWrap.addEventListener("pointermove", function (ev) {
+      if (!isPanning) return;
+      var x = ev.clientX;
+      var y = ev.clientY;
+      plantWrap.scrollLeft = scrollLeft - (x - startX);
+      plantWrap.scrollTop = scrollTop - (y - startY);
+    });
+
+    plantWrap.addEventListener("pointerup", function () {
+      isPanning = false;
+      plantWrap.classList.remove("is-panning");
+    });
+
+    plantWrap.addEventListener("pointerleave", function () {
+      isPanning = false;
+      plantWrap.classList.remove("is-panning");
+    });
+  }
+
   // ------------------------------------------------------------- feed
   function refrescar() {
     fetch(DATOS_URL).then(function (r) { return r.json(); }).then(function (data) {
       if (data.error) { refreshStatus.textContent = data.error; return; }
       render(data.maquinas || []);
       refreshStatus.textContent = "Actualizado " + new Date().toLocaleTimeString();
-      if (estado.seleccionada) cargarDatosDrawer(estado.seleccionada, true);
+      if (estado.seleccionada) {
+        cargarDatosDrawer(estado.seleccionada, true);
+        var mActual = estado.maquinas.find(function (mm) { return mm.codigo === estado.seleccionada; });
+        manejarPollingIot(mActual ? mActual.modo_monitoreo : null);
+      }
     }).catch(function () { refreshStatus.textContent = "Sin conexión"; });
   }
 
@@ -250,6 +306,8 @@ refrescar();
   var drawerMttr = document.getElementById("drawerMttr");
   var drawerDispo = document.getElementById("drawerDispo");
   var drawerDispoFill = document.getElementById("drawerDispoFill");
+  var drawerNumeroFallas = document.getElementById("drawerNumeroFallas");
+  var drawerTiempoInactividad = document.getElementById("drawerTiempoInactividad");
   var drawerVibracion = document.getElementById("drawerVibracion");
   var drawerUmbral = document.getElementById("drawerUmbral");
   var drawerTemperatura = document.getElementById("drawerTemperatura");
@@ -268,6 +326,23 @@ refrescar();
   var drawerSimularMsg = document.getElementById("drawerSimularMsg");
   var drawerOpsForm = document.getElementById("drawerOpsForm");
   var drawerOpsMsg = document.getElementById("drawerOpsMsg");
+  var drawerReparacionForm = document.getElementById("drawerReparacionForm");
+  var drawerReparacionMsg = document.getElementById("drawerReparacionMsg");
+
+
+  var drawerAccionEstadoSection = document.getElementById("drawerAccionEstadoSection");
+  var drawerAccionEstadoBtn = document.getElementById("drawerAccionEstadoBtn");
+  var drawerAccionEstadoMsg = document.getElementById("drawerAccionEstadoMsg");
+  var drawerAccionFallaMantBtn = document.getElementById("drawerAccionFallaMantBtn");
+
+  // estado actual -> qué acción se ofrece y a qué endpoint de maquinaria pega
+  var ACCIONES_POR_ESTADO = {
+    ESPER: { accion: "validar",      label: "Validar y poner operativa" },
+    DESHA: { accion: "reactivar",    label: "Reactivar máquina" },
+    OPERA: { accion: "deshabilitar", label: "Deshabilitar máquina" },
+    // FALLO y MANTE no tienen botón aquí: esos se resuelven por el flujo
+    // normal de reporte de falla / orden de mantenimiento, no manual.
+  };
 
   function abrirDrawer(codigo) {
     estado.seleccionada = codigo;
@@ -279,6 +354,41 @@ refrescar();
   function cerrarDrawer() {
     drawer.setAttribute("aria-hidden", "true");
     estado.seleccionada = null;
+    detenerPollingIot();
+  }
+
+  // ---------------------------------------------------- lecturas en vivo (IoT)
+  // Mientras el drawer está abierto y la máquina está en modo "iot", refrescamos
+  // la última lectura y la tendencia cada 1.5s (en vez de esperar los 5s del
+  // refresco general del mapa), para que se vea la telemetría del Wiimote
+  // llegando casi en tiempo real.
+  var IOT_POLL_MS = 1500;
+  var iotPollTimer = null;
+
+  function manejarPollingIot(modo) {
+    if (modo === "iot") {
+      if (iotPollTimer) return;
+      actualizarLecturaEnVivo(estado.seleccionada);
+      iotPollTimer = setInterval(function () {
+        if (estado.seleccionada) actualizarLecturaEnVivo(estado.seleccionada);
+        else detenerPollingIot();
+      }, IOT_POLL_MS);
+    } else {
+      detenerPollingIot();
+    }
+  }
+  function detenerPollingIot() {
+    if (iotPollTimer) { clearInterval(iotPollTimer); iotPollTimer = null; }
+  }
+  function actualizarLecturaEnVivo(codigo) {
+    fetch(urlPara(HISTORIAL_TPL, codigo) + "?limite=20")
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || estado.seleccionada !== codigo) return;
+        pintarUltimaLectura(data);
+        pintarTendencia(data);
+      })
+      .catch(function () {});
   }
   document.getElementById("drawerClose").addEventListener("click", cerrarDrawer);
   document.getElementById("drawerBackdrop").addEventListener("click", cerrarDrawer);
@@ -288,15 +398,32 @@ refrescar();
     drawerLinea.textContent = m.linea || "Sin línea";
     drawerTitle.textContent = m.nombre + " · " + m.codigo;
     var estadoClase = estadoValido(m.estado_maquina);
-    var etiquetas = { OPERA: "Operativa", MANTE: "En mantenimiento", FALLO: "En falla", sin: "Sin estado" };
+    var etiquetas = { OPERA: "Operativa", MANTE: "En mantenimiento", FALLO: "En falla", ESPER: "En espera de validación", DESHA: "Deshabilitada", sin: "Sin estado" };
     drawerEstado.textContent = etiquetas[estadoClase];
+    var accionInfo = ACCIONES_POR_ESTADO[m.estado_maquina];
+    if (accionInfo) {
+      drawerAccionEstadoSection.hidden = false;
+      drawerAccionEstadoBtn.textContent = accionInfo.label;
+      drawerAccionEstadoBtn.dataset.accion = accionInfo.accion;
+    } else {
+      drawerAccionEstadoSection.hidden = true;
+    }
+    drawerAccionEstadoMsg.hidden = true;
+    if (estadoClase === "FALLO") {
+      drawerAccionFallaMantBtn.textContent = "⛔ Reportar falla";
+      drawerAccionFallaMantBtn.dataset.tipo = "falla";
+    } else {
+      drawerAccionFallaMantBtn.textContent = "🛠 Programar mantenimiento preventivo";
+      drawerAccionFallaMantBtn.dataset.tipo = "preventivo";
+    }
     drawerAlert.hidden = !m.requiere_revision_preventiva;
     document.getElementById("drawerOrdenMsg").hidden = true;
     drawerVibracion.textContent = m.ultima_lectura ? m.ultima_lectura.vibracion : "Sin datos";
     drawerUmbral.textContent = m.umbral_vibracion;
     drawerTemperatura.textContent = m.ultima_lectura && m.ultima_lectura.temperatura != null ? m.ultima_lectura.temperatura + " °C" : "—";
     drawerTimestamp.textContent = m.ultima_lectura ? m.ultima_lectura.timestamp.slice(0, 16).replace("T", " ") : "—";
-    drawerModoSelect.value = m.modo_monitoreo || "simulado";
+    drawerModoSelect.value = m.modo_monitoreo || "manual";
+    manejarPollingIot(m.modo_monitoreo);
     actualizarSeccionesPorModo(m.modo_monitoreo);
     drawerModoMsg.hidden = true;
     drawerManualMsg.hidden = true;
@@ -318,6 +445,7 @@ refrescar();
     el.hidden = false;
     el.textContent = texto;
     el.className = "feedback-msg " + (ok ? "is-ok" : "is-error");
+    if (window.mostrarToast) mostrarToast(texto, ok ? "success" : "error");
   }
 
   drawerModoGuardar.addEventListener("click", function () {
@@ -333,10 +461,59 @@ refrescar();
           mostrarMsg(drawerModoMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo actualizar el modo.", false);
           return;
         }
-        mostrarMsg(drawerModoMsg, "Modo actualizado a " + res.data.modo_monitoreo + ".", true);
+        var msg = "Modo actualizado a " + res.data.modo_monitoreo + ".";
+        if (res.data.maquina_iot_liberada) {
+          msg += " Se liberó " + res.data.maquina_iot_liberada + " (pasó a manual) porque solo una máquina puede estar en IoT a la vez.";
+        }
+        mostrarMsg(drawerModoMsg, msg, true);
         actualizarSeccionesPorModo(res.data.modo_monitoreo);
+        manejarPollingIot(res.data.modo_monitoreo);
         refrescar();
       }).catch(function () { mostrarMsg(drawerModoMsg, "No fue posible conectar con el servidor.", false); });
+  });
+
+  drawerAccionEstadoBtn.addEventListener("click", function () {
+    if (!estado.seleccionada) return;
+    var codigo = estado.seleccionada;
+    var accion = drawerAccionEstadoBtn.dataset.accion;
+
+    // Redirigir a Mantenimiento para programar mantenimiento preventivo si la acción es "deshabilitar"
+    if (accion === "deshabilitar") {
+      var fechaActual = new Date().toISOString().split('T')[0];
+      window.location.href = "/mantenimiento/?maquina=" + encodeURIComponent(codigo) + "&tipo=PREVE&fecha=" + fechaActual;
+      return;
+    }
+
+    drawerAccionEstadoBtn.disabled = true;
+    fetch(urlPara(ESTADO_ACCION_TPL, codigo), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify({ accion: accion }),
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        drawerAccionEstadoBtn.disabled = false;
+        if (!res.ok) {
+          mostrarMsg(drawerAccionEstadoMsg, res.data.detail || "No se pudo cambiar el estado.", false);
+          return;
+        }
+        mostrarMsg(drawerAccionEstadoMsg, "Estado actualizado a " + res.data.estado_maquina + ".", true);
+        refrescar();
+      }).catch(function () {
+        drawerAccionEstadoBtn.disabled = false;
+        mostrarMsg(drawerAccionEstadoMsg, "No fue posible conectar con el servidor.", false);
+      });
+  });
+
+  drawerAccionFallaMantBtn.addEventListener("click", function () {
+    if (!estado.seleccionada) return;
+    var codigo = estado.seleccionada;
+    var fechaActual = new Date().toISOString().split("T")[0];
+
+    if (drawerAccionFallaMantBtn.dataset.tipo === "falla") {
+      window.location.href = REPORTAR_FALLA_URL + "?maquina=" + encodeURIComponent(codigo);
+    } else {
+      window.location.href = MANTENIMIENTO_URL + "?maquina=" + encodeURIComponent(codigo) + "&tipo=PREVE&fecha=" + fechaActual;
+    }
   });
 
   drawerManualForm.addEventListener("submit", function (ev) {
@@ -415,6 +592,26 @@ refrescar();
       }).catch(function () { mostrarMsg(drawerOpsMsg, "No fue posible conectar con el servidor.", false); });
   });
 
+drawerReparacionForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    if (!estado.seleccionada) return;
+    var payload = { horas_reparacion: parseInt(document.getElementById("reparacionHoras").value, 10) };
+    fetch(urlPara(REPARACION_MANUAL_TPL, estado.seleccionada), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify(payload),
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          mostrarMsg(drawerReparacionMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo registrar la reparación.", false);
+          return;
+        }
+        mostrarMsg(drawerReparacionMsg, "Reparación registrada (" + res.data.tiempoParo + " h). Indicadores actualizados.", true);
+        drawerReparacionForm.reset();
+        cargarDatosDrawer(estado.seleccionada, true);
+      }).catch(function () { mostrarMsg(drawerReparacionMsg, "No fue posible conectar con el servidor.", false); });
+  });
+
   function cargarDatosDrawer(codigo, silencioso) {
     Promise.all([
       fetch(urlPara(INDICADORES_TPL, codigo)).then(function (r) { return r.json(); }).catch(function () { return null; }),
@@ -422,7 +619,19 @@ refrescar();
     ]).then(function (res) {
       pintarIndicadores(res[0]);
       pintarTendencia(res[1]);
+      if (res[1]) pintarUltimaLectura(res[1]);
     });
+  }
+
+  // Repinta Vibración/Umbral/Temperatura/Hora a partir de la respuesta del
+  // historial (última lectura = último elemento, ya viene en orden cronológico).
+  function pintarUltimaLectura(data) {
+    var lecturas = data.lecturas || [];
+    var ultima = lecturas.length ? lecturas[lecturas.length - 1] : null;
+    drawerVibracion.textContent = ultima ? ultima.vibracion : "Sin datos";
+    drawerUmbral.textContent = data.umbral_vibracion != null ? data.umbral_vibracion : "—";
+    drawerTemperatura.textContent = ultima && ultima.temperatura != null ? ultima.temperatura + " °C" : "—";
+    drawerTimestamp.textContent = ultima ? ultima.timestamp.slice(0, 16).replace("T", " ") : "—";
   }
 
   function pintarIndicadores(data) {
@@ -432,6 +641,8 @@ refrescar();
     var dispo = data.disponibilidad;
     drawerDispo.textContent = dispo != null ? dispo + " %" : "Sin datos aún";
     drawerDispoFill.style.width = (dispo != null ? dispo : 0) + "%";
+    drawerNumeroFallas.textContent = data.numero_fallas != null ? String(data.numero_fallas) : "—";
+    drawerTiempoInactividad.textContent = data.tiempo_inactividad != null ? Number(data.tiempo_inactividad).toFixed(1) : "—";
   }
 
   function pintarTendencia(data) {
@@ -508,11 +719,11 @@ refrescar();
   function cargarCatalogos() {
     fetch(CATALOGOS_URL).then(function (r) { return r.json(); }).then(function (data) {
       catalogosCargados = true;
-      llenarSelect(document.getElementById("fLinea"), data.lineas || [], "codigo", "nombre", "Sin línea");
-      llenarSelect(document.getElementById("fTipo"), data.tipos_maquina || [], "numeroRegistro", "nombre", "Sin especificar");
-      llenarSelect(document.getElementById("fMarca"), data.marcas || [], "clave", "nombre", "Sin especificar");
-      llenarSelect(document.getElementById("fEstado"), data.estados_maquina || [], "codigo", "nombre");
-      llenarSelect(document.getElementById("fModo"), data.modos_monitoreo || [], "valor", "etiqueta");
+      llenarSelect(document.getElementById("fLinea"), data.lineas || [], "codigo", "nombre", "Selecciona línea");
+      llenarSelect(document.getElementById("fTipo"), data.tipos_maquina || [], "numeroRegistro", "nombre", "Selecciona tipo");
+      llenarSelect(document.getElementById("fMarca"), data.marcas || [], "clave", "nombre", "Selecciona marca");
+      llenarSelect(document.getElementById("fEstado"), data.estados_maquina || [], "codigo", "nombre", "Selecciona estado");
+      llenarSelect(document.getElementById("fModo"), data.modos_monitoreo || [], "valor", "etiqueta", "Selecciona modo");
       todosLosModelos = data.modelos || [];
       filtrarModelos("");
     }).catch(function () {
@@ -529,23 +740,38 @@ refrescar();
   form.addEventListener("submit", function (ev) {
     ev.preventDefault();
     errorBox.hidden = true;
-    var payload = {
+
+    var campos = {
       codigo: document.getElementById("fCodigo").value.trim(),
       nombre: document.getElementById("fNombre").value.trim(),
       descripcion: document.getElementById("fDescripcion").value.trim(),
       numeroSerie: document.getElementById("fSerie").value.trim(),
-      linea: document.getElementById("fLinea").value || null,
-      marca: document.getElementById("fMarca").value || null,
-      modelo: document.getElementById("fModelo").value || null,
-      tipo_maquina: document.getElementById("fTipo").value || null,
-      estado_maquina: document.getElementById("fEstado").value || null,
+      linea: document.getElementById("fLinea").value,
+      marca: document.getElementById("fMarca").value,
+      modelo: document.getElementById("fModelo").value,
+      tipo_maquina: document.getElementById("fTipo").value,
+      estado_maquina: document.getElementById("fEstado").value,
       modo_monitoreo: document.getElementById("fModo").value,
       umbral_vibracion: parseFloat(document.getElementById("fUmbral").value) || 4.0,
     };
+
+    var formData = new FormData();
+    Object.keys(campos).forEach(function (key) {
+      var valor = campos[key];
+      if (valor !== "" && valor !== null && valor !== undefined) {
+        formData.append(key, valor);
+      }
+    });
+
+    var imagenFile = document.getElementById("fImagen").files[0];
+    if (imagenFile) formData.append("imagen", imagenFile);
+    var modelo3dFile = document.getElementById("fModelo3d").files[0];
+    if (modelo3dFile) formData.append("modelo_3d_archivo", modelo3dFile);
+
     fetch(CREAR_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
-      body: JSON.stringify(payload),
+      headers: { "X-CSRFToken": getCookie("csrftoken") },
+      body: formData,
     }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok) {

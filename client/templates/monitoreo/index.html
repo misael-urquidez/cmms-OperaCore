@@ -10,12 +10,16 @@
          data-indicadores-url-base="{% url 'monitoreo:indicadores' codigo='__CODIGO__' %}"
          data-historial-url-base="{% url 'monitoreo:historial' codigo='__CODIGO__' %}"
          data-estado-url-base="{% url 'monitoreo:estado' codigo='__CODIGO__' %}"
+         data-estado-accion-url-base="{% url 'monitoreo:estado-accion' codigo='__CODIGO__' %}"
          data-catalogos-url="{% url 'monitoreo:catalogos' %}"
          data-crear-url="{% url 'monitoreo:crear-maquina' %}"
          data-modo-url-base="{% url 'monitoreo:modo' codigo='__CODIGO__' %}"
          data-lectura-manual-url="{% url 'monitoreo:lectura-manual' %}"
          data-simular-url-base="{% url 'monitoreo:simular' codigo='__CODIGO__' %}"
          data-registro-ops-url-base="{% url 'monitoreo:registro-ops' codigo='__CODIGO__' %}"
+         data-reparacion-manual-url-base="{% url 'monitoreo:reparacion-manual' codigo='__CODIGO__' %}"
+         data-mantenimiento-url="{% url 'mantenimiento:index' %}"
+         data-reportar-falla-url="{% url 'fallas:reporte' %}"
          data-crear-orden-url="{% url 'mantenimiento:ordenes-crear' %}">
 
   {{ maquinas|json_script:"maquinas-data" }}
@@ -44,10 +48,12 @@
 
   {% if error %}<p class="monitoring__error" id="monitorError">{{ error }}</p>{% endif %}
 
-  <div class="plant-legend">
+<div class="plant-legend">
     <span><i class="dot dot--OPERA"></i> Operativa</span>
     <span><i class="dot dot--MANTE"></i> En mantenimiento</span>
     <span><i class="dot dot--FALLO"></i> En falla</span>
+    <span><i class="dot dot--ESPER"></i> En espera de validación</span>
+    <span><i class="dot dot--DESHA"></i> Deshabilitada</span>
     <span><i class="dot dot--ALERT"></i> Revisión preventiva sugerida</span>
     <span><i class="dot dot--sin"></i> Sin línea / sin dato</span>
   </div>
@@ -84,16 +90,50 @@
         <span class="metric-card__unit">horas</span>
       </div>
       <div class="metric-card">
-        <span class="metric-card__label" title="Tiempo medio de reparación: minutos que tarda en promedio resolver una falla.">MTTR</span>
+        <span class="metric-card__label" title="Tiempo medio de reparación: horas que tarda en promedio resolver una falla.">MTTR</span>
         <strong class="metric-card__value" id="drawerMttr">—</strong>
-        <span class="metric-card__unit">min</span>
+        <span class="metric-card__unit">horas</span>
       </div>
       <div class="metric-card metric-card--wide">
         <span class="metric-card__label" title="Porcentaje del tiempo que la máquina está disponible para operar: MTBF / (MTBF + MTTR).">Disponibilidad</span>
         <div class="metric-card__bar"><div class="metric-card__bar-fill" id="drawerDispoFill"></div></div>
         <strong class="metric-card__value" id="drawerDispo">—</strong>
       </div>
+      <div class="metric-card">
+        <span class="metric-card__label" title="Número total de fallas registradas para esta máquina.">Número de fallas</span>
+        <strong class="metric-card__value" id="drawerNumeroFallas">—</strong>
+      </div>
+      <div class="metric-card">
+        <span class="metric-card__label" title="Tiempo total de inactividad acumulado por fallas.">Tiempo de inactividad</span>
+        <strong class="metric-card__value" id="drawerTiempoInactividad">—</strong>
+        <span class="metric-card__unit">horas</span>
+      </div>
     </div>
+
+    <p class="machine-drawer__group-title">Indicadores</p>
+
+    <div class="machine-drawer__section">
+      <h3>Horas de operación <span class="section-hint">(alimenta el MTBF)</span></h3>
+      <form id="drawerOpsForm" class="manual-form">
+        <label>Fecha inicio<input type="date" id="opsFechaInicio" required></label>
+        <label>Fecha fin<input type="date" id="opsFechaFin" required></label>
+        <label>Horas operadas<input type="number" step="1" min="0" id="opsHoras" required></label>
+        <button type="submit" class="btn-plant-secondary">Registrar horas</button>
+      </form>
+      <p class="feedback-msg" id="drawerOpsMsg" hidden></p>
+      <p class="section-hint">El MTTR y la disponibilidad se calculan solos: MTTR al cerrar una orden de mantenimiento, disponibilidad a partir de MTBF y MTTR.</p>
+    </div>
+
+    <div class="machine-drawer__section">
+      <h3>Reparación manual <span class="section-hint" title="Crea un reporte de falla ya resuelto y una orden ya cerrada con el tiempo de paro que pongas, sin mover el estado en vivo de la máquina.">(alimenta el MTTR)</span></h3>
+      <form id="drawerReparacionForm" class="manual-form">
+        <label>Horas de reparación<input type="number" step="1" min="0" id="reparacionHoras" required></label>
+        <button type="submit" class="btn-plant-secondary">Registrar reparación</button>
+      </form>
+      <p class="feedback-msg" id="drawerReparacionMsg" hidden></p>
+    </div>
+
+    <p class="machine-drawer__group-title">Salud y monitoreo de la máquina</p>
 
     <div class="machine-drawer__section">
       <h3>Modo de monitoreo</h3>
@@ -101,7 +141,7 @@
         <select id="drawerModoSelect">
           <option value="manual">Manual</option>
           <option value="simulado">Simulado</option>
-          <option value="iot" disabled>IoT (próximamente)</option>
+          <option value="iot">IoT</option>
         </select>
         <button type="button" class="btn-plant-secondary" id="drawerModoGuardar">Guardar</button>
       </div>
@@ -126,17 +166,6 @@
     </div>
 
     <div class="machine-drawer__section">
-      <h3>Horas de operación <span class="section-hint">(alimenta el MTBF)</span></h3>
-      <form id="drawerOpsForm" class="manual-form">
-        <label>Fecha inicio<input type="date" id="opsFechaInicio" required></label>
-        <label>Fecha fin<input type="date" id="opsFechaFin" required></label>
-        <label>Horas operadas<input type="number" step="1" min="0" id="opsHoras" required></label>
-        <button type="submit" class="btn-plant-secondary">Registrar horas</button>
-      </form>
-      <p class="feedback-msg" id="drawerOpsMsg" hidden></p>
-    </div>
-
-    <div class="machine-drawer__section">
       <h3>Última lectura</h3>
       <dl class="machine-drawer__dl">
         <div><dt>Vibración</dt><dd id="drawerVibracion">—</dd></div>
@@ -152,10 +181,17 @@
       <p class="trend-chart__empty" id="trendEmpty" hidden>Sin lecturas suficientes todavía.</p>
     </div>
 
-    <div class="machine-drawer__foot">
-      <a href="{% url 'fallas:reporte' %}" class="btn-plant-secondary" id="drawerReportarFalla">Reportar falla en esta máquina</a>
-      <button type="button" class="btn-plant-new" id="drawerLevantarOrden" style="margin-top:.6rem;width:100%;">Levantar orden de mantenimiento preventivo</button>
-      <p class="feedback-msg" id="drawerOrdenMsg" hidden></p>
+    <p class="machine-drawer__group-title">Acciones</p>
+
+    <div class="machine-drawer__section" id="drawerAccionEstadoSection" hidden>
+      <h3>Estado de la máquina</h3>
+      <button type="button" class="btn-plant-new" id="drawerAccionEstadoBtn" style="width:100%;"></button>
+      <p class="feedback-msg" id="drawerAccionEstadoMsg" hidden></p>
+    </div>
+
+    <div class="machine-drawer__section" id="drawerAccionFallaMantSection">
+      <h3>Falla / mantenimiento</h3>
+      <button type="button" class="btn-plant-new" id="drawerAccionFallaMantBtn" style="width:100%;"></button>
     </div>
   </aside>
 </div>
@@ -170,21 +206,24 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
     </div>
-    <form id="newMachineForm" class="new-machine-form">
+    <form id="newMachineForm" class="new-machine-form" enctype="multipart/form-data">
       <p class="new-machine-form__error" id="newMachineError" hidden></p>
+      <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
       <div class="new-machine-form__grid">
-        <label>Código<input type="text" name="codigo" id="fCodigo" maxlength="10" required placeholder="MAQ007"></label>
-        <label>Nombre<input type="text" name="nombre" id="fNombre" maxlength="100" required placeholder="Pick &amp; Place 2"></label>
-        <label>Línea<select name="linea" id="fLinea"><option value="">Sin línea</option></select></label>
-        <label>Tipo de máquina<select name="tipo_maquina" id="fTipo"><option value="">Sin especificar</option></select></label>
-        <label>Marca<select name="marca" id="fMarca"><option value="">Sin especificar</option></select></label>
-        <label>Modelo<select name="modelo" id="fModelo"><option value="">Sin especificar</option></select></label>
-        <label>Estado inicial<select name="estado_maquina" id="fEstado"></select></label>
-        <label>Modo de monitoreo<select name="modo_monitoreo" id="fModo"></select></label>
+        <label>Código<span id="codigo-error"></span><input type="text" name="codigo" id="fCodigo" data-error-id="codigo-error" maxlength="10" required placeholder="MAQ007"></label>
+        <label>Nombre<span id="nombre-error"></span><input type="text" name="nombre" id="fNombre" data-error-id="nombre-error" maxlength="100" required placeholder="Pick &amp; Place 2"></label>
+        <label>Línea<select name="linea" id="fLinea"><option value="">Selecciona línea</option></select></label>
+        <label>Tipo de máquina<select name="tipo_maquina" id="fTipo"><option value="">Selecciona tipo</option></select></label>
+        <label>Marca<select name="marca" id="fMarca"><option value="">Selecciona marca</option></select></label>
+        <label>Modelo<select name="modelo" id="fModelo"><option value="">Selecciona modelo</option></select></label>
+        <label>Estado inicial<select name="estado_maquina" id="fEstado"><option value="">Selecciona estado</option></select></label>
+        <label>Modo de monitoreo<select name="modo_monitoreo" id="fModo"><option value="">Selecciona modo</option></select></label>
         <label>Umbral de vibración<input type="number" name="umbral_vibracion" id="fUmbral" step="0.1" min="0" value="4.0"></label>
-        <label>N° de serie<input type="text" name="numeroSerie" id="fSerie" maxlength="30" placeholder="Opcional"></label>
+        <label>N° de serie<span id="serie-error"></span><input type="text" name="numeroSerie" id="fSerie" data-error-id="serie-error" maxlength="30" required placeholder="MAQ007-SN001"></label>
+        <label>Imagen<input type="file" name="imagen" id="fImagen" accept="image/*"></label>
+        <label>Modelo 3D (.glb)<input type="file" name="modelo_3d_archivo" id="fModelo3d" accept=".glb,model/gltf-binary"></label>
       </div>
-      <label class="new-machine-form__full">Descripción<textarea name="descripcion" id="fDescripcion" maxlength="255" rows="2" placeholder="Opcional"></textarea></label>
+      <label class="new-machine-form__full">Descripción<span id="descripcion-error"></span><textarea name="descripcion" id="fDescripcion" data-error-id="descripcion-error" maxlength="255" rows="2" placeholder="Descripción breve del equipo..."></textarea></label>
       <div class="new-machine-form__actions">
         <button type="button" class="btn-plant-secondary" id="newMachineCancel">Cancelar</button>
         <button type="submit" class="btn-plant-new" id="newMachineSubmit">Crear máquina</button>
@@ -194,4 +233,8 @@
 </div>
 
 {% endblock %}
-{% block extra_js %}<script src="{% static 'js/monitoreo.js' %}"></script>{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/validaciones-inputs.js' %}"></script>
+<script src="{% static 'monitoreo/js/validaciones-maquina-monitoreo.js' %}"></script>
+<script src="{% static 'js/monitoreo.js' %}"></script>
+{% endblock %}

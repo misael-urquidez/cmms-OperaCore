@@ -1,4 +1,4 @@
-{% extends "base_admin.html" %}
+{% extends base_template %}
 {% load static %}
 
 {% block title %} Nuevo Tipo Herramienta· OperaCore{% endblock %}
@@ -14,14 +14,14 @@
       <div class="left-side">
         {% if tiene_codigo %}
           <label for="codigo">Código identificador</label>
-          <input type="text" name="codigo" id="codigo" required maxlength="20" placeholder="Ej. OP, REP, DES" />
+          <input type="text" name="codigo" id="codigo" required maxlength="20" placeholder="Ej. OP, REP, DES" value="{{ datos.codigo|default:'' }}" />
         {% endif %}
 
         <label for="nombre">Nombre</label>
-        <input type="text" name="nombre" id="nombre" required maxlength="100" />
+        <input type="text" name="nombre" id="nombre" required maxlength="100" value="{{ datos.nombre|default:'' }}" />
 
         <label for="descripcion">Descripción</label>
-        <textarea name="descripcion" id="descripcion" rows="3"></textarea>
+        <textarea name="descripcion" id="descripcion" rows="3">{{ datos.descripcion|default:'' }}</textarea>
 
         <div class="contenedor-botones">
           <button type="submit">Guardar registro</button>

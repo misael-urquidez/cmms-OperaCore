@@ -140,7 +140,7 @@
     grid-template-rows: 0fr;              /* truco para animar height:auto */
     transition: grid-template-rows 0.24s ease;
 }
-.sidebar__submenu > a { overflow: hidden; }
+.sidebar__submenu-inner { overflow: hidden; min-height: 0; }
 .sidebar__group.is-open .sidebar__submenu { grid-template-rows: 1fr; }
 
 /* wrapper interno implícito: los <a> se ocultan al colapsar por el 0fr */
@@ -188,6 +188,11 @@
     background: #34d399;
     box-shadow: 0 0 6px rgba(52, 211, 153, 0.8);
     flex-shrink: 0;
+}
+
+.sidebar__foot-dot.is-offline {
+    background: #f87171;
+    box-shadow: 0 0 6px rgba(248, 113, 113, 0.8);
 }
 
 /* ---- colapsado (solo iconos, escritorio) ---- */
@@ -588,6 +593,17 @@
   margin-top: 0.5rem;
 }
 
+.gestion-modal__ubicacion {
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--accent, #00adb5);
+  border-radius: 0.5rem;
+  background: rgba(0, 173, 181, 0.08);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: 0.01em;
+}
+
 .gestion-modal__footer {
   display: flex;
   justify-content: flex-end;
@@ -629,3 +645,17 @@
 }
 
 .btn-detalles:hover { text-decoration: underline; }
+
+/* -------- buscador / tabla filter (shared) -------- */
+.inv-search { display:flex; align-items:center; gap:.5rem; margin-bottom:1rem; flex-wrap:wrap; }
+.inv-search__icon { color:var(--color-muted); flex:none; }
+.inv-search input,
+.buscador-input { flex:1; min-width:180px; padding:.5rem .75rem; border:1px solid var(--line); border-radius:.4rem; background:var(--color-surface); color:var(--color-text); font-size:.85rem; outline:none; }
+.inv-search input:focus,
+.buscador-input:focus { border-color:var(--color-primary); }
+.inv-search input::placeholder,
+.buscador-input::placeholder { color:var(--color-muted); }
+.inv-search__select,
+.filter-select { padding:.5rem .6rem; border:1px solid var(--line); border-radius:.4rem; background:var(--color-surface); color:var(--color-text); font-size:.85rem; outline:none; cursor:pointer; }
+.inv-search__select:focus,
+.filter-select:focus { border-color:var(--color-primary); }

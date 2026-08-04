@@ -192,10 +192,6 @@ class UpdateTipoMaquinaSerializer(serializers.ModelSerializer):
 # MAQUINA
 # ==========================================================
 class ListMaquinaSerializer(serializers.ModelSerializer):
-    estado_maquina = serializers.StringRelatedField()
-    tipo_maquina = serializers.StringRelatedField()
-    linea = serializers.StringRelatedField()
-
     class Meta:
         model = Maquina
         fields = "__all__"
@@ -222,13 +218,33 @@ class ValidarTipoMaquinaAreaMixin:
         return datos
 
 
+def _guardar_modelo_3d(archivo):
+    """Guarda el .glb subido en MEDIA_ROOT/maquinaria/modelos3d/ y regresa la
+    ruta relativa que se debe guardar en Maquina.modelo_3d (mismo patrón que
+    usa 'imagen' para imagen_url)."""
+    carpeta = os.path.join(settings.MEDIA_ROOT, "maquinaria", "modelos3d")
+    os.makedirs(carpeta, exist_ok=True)
+    ruta = os.path.join(carpeta, archivo.name)
+    with open(ruta, "wb+") as dest:
+        for chunk in archivo.chunks():
+            dest.write(chunk)
+    return f"maquinaria/modelos3d/{archivo.name}"
+
+
 class CreateMaquinaSerializer(ValidarTipoMaquinaAreaMixin, serializers.ModelSerializer):
+    imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
+    # Llave que ya manda el cliente (apps/maquinaria/views.py del proyecto
+    # client) como 'modelo_3d_archivo'. 'modelo_3d' se deja como el CharField
+    # normal del modelo (la ruta ya procesada) y NO se expone como file aquí,
+    # para no chocar con el nombre.
+    modelo_3d_archivo = serializers.FileField(write_only=True, required=False, allow_null=True)
+
     class Meta:
         model = Maquina
         fields = [
             "codigo", "numeroserie", "nombre", "descripcion", "imagen_url",
             "imagen",
-            "modelo_3d", "fechainstalacion", "linea", "marca", "modelo",
+            "modelo_3d", "modelo_3d_archivo", "fechainstalacion", "linea", "marca", "modelo",
             "estado_maquina", "tipo_maquina"
         ]
 
@@ -242,31 +258,60 @@ class CreateMaquinaSerializer(ValidarTipoMaquinaAreaMixin, serializers.ModelSeri
                 for chunk in imagen_file.chunks():
                     dest.write(chunk)
             validated_data["imagen_url"] = f"maquinaria/{imagen_file.name}"
+
+        modelo_3d_file = validated_data.pop("modelo_3d_archivo", None)
+        if modelo_3d_file:
+            validated_data["modelo_3d"] = _guardar_modelo_3d(modelo_3d_file)
+
         return super().create(validated_data)
 
 class UpdateMaquinaSerializer(serializers.ModelSerializer):
     imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
+    modelo_3d_archivo = serializers.FileField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = Maquina
         fields = [
             "codigo", "numeroserie", "nombre", "descripcion", "imagen_url",
             "imagen",
-            "modelo_3d", "fechainstalacion", "linea", "marca", "modelo",
+            "modelo_3d", "modelo_3d_archivo", "fechainstalacion", "linea", "marca", "modelo",
             "estado_maquina", "tipo_maquina"
         ]
 
     def update(self, instance, validated_data):
-        imagen_file = validated_data.pop("imagen", None)
-        if imagen_file:
-            carpeta = os.path.join(settings.MEDIA_ROOT, "maquinaria")
-            os.makedirs(carpeta, exist_ok=True)
-            ruta = os.path.join(carpeta, imagen_file.name)
-            with open(ruta, "wb+") as dest:
-                for chunk in imagen_file.chunks():
-                    dest.write(chunk)
-            validated_data["imagen_url"] = f"maquinaria/{imagen_file.name}"
-        return super().update(instance, validated_data)
+            imagen_file = validated_data.pop("imagen", None)
+            if imagen_file:
+                carpeta = os.path.join(settings.MEDIA_ROOT, "maquinaria")
+                os.makedirs(carpeta, exist_ok=True)
+                ruta = os.path.join(carpeta, imagen_file.name)
+                with open(ruta, "wb+") as dest:
+                    for chunk in imagen_file.chunks():
+                        dest.write(chunk)
+                validated_data["imagen_url"] = f"maquinaria/{imagen_file.name}"
+
+            modelo_3d_file = validated_data.pop("modelo_3d_archivo", None)
+            if modelo_3d_file:
+                validated_data["modelo_3d"] = _guardar_modelo_3d(modelo_3d_file)
+
+            # estado_maquina NUNCA se pisa directo aquí: si viene en el payload
+            # (p. ej. desde Gestión) se saca del validated_data y se enruta por
+            # cambiar_estado_maquina(), para que HISTORIAL_ESTADO_MAQUINA y
+            # REGISTRO_OPS (y con ello MTBF/MTTR/Disponibilidad) queden
+            # consistentes sin importar que el cambio venga de Gestión o de los
+            # endpoints dedicados (validar/deshabilitar/reactivar).
+            nuevo_estado = validated_data.pop("estado_maquina", None)
+            if nuevo_estado is not None:
+                nuevo_estado_id = nuevo_estado.pk if hasattr(nuevo_estado, "pk") else nuevo_estado
+                if nuevo_estado_id != instance.estado_maquina_id:
+                    from django.core.exceptions import ValidationError as DjangoValidationError
+                    from .services import cambiar_estado_maquina
+                    try:
+                        cambiar_estado_maquina(instance.codigo, nuevo_estado_id, referencia_tipo="gestion")
+                    except DjangoValidationError as e:
+                        raise serializers.ValidationError({"estado_maquina": e.messages if hasattr(e, "messages") else str(e)})
+                    instance.refresh_from_db()
+
+            return super().update(instance, validated_data)
 
 
 # ==========================================================

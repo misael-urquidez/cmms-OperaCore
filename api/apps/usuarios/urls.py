@@ -7,6 +7,7 @@ app_name = "usuarios"
 urlpatterns = [
     path("ping/", views.PingAPIView.as_view(), name="ping"),
     path("roles/", views.RolListAPIView.as_view(), name="roles"),
+    path("roles/validar/", views.RolValidarAPIView.as_view(), name="roles-validar"),
     path("roles/create/", views.RolCreateAPIView.as_view(), name="roles-create"),
     path("roles/<str:codigo>/", views.RolDetailAPIView.as_view(), name="roles-detail"),
     path("especialidades/", views.EspecialidadListAPIView.as_view(), name="especialidades"),

@@ -54,6 +54,25 @@ class Chat(generic.View):
             return JsonResponse({"error": "No se pudo conectar con el servidor de Elipse."}, status=502)
 
 
+class Estado(generic.View):
+    """Endpoint ligero para el indicador del sidebar: valida sesion y
+    pregunta al api/ si la IA (Groq) realmente esta disponible."""
+
+    def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            return JsonResponse({"ok": False, "motivo": "sin_sesion"}, status=401)
+
+        try:
+            resp = SESSION.get(f"{API_URL}/estado/", timeout=5)
+            data = resp.json()
+            ok = resp.status_code < 500 and bool(data.get("ok"))
+        except (requests.exceptions.RequestException, ValueError):
+            ok = False
+
+        return JsonResponse({"ok": ok})
+
+
 class AutocompletarFalla(generic.View):
     """Reenvia al api/ la descripcion libre de una falla para que Elipse
     proponga los campos del formulario de reporte de falla. Mismo patron
@@ -71,6 +90,49 @@ class AutocompletarFalla(generic.View):
 
         try:
             resp = SESSION.post(f"{API_URL}/autocompletar-falla/", json=body, timeout=25)
+            return JsonResponse(resp.json(), status=resp.status_code)
+        except requests.exceptions.RequestException:
+            return JsonResponse({"error": "No se pudo conectar con el servidor de Elipse."}, status=502)
+
+
+class SugerenciaDiagnostico(generic.View):
+    """Reenvia sintoma+maquina al api/ para la sugerencia de diagnostico
+    (RF-28). Mismo patron que AutocompletarFalla: solo reenvia."""
+
+    def post(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            return JsonResponse({"error": "Sesión expirada, vuelve a iniciar sesión."}, status=401)
+
+        try:
+            body = json.loads(request.body)
+        except ValueError:
+            return JsonResponse({"error": "Petición inválida."}, status=400)
+
+        try:
+            resp = SESSION.post(f"{API_URL}/sugerencia-diagnostico/", json=body, timeout=15)
+            return JsonResponse(resp.json(), status=resp.status_code)
+        except requests.exceptions.RequestException:
+            return JsonResponse({"error": "No se pudo conectar con el servidor de Elipse."}, status=502)
+
+
+class AutocompletarOrden(generic.View):
+    """Reenvia al api/ la descripcion libre de una orden de mantenimiento
+    para que Elipse proponga los campos del formulario de nueva orden.
+    Mismo patron que AutocompletarFalla: solo reenvia, no toca la BD."""
+
+    def post(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            return JsonResponse({"error": "Sesión expirada, vuelve a iniciar sesión."}, status=401)
+
+        try:
+            body = json.loads(request.body)
+        except ValueError:
+            return JsonResponse({"error": "Petición inválida."}, status=400)
+
+        try:
+            resp = SESSION.post(f"{API_URL}/autocompletar-orden/", json=body, timeout=25)
             return JsonResponse(resp.json(), status=resp.status_code)
         except requests.exceptions.RequestException:
             return JsonResponse({"error": "No se pudo conectar con el servidor de Elipse."}, status=502)
