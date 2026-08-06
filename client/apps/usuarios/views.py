@@ -87,7 +87,7 @@ class AuthView(generic.View):
             },
         )
 
-
+ 
 class LoginView(generic.View):
     """Procesa el login: identificador puede ser correo o usuario."""
 

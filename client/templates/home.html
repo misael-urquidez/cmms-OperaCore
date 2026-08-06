@@ -3,7 +3,7 @@
 {% block content %}
   <section class="hero">
     {% if request.session.usuario %}
-      <p class="hero__eyebrow">Hola, {{ request.session.usuario.nombre|default:request.session.usuario.usuario }} 👋</p>
+      <p class="hero__eyebrow">Bienvenido, {{ request.session.usuario.nombre|default:request.session.usuario.usuario }} </p>
     {% endif %}
     <h1>OperaCore CMMS</h1>
     <p>Sistema de Gestión de Mantenimiento de Maquinaria Industrial.</p>
