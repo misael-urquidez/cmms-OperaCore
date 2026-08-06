@@ -10,22 +10,31 @@
   var INICIAR_TPL = root.dataset.iniciarUrlBase;
   var CERRAR_TPL = root.dataset.cerrarUrlBase;
   var ACTUALIZAR_TPL = root.dataset.actualizarUrlBase;
+  var DETALLE_TPL = root.dataset.detalleUrlBase;
+  var CANCELAR_TPL = root.dataset.cancelarUrlBase;
+  var TAREAS_CREAR_URL = root.dataset.tareasCrearUrl;
+  var TAREA_ORDEN_TPL = root.dataset.tareaOrdenUrlBase;
   var REPORTES_DISPONIBLES_URL = root.dataset.reportesDisponiblesUrl;
   var EXPORTAR_CSV_TPL = root.dataset.exportarCsvBase;
   var EXPORTAR_XLSX_TPL = root.dataset.exportarXlsxBase;
   var EXPORTAR_PDF_TPL = root.dataset.exportarPdfBase;
   var DOCUMENTO_TPL = root.dataset.documentoUrlBase;
   var ES_TECNICO = root.dataset.esTecnico === "1";
+  var ES_ADMIN = root.dataset.esAdmin === "1";
   var NUMERO_NOMINA = root.dataset.numeroNomina;
 
   var trabajadoresEl = document.getElementById("trabajadores-data");
   var maquinasEl = document.getElementById("maquinas-data");
   var piezasEl = document.getElementById("piezas-data");
   var refaccionesEl = document.getElementById("refacciones-data");
+  var tareasEl = document.getElementById("tareas-data");
+  var herramientasEl = document.getElementById("herramientas-data");
   var trabajadores = trabajadoresEl ? JSON.parse(trabajadoresEl.textContent || "[]") : [];
   var maquinas = maquinasEl ? JSON.parse(maquinasEl.textContent || "[]") : [];
   var piezas = piezasEl ? JSON.parse(piezasEl.textContent || "[]") : [];
   var refacciones = refaccionesEl ? JSON.parse(refaccionesEl.textContent || "[]") : [];
+  var tareas = tareasEl ? JSON.parse(tareasEl.textContent || "[]") : [];
+  var herramientas = herramientasEl ? JSON.parse(herramientasEl.textContent || "[]") : [];
 
   var listEl = document.getElementById("ordenesList");
   var emptyEl = document.getElementById("ordenesEmpty");
@@ -33,12 +42,79 @@
 
   var estado = { ordenes: [], seleccionada: null };
 
+  // -------------------------------------------------- multiselect de asignacion
+  // Listbox nativo (<select multiple>) + buscador + contador para elegir
+  // equipo/trabajadores, herramientas y tareas, tanto en el modal de "Nueva
+  // orden" como en el editor del drawer. La seleccion se lee directo del
+  // <select> (selectedOptions); no hace falta estado paralelo.
+  function llenarMultiSelect(selectEl, items, valueKey, labelFn) {
+    if (!selectEl) return;
+    selectEl.innerHTML = "";
+    items.forEach(function (item) {
+      var opt = document.createElement("option");
+      opt.value = String(item[valueKey]);
+      opt.textContent = labelFn(item);
+      selectEl.appendChild(opt);
+    });
+  }
+
+  function leerMultiSelect(selectEl) {
+    if (!selectEl) return [];
+    return Array.prototype.slice.call(selectEl.selectedOptions).map(function (o) { return o.value; });
+  }
+
+  function seleccionarMultiSelect(selectEl, valores) {
+    if (!selectEl) return;
+    var set = {};
+    (valores || []).forEach(function (v) { set[String(v)] = true; });
+    Array.prototype.forEach.call(selectEl.options, function (o) { o.selected = !!set[o.value]; });
+  }
+
+  function contarMultiSelect(selectEl, contadorEl) {
+    if (!selectEl || !contadorEl) return;
+    var n = selectEl.selectedOptions.length;
+    contadorEl.textContent = n + (n === 1 ? " seleccionado" : " seleccionados");
+  }
+
+  function filtrarMultiSelect(selectEl, inputEl) {
+    if (!selectEl || !inputEl) return;
+    var texto = (inputEl.value || "").trim().toLowerCase();
+    Array.prototype.forEach.call(selectEl.options, function (o) {
+      // Las ya seleccionadas siempre quedan visibles para no "perderlas"
+      // de vista mientras se busca.
+      if (o.selected) { o.hidden = false; return; }
+      o.hidden = texto !== "" && o.textContent.toLowerCase().indexOf(texto) === -1;
+    });
+  }
+
+  function pintarChipsEstaticos(listaEl, items, labelFn) {
+    if (!listaEl) return;
+    listaEl.innerHTML = "";
+    if (!items || !items.length) {
+      var vacio = document.createElement("span");
+      vacio.className = "orden-asig__chip";
+      vacio.textContent = "Ninguna";
+      listaEl.appendChild(vacio);
+      return;
+    }
+    items.forEach(function (item) {
+      var chip = document.createElement("span");
+      chip.className = "orden-asig__chip";
+      chip.textContent = labelFn(item);
+      listaEl.appendChild(chip);
+    });
+  }
+
+  function etiquetaTrabajador(t) { return t.nombre + " " + (t.apellidoPat || "") + " (" + t.numeroNomina + ")"; }
+
   var _modalNuevaOrden = document.getElementById("newOrdenModal");
   var _drawerOrden = document.getElementById("ordenDrawer");
   var _modalReporteFalla = document.getElementById("reporteFallaPickerModal");
   var _drawerScrim = document.getElementById("ordenDrawerScrim");
   if (_modalNuevaOrden) conBloqueoScroll(_modalNuevaOrden);
   if (_modalReporteFalla) conBloqueoScroll(_modalReporteFalla);
+  var _modalConfirmarCancelar = document.getElementById("confirmCancelarOrdenModal");
+  if (_modalConfirmarCancelar) conBloqueoScroll(_modalConfirmarCancelar);
 
   // El drawer de orden ya NO usa .showModal(): un <dialog> abierto asi vive
   // en el "top layer" del navegador y se pinta encima de TODO sin importar
@@ -86,9 +162,11 @@
     oReporteFallaTexto.textContent = "#" + reporteSeleccionado.numeroRegistro + " · " + reporteSeleccionado.asunto;
   }
 
-  if (oTipo && oReporteFallaWrap) {
+  var oFechaWrap = document.getElementById("oFechaWrap");
+  if (oTipo) {
     oTipo.addEventListener("change", function () {
-      oReporteFallaWrap.hidden = oTipo.value !== "CORRE";
+      if (oFechaWrap) oFechaWrap.hidden = oTipo.value !== "PREVE";
+      if (oReporteFallaWrap) oReporteFallaWrap.hidden = oTipo.value !== "CORRE";
       if (oTipo.value !== "CORRE") limpiarReporteSeleccionado();
     });
   }
@@ -269,12 +347,91 @@
       selectTrabajador.appendChild(opt);
     });
 
+    // ---- asignaciones: equipo / herramientas / tareas (multiselect + buscador) ----
+    var oEquipoSelect = document.getElementById("oEquipoSelect");
+    var oEquipoBuscar = document.getElementById("oEquipoBuscar");
+    var oEquipoContador = document.getElementById("oEquipoContador");
+    var oHerramientasSelect = document.getElementById("oHerramientasSelect");
+    var oHerramientasBuscar = document.getElementById("oHerramientasBuscar");
+    var oHerramientasContador = document.getElementById("oHerramientasContador");
+    var oTareasSelect = document.getElementById("oTareasSelect");
+    var oTareasBuscar = document.getElementById("oTareasBuscar");
+    var oTareasContador = document.getElementById("oTareasContador");
+
+    llenarMultiSelect(oEquipoSelect, trabajadores, "numeroNomina", etiquetaTrabajador);
+    llenarMultiSelect(oHerramientasSelect, herramientas, "numeroregistro", function (h) { return h.nombre; });
+    llenarMultiSelect(oTareasSelect, tareas, "numeroregistro", function (t) { return t.instruccion; });
+    [
+      [oEquipoSelect, oEquipoBuscar, oEquipoContador],
+      [oHerramientasSelect, oHerramientasBuscar, oHerramientasContador],
+      [oTareasSelect, oTareasBuscar, oTareasContador],
+    ].forEach(function (tripla) {
+      if (tripla[1]) tripla[1].addEventListener("input", function () { filtrarMultiSelect(tripla[0], tripla[1]); });
+      if (tripla[0]) tripla[0].addEventListener("change", function () { contarMultiSelect(tripla[0], tripla[2]); });
+    });
+
+    // Admin: dar de alta una tarea nueva sobre la marcha (registro previo en TAREAS).
+    var oNuevaTareaToggle = document.getElementById("oNuevaTareaToggle");
+    var oNuevaTareaWrap = document.getElementById("oNuevaTareaWrap");
+    var oNuevaTareaInput = document.getElementById("oNuevaTareaInput");
+    var oNuevaTareaBtn = document.getElementById("oNuevaTareaBtn");
+    if (oNuevaTareaToggle && oNuevaTareaWrap && TAREAS_CREAR_URL) {
+      oNuevaTareaToggle.addEventListener("click", function () {
+        oNuevaTareaWrap.hidden = false;
+        oNuevaTareaToggle.hidden = true;
+        if (oNuevaTareaInput) oNuevaTareaInput.focus();
+      });
+      function guardarNuevaTarea() {
+        var texto = (oNuevaTareaInput && oNuevaTareaInput.value ? oNuevaTareaInput.value : "").trim();
+        if (!texto) return;
+        fetch(TAREAS_CREAR_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify({ instruccion: texto, actividad: true }),
+        }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+          .then(function (res) {
+            if (!res.ok) {
+              errorEl.hidden = false;
+              errorEl.textContent = typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo crear la tarea.";
+              if (window.mostrarToast) mostrarToast(errorEl.textContent, "error");
+              return;
+            }
+            tareas.push(res.data);
+            var opt = document.createElement("option");
+            opt.value = String(res.data.numeroregistro);
+            opt.textContent = res.data.instruccion;
+            if (oTareasSelect) { oTareasSelect.appendChild(opt); opt.selected = true; contarMultiSelect(oTareasSelect, oTareasContador); }
+            oNuevaTareaInput.value = "";
+            oNuevaTareaWrap.hidden = true;
+            oNuevaTareaToggle.hidden = false;
+            if (window.mostrarToast) mostrarToast("Tarea creada.", "success");
+          }).catch(function () {
+            errorEl.hidden = false;
+            errorEl.textContent = "No fue posible conectar con el servidor.";
+            if (window.mostrarToast) mostrarToast(errorEl.textContent, "error");
+          });
+      }
+      if (oNuevaTareaBtn) oNuevaTareaBtn.addEventListener("click", guardarNuevaTarea);
+      if (oNuevaTareaInput) oNuevaTareaInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); guardarNuevaTarea(); }
+      });
+    }
+
     function abrirModal() { errorEl.hidden = true; errorEl.textContent = ""; modal.showModal(); }
     function cerrarModal() {
       modal.close();
       form.reset();
       limpiarReporteSeleccionado();
       if (oReporteFallaWrap) oReporteFallaWrap.hidden = true;
+      if (oFechaWrap) oFechaWrap.hidden = false;
+      [oEquipoSelect, oHerramientasSelect, oTareasSelect].forEach(function (sel) {
+        if (!sel) return;
+        Array.prototype.forEach.call(sel.options, function (o) { o.selected = false; o.hidden = false; });
+      });
+      [oEquipoBuscar, oHerramientasBuscar, oTareasBuscar].forEach(function (inp) { if (inp) inp.value = ""; });
+      [oEquipoContador, oHerramientasContador, oTareasContador].forEach(function (c) { if (c) c.textContent = "0 seleccionados"; });
+      if (oNuevaTareaWrap) oNuevaTareaWrap.hidden = true;
+      if (oNuevaTareaToggle) oNuevaTareaToggle.hidden = false;
     }
 
     btnNueva.addEventListener("click", abrirModal);
@@ -317,6 +474,9 @@
         fechaprogramada: document.getElementById("oFecha").value || null,
         descripcion: document.getElementById("oDescripcion").value,
         reporte_falla: reporteSeleccionado ? reporteSeleccionado.numeroRegistro : null,
+        trabajadores: leerMultiSelect(oEquipoSelect),
+        herramientas: leerMultiSelect(oHerramientasSelect),
+        tareas: leerMultiSelect(oTareasSelect),
       };
       fetch(CREAR_URL, {
         method: "POST",
@@ -363,6 +523,142 @@
     msgEl.className = "";
   }
 
+  // ----------------------------------------- asociaciones (drawer)
+  // El detalle viaja con un GET al endpoint de detalle; el listado solo trae
+  // campos base, asi que los equipos/herramientas/tareas se piden aparte.
+  var edEquipoSelect = document.getElementById("edEquipoSelect");
+  var edEquipoBuscar = document.getElementById("edEquipoBuscar");
+  var edEquipoContador = document.getElementById("edEquipoContador");
+  var edHerramientasSelect = document.getElementById("edHerramientasSelect");
+  var edHerramientasBuscar = document.getElementById("edHerramientasBuscar");
+  var edHerramientasContador = document.getElementById("edHerramientasContador");
+  var edTareasSelect = document.getElementById("edTareasSelect");
+  var edTareasBuscar = document.getElementById("edTareasBuscar");
+  var edTareasContador = document.getElementById("edTareasContador");
+  [
+    [edEquipoSelect, edEquipoBuscar, edEquipoContador],
+    [edHerramientasSelect, edHerramientasBuscar, edHerramientasContador],
+    [edTareasSelect, edTareasBuscar, edTareasContador],
+  ].forEach(function (tripla) {
+    if (tripla[1]) tripla[1].addEventListener("input", function () { filtrarMultiSelect(tripla[0], tripla[1]); });
+    if (tripla[0]) tripla[0].addEventListener("change", function () { contarMultiSelect(tripla[0], tripla[2]); });
+  });
+
+  var edTrabajadorSelect = document.getElementById("edTrabajador");
+  if (edTrabajadorSelect) {
+    trabajadores.forEach(function (t) {
+      var opt = document.createElement("option");
+      opt.value = t.numeroNomina; opt.textContent = etiquetaTrabajador(t);
+      edTrabajadorSelect.appendChild(opt);
+    });
+  }
+
+  function cargarAsociaciones(folio) {
+    if (!DETALLE_TPL) return Promise.resolve(null);
+    return fetch(urlPara(DETALLE_TPL, folio))
+      .then(function (r) { return r.json(); })
+      .catch(function () { return null; });
+  }
+
+  function renderAsociacionesVista(det) {
+    pintarChipsEstaticos(document.getElementById("ordenDrawerEquipo"), det ? (det.trabajadores || []) : [], etiquetaTrabajador);
+    pintarChipsEstaticos(document.getElementById("ordenDrawerHerramientas"), det ? (det.herramientas || []) : [], function (h) { return h.nombre; });
+    pintarChipsEstaticos(document.getElementById("ordenDrawerTareas"), det ? (det.tareas || []) : [], function (t) { return t.instruccion; });
+    pintarChecklistTareas(det);
+    pintarPorcentaje(det);
+  }
+
+  // Checklist de tareas para el tecnico: cada fila es un checkbox que
+  // marca/desmarca el booleano verificacion en TAREA_ORDEN. Solo editable
+  // mientras la orden esta ENPRO; en PROGR se ve pero bloqueado. El admin
+  // conserva los chips estaticos (pintarChipsEstaticos de arriba).
+  function pintarChecklistTareas(det) {
+    var lista = document.getElementById("ordenChecklistTareas");
+    if (!lista) return;
+    lista.innerHTML = "";
+    var tas = det ? (det.tareas || []) : [];
+    if (!tas.length) {
+      var vacio = document.createElement("span");
+      vacio.className = "orden-asig__chip";
+      vacio.textContent = "Ninguna";
+      lista.appendChild(vacio);
+      return;
+    }
+    var sel = estado.seleccionada;
+    var habilitado = ES_TECNICO && sel && sel.estado_orden === "ENPRO";
+    tas.forEach(function (t) {
+      var fila = document.createElement("label");
+      fila.className = "orden-checklist__item";
+      var chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.checked = !!t.verificacion;
+      chk.disabled = !habilitado;
+      chk.addEventListener("change", function () {
+        toggleTareaVerificacion(sel.folio, t.numeroregistro, chk.checked, chk);
+      });
+      fila.appendChild(chk);
+      var txt = document.createElement("span");
+      txt.textContent = t.instruccion;
+      fila.appendChild(txt);
+      lista.appendChild(fila);
+    });
+  }
+
+  function pintarPorcentaje(det) {
+    var porcEl = document.getElementById("ordenDrawerPorcentaje");
+    if (!porcEl) return;
+    var tas = det ? (det.tareas || []) : [];
+    if (tas.length && det.porcentaje != null) {
+      porcEl.hidden = false;
+      porcEl.textContent = "· " + det.porcentaje + "%";
+    } else {
+      porcEl.hidden = true;
+      porcEl.textContent = "";
+    }
+  }
+
+  function toggleTareaVerificacion(folio, tarea, verificado, chk) {
+    if (!TAREA_ORDEN_TPL) { chk.checked = !verificado; return; }
+    fetch(TAREA_ORDEN_TPL
+        .replace("__FOLIO__", encodeURIComponent(folio))
+        .replace("__TAREA__", encodeURIComponent(tarea)), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify({ verificacion: verificado }),
+    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          chk.checked = !verificado;
+          mostrarMsg("No se pudo actualizar la tarea.", false);
+          return;
+        }
+        // El servidor recalcula el porcentaje de la orden: se refresca el
+        // detalle para que el checklist y el progreso queden al dia.
+        cargarAsociaciones(folio).then(function (det) {
+          if (!estado.seleccionada || estado.seleccionada.folio !== folio) return;
+          if (det) estado.seleccionada.detalle = det;
+          renderAsociacionesVista(det || estado.seleccionada.detalle);
+        });
+      }).catch(function () {
+        chk.checked = !verificado;
+        mostrarMsg("Sin conexión.", false);
+      });
+  }
+
+  function renderAsociacionesEdicion(det) {
+    llenarMultiSelect(edEquipoSelect, trabajadores, "numeroNomina", etiquetaTrabajador);
+    llenarMultiSelect(edHerramientasSelect, herramientas, "numeroregistro", function (h) { return h.nombre; });
+    llenarMultiSelect(edTareasSelect, tareas, "numeroregistro", function (t) { return t.instruccion; });
+    if (det) {
+      seleccionarMultiSelect(edEquipoSelect, (det.trabajadores || []).map(function (t) { return t.numeroNomina; }));
+      seleccionarMultiSelect(edHerramientasSelect, (det.herramientas || []).map(function (h) { return h.numeroregistro; }));
+      seleccionarMultiSelect(edTareasSelect, (det.tareas || []).map(function (t) { return t.numeroregistro; }));
+    }
+    contarMultiSelect(edEquipoSelect, edEquipoContador);
+    contarMultiSelect(edHerramientasSelect, edHerramientasContador);
+    contarMultiSelect(edTareasSelect, edTareasContador);
+  }
+
   function abrirDrawer(folio) {
     var orden = estado.ordenes.filter(function (o) { return o.folio === folio; })[0];
     if (!orden) return;
@@ -390,11 +686,17 @@
     var edFecha = document.getElementById("edFecha");
     var edNotas = document.getElementById("edNotas");
     var edDiag = document.getElementById("edDiagnostico");
+    var edTrabajador = document.getElementById("edTrabajador");
+    var edHoras = document.getElementById("edHoras");
+    var edFechaWrap = document.getElementById("edFechaWrap");
     if (edDesc) edDesc.value = orden.descripcion || "";
     if (edTipo) edTipo.value = orden.tipo_mantenimiento || "";
     if (edFecha) edFecha.value = orden.fechaprogramada || "";
     if (edNotas) edNotas.value = orden.notas || "";
     if (edDiag) edDiag.value = orden.diagnostico || "";
+    if (edTrabajador) edTrabajador.value = orden.trabajador || "";
+    if (edHoras) edHoras.value = orden.horasintervenidas != null ? orden.horasintervenidas : "";
+    if (edFechaWrap) edFechaWrap.hidden = (orden.tipo_mantenimiento || "") !== "PREVE";
 
     var reporteWrap = document.getElementById("ordenDrawerReporte");
     if (reporteWrap) {
@@ -454,12 +756,36 @@
     // completa (documento_orden.html).
     if (exportBtn) exportBtn.hidden = ES_TECNICO && !cerrada;
 
+    // Cancelacion (solo admin y mientras la orden no este cerrada/cancelada).
+    var cancelarBtn = document.getElementById("ordenCancelarBtn");
+    if (cancelarBtn) cancelarBtn.hidden = !ES_ADMIN || cerrada;
+
     // Piezas disponibles para "reemplaza" = solo las de esta maquina.
     refrescarSelectPiezas(orden.maquina);
     movPendientes = [];
     pintarMovPendientes();
 
     abrirDrawerPanel();
+
+    // Asociaciones: se piden al detalle y se pintan tanto en modo vista como
+    // en el editor. De paso completan los campos que el listado no trae.
+    renderAsociacionesVista(null);
+    renderAsociacionesEdicion(null);
+    cargarAsociaciones(folio).then(function (det) {
+      if (!estado.seleccionada || estado.seleccionada.folio !== folio) return;
+      estado.seleccionada.detalle = det || estado.seleccionada.detalle;
+      renderAsociacionesVista(det);
+      renderAsociacionesEdicion(det);
+      if (!det) return;
+      if (edDesc) edDesc.value = det.descripcion || "";
+      if (edTipo) edTipo.value = det.tipo_mantenimiento || "";
+      if (edFecha) edFecha.value = det.fechaprogramada || "";
+      if (edNotas) edNotas.value = det.notas || "";
+      if (edDiag) edDiag.value = det.diagnostico || "";
+      if (edTrabajador) edTrabajador.value = det.trabajador || "";
+      if (edHoras) edHoras.value = det.horasintervenidas != null ? det.horasintervenidas : "";
+      if (edFechaWrap) edFechaWrap.hidden = (det.tipo_mantenimiento || "") !== "PREVE";
+    });
   }
 
   var btnCerrarDrawer = document.getElementById("ordenDrawerClose");
@@ -536,6 +862,14 @@
   var guardarBtn = document.getElementById("ordenGuardarBtn");
   var cancelarEditBtn = document.getElementById("ordenCancelarEditBtn");
 
+  var edTipoSelect = document.getElementById("edTipo");
+  if (edTipoSelect) {
+    edTipoSelect.addEventListener("change", function () {
+      var wrap = document.getElementById("edFechaWrap");
+      if (wrap) wrap.hidden = edTipoSelect.value !== "PREVE";
+    });
+  }
+
   if (editarBtn && editDiv) {
     editarBtn.addEventListener("click", function () {
       editDiv.hidden = false;
@@ -552,6 +886,11 @@
         fechaprogramada: document.getElementById("edFecha").value || null,
         notas: document.getElementById("edNotas").value,
         diagnostico: document.getElementById("edDiagnostico").value,
+        trabajador: document.getElementById("edTrabajador").value || null,
+        horasintervenidas: document.getElementById("edHoras").value,
+        trabajadores: leerMultiSelect(edEquipoSelect),
+        herramientas: leerMultiSelect(edHerramientasSelect),
+        tareas: leerMultiSelect(edTareasSelect),
       };
       fetch(urlPara(ACTUALIZAR_TPL, estado.seleccionada.folio), {
         method: "PATCH",
@@ -571,6 +910,46 @@
     cancelarEditBtn.addEventListener("click", function () {
       editDiv.hidden = true;
       editarBtn.hidden = false;
+    });
+  }
+
+  // -------------------------------------------------- cancelar orden
+  var ordenCancelarBtn = document.getElementById("ordenCancelarBtn");
+  var confirmarCancelarBtn = document.getElementById("btnConfirmarCancelarSi");
+  var rechazarCancelarBtn = document.getElementById("btnConfirmarCancelarNo");
+
+  if (ordenCancelarBtn && _modalConfirmarCancelar) {
+    ordenCancelarBtn.addEventListener("click", function () {
+      if (!estado.seleccionada) return;
+      var txt = document.getElementById("confirmCancelarOrdenTexto");
+      if (txt) txt.textContent = "¿Cancelar la orden " + estado.seleccionada.folio + "? Quedará marcada como cancelada y su reporte de falla volverá a estar disponible.";
+      _modalConfirmarCancelar.showModal();
+    });
+  }
+  if (rechazarCancelarBtn && _modalConfirmarCancelar) {
+    rechazarCancelarBtn.addEventListener("click", function () { _modalConfirmarCancelar.close(); });
+  }
+  if (confirmarCancelarBtn && _modalConfirmarCancelar) {
+    confirmarCancelarBtn.addEventListener("click", function () {
+      if (!estado.seleccionada) return;
+      var folio = estado.seleccionada.folio;
+      confirmarCancelarBtn.disabled = true;
+      fetch(urlPara(CANCELAR_TPL, folio), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (res) {
+          confirmarCancelarBtn.disabled = false;
+          _modalConfirmarCancelar.close();
+          if (!res.ok) { mostrarMsg("No se pudo cancelar la orden.", false); return; }
+          mostrarMsg("Orden cancelada.", true);
+          cerrarDrawerPanel();
+          cargarOrdenes();
+        }).catch(function () {
+          confirmarCancelarBtn.disabled = false;
+          _modalConfirmarCancelar.close();
+          mostrarMsg("Sin conexión.", false);
+        });
     });
   }
 

@@ -38,7 +38,7 @@ class Index(View):
             try:
                 r = SESSION.get(url, timeout=5); r.raise_for_status(); return r.json()
             except requests.RequestException: return []
-        return render(request, self.template_name, {"seccion":"mantenimiento", "base_template":"base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html", "es_tecnico":usuario.get("rol") == "TECNI", "usuario":usuario, "trabajadores":obtener(f"{settings.API_BASE_URL}/fallas/v1/trabajadores/"), "maquinas":obtener(f"{settings.API_BASE_URL}/monitoreo/maquinas/"), "estados":obtener(f"{API_URL}/v1/estado-orden/list/"), "tipos_mantenimiento":obtener(f"{API_URL}/v1/tipo-mantenimiento/list/"), "piezas":obtener(f"{settings.API_BASE_URL}/inventario/v1/piezas/list/"), "refacciones":obtener(f"{settings.API_BASE_URL}/inventario/v1/refacciones/list/")})
+        return render(request, self.template_name, {"seccion":"mantenimiento", "base_template":"base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html", "es_tecnico":usuario.get("rol") == "TECNI", "es_admin":usuario.get("rol") == "ADMIN", "usuario":usuario, "trabajadores":obtener(f"{settings.API_BASE_URL}/fallas/v1/trabajadores/"), "maquinas":obtener(f"{settings.API_BASE_URL}/monitoreo/maquinas/"), "estados":obtener(f"{API_URL}/v1/estado-orden/list/"), "tipos_mantenimiento":obtener(f"{API_URL}/v1/tipo-mantenimiento/list/"), "piezas":obtener(f"{settings.API_BASE_URL}/inventario/v1/piezas/list/"), "refacciones":obtener(f"{settings.API_BASE_URL}/inventario/v1/refacciones/list/"), "herramientas":obtener(f"{settings.API_BASE_URL}/inventario/v1/herramientas/list/"), "tareas":obtener(f"{API_URL}/v1/tareas/list/")})
 
 
 class DocumentoOrden(View):
@@ -122,6 +122,68 @@ class OrdenUpdateAPIView(View):
             r = SESSION.patch(
                 f"{API_URL}/v2/ordenes/{folio}/update/",
                 json=payload, timeout=5,
+            )
+            cuerpo = r.json()
+        except (requests.RequestException, ValueError):
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        return JsonResponse(cuerpo, safe=False, status=r.status_code)
+
+
+class OrdenDetalleAPIView(View):
+    """Proxy GET del detalle de una orden (incluye tareas, herramientas y
+    trabajadores asociados) para el drawer de edicion."""
+
+    def get(self, request, folio):
+        try:
+            r = SESSION.get(f"{API_URL}/v1/ordenes/{folio}/", timeout=5)
+            cuerpo = r.json()
+        except (requests.RequestException, ValueError):
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        return JsonResponse(cuerpo, safe=False, status=r.status_code)
+
+
+class OrdenCancelarAPIView(View):
+    """Proxy PATCH hacia mantenimiento/v2/ordenes/<folio>/cancelar/ (marca
+    la orden como CANCE)."""
+
+    def patch(self, request, folio):
+        try:
+            r = SESSION.patch(f"{API_URL}/v2/ordenes/{folio}/cancelar/", timeout=5)
+            cuerpo = r.json()
+        except (requests.RequestException, ValueError):
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        return JsonResponse(cuerpo, safe=False, status=r.status_code)
+
+
+class TareaCrearAPIView(View):
+    """Proxy POST hacia mantenimiento/v2/tareas/create/ para que un admin
+    pueda dar de alta una tarea nueva sobre la marcha en el modal de Nueva
+    orden."""
+
+    def post(self, request):
+        try:
+            r = SESSION.post(
+                f"{API_URL}/v2/tareas/create/",
+                json=json.loads(request.body.decode() or "{}"),
+                timeout=10,
+            )
+            cuerpo = r.json()
+        except (requests.RequestException, ValueError):
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        return JsonResponse(cuerpo, safe=False, status=r.status_code)
+
+
+class TareaOrdenVerificarAPIView(View):
+    """Proxy PATCH hacia mantenimiento/v1/tarea-orden/<tarea>/<folio>/ para
+    marcar/desmarcar la verificacion (booleano) de una tarea del checklist
+    del tecnico. El API recalcula el porcentaje de la orden."""
+
+    def patch(self, request, folio, tarea):
+        try:
+            r = SESSION.patch(
+                f"{API_URL}/v1/tarea-orden/{tarea}/{folio}/",
+                json=json.loads(request.body.decode() or "{}"),
+                timeout=5,
             )
             cuerpo = r.json()
         except (requests.RequestException, ValueError):

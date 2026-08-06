@@ -54,6 +54,7 @@ urlpatterns = [
     path("v2/ordenes/<str:folio>/iniciar/", views.OrdenMantenimientoIniciarAPIView.as_view(), name="ordenes-iniciar"),
     path("v2/ordenes/<str:folio>/cerrar/", views.OrdenMantenimientoCerrarAPIView.as_view(), name="ordenes-cerrar"),
     path("v2/ordenes/<str:folio>/update/", views.OrdenMantenimientoUpdateAPIView.as_view(), name="ordenes-update"),
+    path("v2/ordenes/<str:folio>/cancelar/", views.OrdenMantenimientoCancelarAPIView.as_view(), name="ordenes-cancelar"),
     # exportaciones
     path("v1/ordenes/<str:folio>/export/csv/", views.ExportarOrdenCSVAPIView.as_view(), name="ordenes-export-csv"),
     path("v1/ordenes/<str:folio>/export/xlsx/", views.ExportarOrdenXLSXAPIView.as_view(), name="ordenes-export-xlsx"),
