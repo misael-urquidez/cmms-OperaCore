@@ -149,7 +149,11 @@ class ReporteFalla(generic.View):
                 )
             )
         else:
-            messages.warning(request, "Error al registrar el reporte")
+            try:
+                detalle = self.response.json()
+            except ValueError:
+                detalle = self.response.text
+            messages.warning(request, f"Error al registrar el reporte: {detalle}")
             return self._render_error(request)
 
     def _render_error(self, request):
