@@ -6,7 +6,7 @@
 {% block content %}
 
   <section class="hero" style="margin-bottom:1.5rem;">
-    <p class="hero__eyebrow">Hola, {{ request.session.usuario.nombre|default:request.session.usuario.usuario }} 👋</p>
+    <p class="hero__eyebrow">Hola, {{ request.session.usuario.nombre|default:request.session.usuario.usuario }} </p>
     <p style="color:var(--color-muted); margin:0;">Esto es lo que tienes pendiente hoy.</p>
   </section>
 

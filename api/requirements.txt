@@ -9,3 +9,5 @@ sqlparse==0.5.5
 tzdata==2026.2
 openpyxl==3.1.5
 reportlab==4.2.5
+requests==2.32.3
+xhtml2pdf==0.2.17
