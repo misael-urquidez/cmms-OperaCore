@@ -5,6 +5,27 @@
 {% block breadcrumb %}Inventario{% endblock %}
 {% block page_title %}Registrar Movimiento{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}">
+<style>
+  .mov-pieza { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+  .mov-pieza__resumen { font-size:.85rem; margin:.4rem 0 0; color:var(--color-muted); }
+  .mov-pieza__tabs { display:flex; gap:.35rem; margin-bottom:1rem; }
+  .mov-pieza__tab { flex:1; padding:.5rem .75rem; border:1px solid var(--line); background:transparent; color:var(--color-muted); border-radius:.5rem; font-size:.85rem; font-weight:600; cursor:pointer; }
+  .mov-pieza__tab.is-active { background:var(--color-primary); color:#04121c; border-color:var(--color-primary); }
+  .mov-pieza__panel input[type="search"] { width:100%; padding:.5rem .65rem; border:1px solid var(--line); border-radius:.375rem; background:var(--color-bg); color:var(--color-text); font-size:.9rem; box-sizing:border-box; }
+  .mov-pieza__lista { max-height:16rem; overflow:auto; margin-top:.6rem; display:grid; gap:.35rem; }
+  .mov-pieza__item { text-align:left; width:100%; padding:.5rem .65rem; border:1px solid var(--line); border-radius:.5rem; background:var(--input-bg); color:var(--color-text); font-size:.85rem; cursor:pointer; }
+  .mov-pieza__item:hover { border-color:var(--color-primary); }
+  .mov-pieza__item strong { display:block; }
+  .mov-pieza__item span { opacity:.75; font-size:.8rem; }
+  .mov-pieza__grid { display:grid; grid-template-columns:1fr 1fr; gap:.85rem; }
+  .mov-pieza__campo { display:flex; flex-direction:column; gap:.25rem; }
+  .mov-pieza__campo label { font-size:.78rem; opacity:.8; }
+  .mov-pieza__campo input, .mov-pieza__campo select { padding:.5rem .65rem; border:1px solid var(--line); border-radius:.375rem; background:var(--color-bg); color:var(--color-text); font-size:.9rem; box-sizing:border-box; width:100%; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="gestion-header">
   <div>
@@ -79,19 +100,7 @@
       </select>
     </div>
 
-    {# Pieza — todos los tipos #}
-    <div id="campo-pieza" style="margin-bottom:1rem;">
-      <label class="fallas-modal__label" for="mov-pieza">Pieza</label>
-      <select name="pieza" id="mov-pieza" required
-              style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem;">
-        <option value="">Seleccionar pieza...</option>
-        {% for p in piezas %}
-          <option value="{{ p.numeroeserie }}" {% if datos.pieza == p.numeroeserie %}selected{% endif %}>{{ p.nombre }} — {{ p.numeroeserie }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    {# Refacción — INSTA y REHA #}
+    {# Refacción — INSTA y REHA. Va primero porque una refacción se convierte en pieza. #}
     <div id="campo-refaccion" style="margin-bottom:1rem;">
       <label class="fallas-modal__label" for="mov-refaccion">Refacción</label>
       <select name="refaccion" id="mov-refaccion"
@@ -101,6 +110,23 @@
           <option value="{{ r.numeroregistro }}" {% if datos.refaccion == r.numeroregistro %}selected{% endif %}>{{ r.nombre }} (stock: {{ r.stock }})</option>
         {% endfor %}
       </select>
+    </div>
+
+    {# Pieza: INSTA usa botón+modal (existente o nueva). DESMO/REHA solo select de piezas existentes. #}
+    <div id="campo-pieza" style="margin-bottom:1rem;">
+      <label class="fallas-modal__label" for="mov-pieza-btn">Pieza</label>
+      <div class="mov-pieza" id="pieza-nueva-wrap">
+        <button type="button" id="mov-pieza-btn" class="btn-primary-sm">+ Seleccionar / registrar pieza</button>
+      </div>
+      <select id="mov-pieza-select"
+              style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem;">
+        <option value="">Seleccionar pieza...</option>
+        {% for p in piezas %}
+          <option value="{{ p.numeroserie }}" {% if datos.pieza.0 == p.numeroserie %}selected{% endif %}>{{ p.nombre }} — {{ p.numeroserie }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="pieza" id="mov-pieza" value="{% if datos.pieza %}{{ datos.pieza.0 }}{% endif %}">
+      <p class="mov-pieza__resumen" id="mov-pieza-resumen">{% if datos.pieza %}Pieza seleccionada: {{ datos.pieza.0 }}{% else %}Sin pieza seleccionada.{% endif %}</p>
     </div>
 
     {# Descripción — requerida en DESMO #}
@@ -115,7 +141,117 @@
       <button type="submit" class="btn-primary-sm">Registrar</button>
     </div>
   </div>
+
+  {# ---- Modal de pieza ---- #}
+  <div class="fallas-modal" id="mov-pieza-modal" role="dialog">
+    <div class="fallas-modal__backdrop"></div>
+    <div class="fallas-modal__dialog">
+      <div class="fallas-modal__content">
+        <div class="fallas-modal__header">
+          <h2 class="fallas-modal__title">Pieza</h2>
+          <button class="fallas-modal__close" type="button" id="mov-pieza-modal-close" aria-label="Cerrar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="fallas-modal__body">
+          <div class="mov-pieza__tabs">
+            <button type="button" class="mov-pieza__tab is-active" data-tab="buscar">Buscar existente</button>
+            <button type="button" class="mov-pieza__tab" data-tab="nueva">Registrar nueva</button>
+          </div>
+
+          {# ---- Tab: buscar pieza existente ---- #}
+          <div class="mov-pieza__panel" data-panel="buscar">
+            <input type="search" id="mov-pieza-buscar" placeholder="Buscar por número de serie o nombre...">
+            <div class="mov-pieza__lista" id="mov-pieza-lista"></div>
+          </div>
+
+          {# ---- Tab: registrar pieza nueva (misma estructura que en gestión) ---- #}
+          <div class="mov-pieza__panel" data-panel="nueva" hidden>
+            <div class="mov-pieza__grid">
+              <div class="mov-pieza__campo">
+                <label for="pieza_numeroserie">Número de serie *</label>
+                <input type="text" id="pieza_numeroserie" name="pieza_numeroserie" maxlength="100" value="{% if datos.pieza_numeroserie %}{{ datos.pieza_numeroserie.0 }}{% endif %}">
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="pieza_codigoetiqueta">Código de etiqueta / QR</label>
+                <input type="text" id="pieza_codigoetiqueta" name="pieza_codigoetiqueta" maxlength="100" value="{% if datos.pieza_codigoetiqueta %}{{ datos.pieza_codigoetiqueta.0 }}{% endif %}">
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="pieza_nombre">Nombre de la pieza *</label>
+                <input type="text" id="pieza_nombre" name="pieza_nombre" maxlength="255" value="{% if datos.pieza_nombre %}{{ datos.pieza_nombre.0 }}{% endif %}">
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="pieza_costoinicial">Costo inicial ($) *</label>
+                <input type="number" step="0.01" id="pieza_costoinicial" name="pieza_costoinicial" min="0" placeholder="0.00" value="{% if datos.pieza_costoinicial %}{{ datos.pieza_costoinicial.0 }}{% endif %}">
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="pieza_horasoperacion">Horas de operación</label>
+                <input type="number" id="pieza_horasoperacion" name="pieza_horasoperacion" min="0" value="{% if datos.pieza_horasoperacion %}{{ datos.pieza_horasoperacion.0 }}{% else %}0{% endif %}">
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="pieza_tiempovidautil">Vida útil estimada (horas) *</label>
+                <input type="number" id="pieza_tiempovidautil" name="pieza_tiempovidautil" min="0" value="{% if datos.pieza_tiempovidautil %}{{ datos.pieza_tiempovidautil.0 }}{% endif %}">
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="pieza_depresacionanual">Depreciación anual (%)</label>
+                <input type="number" step="0.01" id="pieza_depresacionanual" name="pieza_depresacionanual" min="0" value="{% if datos.pieza_depresacionanual %}{{ datos.pieza_depresacionanual.0 }}{% else %}0{% endif %}">
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="pieza_valorresidual">Valor residual ($)</label>
+                <input type="number" step="0.01" id="pieza_valorresidual" name="pieza_valorresidual" min="0" value="{% if datos.pieza_valorresidual %}{{ datos.pieza_valorresidual.0 }}{% else %}0{% endif %}">
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="pieza_fechainstalacion">Fecha de instalación</label>
+                <input type="date" id="pieza_fechainstalacion" name="pieza_fechainstalacion" value="{% if datos.pieza_fechainstalacion %}{{ datos.pieza_fechainstalacion.0 }}{% endif %}">
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="pieza_fechagarantia">Fecha fin de garantía</label>
+                <input type="date" id="pieza_fechagarantia" name="pieza_fechagarantia" value="{% if datos.pieza_fechagarantia %}{{ datos.pieza_fechagarantia.0 }}{% endif %}">
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="pieza_tipo_pieza">Tipo de pieza *</label>
+                <select id="pieza_tipo_pieza" name="pieza_tipo_pieza">
+                  <option value="">Seleccione...</option>
+                  {% for tp in tipos_pieza %}
+                    <option value="{{ tp.numeroregistro }}" {% if datos.pieza_tipo_pieza.0 == tp.numeroregistro|stringformat:'s' %}selected{% endif %}>{{ tp.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="pieza_edo_pieza">Estado físico/operativo *</label>
+                <select id="pieza_edo_pieza" name="pieza_edo_pieza">
+                  <option value="">Seleccione...</option>
+                  {% for ep in estados_pieza %}
+                    <option value="{{ ep.codigo }}" {% if datos.pieza_edo_pieza.0 == ep.codigo %}selected{% endif %}>{{ ep.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="mov-pieza__campo" style="grid-column:1 / -1;">
+                <label for="pieza_maquina">Máquina</label>
+                <select id="pieza_maquina" name="pieza_maquina">
+                  <option value="">Sin máquina asociada</option>
+                  {% for m in maquinas %}
+                    <option value="{{ m.codigo }}" {% if datos.pieza_maquina.0 == m.codigo %}selected{% endif %}>{{ m.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fallas-modal__footer">
+          <button type="button" class="fallas-modal__btn fallas-modal__btn--close" id="mov-pieza-modal-cancelar">Cancelar</button>
+          <button type="button" class="fallas-modal__btn" id="mov-pieza-registrar" hidden>Usar pieza nueva</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </form>
+{{ piezas|json_script:"mov-piezas-data" }}
+{{ ordenes|json_script:"mov-ordenes-data" }}
+{{ maquinas|json_script:"mov-maquinas-data" }}
+{{ refacciones|json_script:"mov-refacciones-data" }}
 {% endblock %}
 {% block extra_js %}
 <script src="{% static 'inventario/js/movimiento.js' %}"></script>
