@@ -397,6 +397,12 @@
               return;
             }
             tareas.push(res.data);
+            if (res.data.numeroregistro == null) {
+              errorEl.hidden = false;
+              errorEl.textContent = "El API no devolvió el número de registro de la tarea.";
+              if (window.mostrarToast) mostrarToast(errorEl.textContent, "error");
+              return;
+            }
             var opt = document.createElement("option");
             opt.value = String(res.data.numeroregistro);
             opt.textContent = res.data.instruccion;
@@ -1012,7 +1018,7 @@
     movAddBtn.addEventListener("click", function () { movForm.hidden = false; movAddBtn.hidden = true; limpiarMovError(); });
   }
   if (movCancelar) {
-    movCancelar.addEventListener("click", function () { movForm.hidden = true; movAddBtn.hidden = false; movRefaccion.value = ""; movPieza.value = ""; limpiarMovError(); });
+    movCancelar.addEventListener("click", function () { movForm.hidden = true; if (movAddBtn) movAddBtn.hidden = false; movRefaccion.value = ""; movPieza.value = ""; limpiarMovError(); });
   }
   if (movConfirmar) {
     movConfirmar.addEventListener("click", function () {

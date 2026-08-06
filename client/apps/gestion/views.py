@@ -112,6 +112,11 @@ def _resolver_choices_con_valores(config, valores=None):
     for campo in config["campos"]:
         campo = dict(campo)
         campo["valor"] = "" if campo.get("tipo") == "password" else valores.get(campo["name"], "")
+        if campo.get("es_booleano"):
+            if campo["valor"] in (True, "True", "true", 1, "1"):
+                campo["valor"] = 1
+            elif campo["valor"] in (False, "False", "false", 0, "0"):
+                campo["valor"] = 0
         if campo.get("tipo") == "select" and campo.get("fk"):
             crudos = _fetch_fk_choices(campo["fk"])
             parent_key = campo.get("fk_parent_key")

@@ -124,11 +124,44 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateMovimientoSerializer
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        movimiento = serializer.save()
-        data = serializers.ListMovimientoSerializer(movimiento).data
-        return Response(data, status=status.HTTP_201_CREATED)
+        from apps.inventario.serializers import CreatePiezaSerializer
+
+        data = request.data.copy()
+        pieza_data = data.get("pieza_data") or None
+
+        with transaction.atomic():
+            if pieza_data:
+                # La pieza "nace" al momento de la instalacion: se crea primero
+                # y su numeroserie queda registrada como pieza_id del MOVIMIENTO.
+                pieza_campos = dict(pieza_data)
+                for k in ("pieza", "pieza_data"):
+                    pieza_campos.pop(k, None)
+                if data.get("tipoMovimiento") == "INSTA":
+                    if not pieza_campos.get("nombre") and data.get("refaccion"):
+                        ref = models.Refaccion.objects.filter(pk=data["refaccion"]).first()
+                        if ref:
+                            pieza_campos["nombre"] = ref.nombre
+                            pieza_campos.setdefault("costoinicial", ref.costo)
+                    if not pieza_campos.get("fechainstalacion") and data.get("fecha"):
+                        pieza_campos["fechainstalacion"] = data["fecha"]
+                    if not pieza_campos.get("maquina") and data.get("orden_mantenimiento"):
+                        orden = models.OrdenMantenimiento.objects.filter(
+                            pk=data["orden_mantenimiento"]
+                        ).first()
+                        if orden and orden.maquina_id:
+                            pieza_campos["maquina"] = orden.maquina_id
+                pieza_ser = CreatePiezaSerializer(data=pieza_campos)
+                pieza_ser.is_valid(raise_exception=True)
+                pieza = pieza_ser.save()
+                data["pieza"] = pieza.numeroserie
+                data.pop("pieza_data", None)
+
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            movimiento = serializer.save()
+
+        data_out = serializers.ListMovimientoSerializer(movimiento).data
+        return Response(data_out, status=status.HTTP_201_CREATED)
 
 
 # ------------ TAREA_ORDEN (llave compuesta) ------------------------------
@@ -163,7 +196,14 @@ class TareaOrdenDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         orden = serializer.instance.orden_mantenimiento
         if orden.estado_orden_id != "ENPRO":
             raise PermissionDenied("Solo se pueden marcar tareas con la orden en progreso (ENPRO).")
-        serializer.save()
+        # TAREA_ORDEN tiene llave compuesta (tarea, orden_mantenimiento) que
+        # Django no sabe modelar: save() sobre la instancia cae en un INSERT
+        # (pk duplicada). Se actualiza por queryset, igual que en el resto
+        # del modulo, y el porcentaje se recalcula despues.
+        models.TareaOrden.objects.filter(
+            tarea=serializer.instance.tarea_id,
+            orden_mantenimiento=orden,
+        ).update(**serializer.validated_data)
         serializers._recalcular_porcentaje(orden)
 
 

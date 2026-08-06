@@ -449,6 +449,9 @@ class CrearMovimiento(generic.View):
             "piezas": "/inventario/v1/piezas/list/",
             "refacciones": "/inventario/v1/refacciones/list/",
             "tipos_movimiento": "/mantenimiento/v1/tipo-movimiento/list/",
+            "tipos_pieza": "/inventario/v1/tipos-pieza/list/",
+            "estados_pieza": "/inventario/v1/estados-pieza/list/",
+            "maquinas": "/maquinaria/v1/maquina/list/",
         }
         for key, path in endpoints.items():
             try:
@@ -460,8 +463,13 @@ class CrearMovimiento(generic.View):
 
     def get(self, request):
         dropdowns = self._cargar_dropdowns()
+        datos = {}
+        folio = request.GET.get("orden")
+        if folio:
+            datos["orden_mantenimiento"] = folio
         return render(request, self.template_name, {
             **dropdowns,
+            "datos": datos,
             "seccion": "inventario",
             "subseccion": "movimientos",
             "base_template": _base_template(request),
@@ -477,10 +485,29 @@ class CrearMovimiento(generic.View):
             "pieza": request.POST.get("pieza") or None,
             "refaccion": request.POST.get("refaccion") or None,
         }
+
+        # Pieza nueva registrada desde el modal: la pieza "nace" al instalarse.
+        # Se manda pieza_data para que el API la cree en transaccion con el
+        # movimiento y registre pieza_id en la fila del MOVIMIENTO.
+        campos_pieza = [
+            "numeroserie", "codigoetiqueta", "nombre", "costoinicial",
+            "horasoperacion", "tiempovidautil", "depresacionanual",
+            "valorresidual", "fechainstalacion", "fechagarantia",
+            "edo_pieza", "maquina", "tipo_pieza",
+        ]
+        pieza_nueva = {}
+        for campo in campos_pieza:
+            valor = request.POST.get(f"pieza_{campo}")
+            if valor not in (None, ""):
+                pieza_nueva[campo] = valor
+        if pieza_nueva:
+            payload["pieza_data"] = pieza_nueva
+            payload.pop("pieza", None)
+
         try:
             res = SESSION.post(
                 f"{self.API_BASE}/mantenimiento/v2/movimientos/create/",
-                data=payload, timeout=10,
+                json=payload, timeout=10,
             )
             if res.status_code == 201:
                 cache.delete("inventario_movimientos_list")
