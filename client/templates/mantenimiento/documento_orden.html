@@ -92,6 +92,9 @@
           </div>
         </div>
       </div>
+      <p class="doc-orden__hint" style="margin:1rem 0 0;">
+        ¿Registrar una refacción o pieza instalada? <a href="{% url 'inventario:crear_movimiento' %}?orden={{ orden.folio }}" style="color:var(--color-primary);">Ir a inventario / movimientos →</a>
+      </p>
       <div class="doc-orden__actions" style="border-top:none;padding-top:1rem;">
         <button type="submit" class="doc-orden__btn doc-orden__btn--editar">Cerrar orden</button>
       </div>
