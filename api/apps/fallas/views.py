@@ -3,7 +3,9 @@ import io
 import os
 
 from django.conf import settings
+from django.db import transaction
 from django.http import HttpResponse
+from django.core.exceptions import ValidationError as DjangoValidationError
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
 from reportlab.lib.pagesizes import letter
@@ -13,6 +15,7 @@ from reportlab.lib import colors
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from apps.usuarios.models import Trabajador
 from apps.maquinaria.services import cambiar_estado_maquina
@@ -121,12 +124,17 @@ class ReporteFallaCreateAPIView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        reporte = serializer.save()
-        cambiar_estado_maquina(
-            reporte.maquina_id, "FALLO", "reporte_falla", str(reporte.numeroRegistro),
-        )
-        data = serializers.ReporteFallaDetailSerializer(reporte).data
-        return Response(data, status=status.HTTP_201_CREATED)
+
+        try:
+            with transaction.atomic():
+                reporte = serializer.save()
+                cambiar_estado_maquina(
+                    reporte.maquina_id, "FALLO", "reporte_falla", str(reporte.numeroRegistro),
+                )
+                data = serializers.ReporteFallaDetailSerializer(reporte).data
+                return Response(data, status=status.HTTP_201_CREATED)
+        except DjangoValidationError as e:
+            raise DRFValidationError({"maquina": e.messages})
 
 
 class ReporteFallaUpdateAPIView(generics.UpdateAPIView):

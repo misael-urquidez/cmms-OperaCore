@@ -261,13 +261,36 @@ def _detalle_error_api(response):
 
 
 class CrearMaquina(generic.View):
+    """Alta de un nuevo equipo SMT. Solo ADMIN puede entrar; un TECNI que
+    intente acceder por URL directa se regresa con aviso (el botón que
+    llega aquí ya se oculta para TECNI en maquinaria/index.html, pero eso
+    es solo cosmético: la protección real tiene que estar aquí)."""
+
     template_name = "maquinaria/crear_maquina.html"
 
+    def _validar_acceso(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+        if usuario.get("rol") != "ADMIN":
+            messages.error(request, "No tienes permisos para registrar una nueva máquina.")
+            return redirect("maquinaria:index")
+        return None
+
     def get(self, request):
+        redireccion = self._validar_acceso(request)
+        if redireccion:
+            return redireccion
+
         form = MaquinaForm()
         return render(request, self.template_name, {"form": form})
 
     def post(self, request):
+        redireccion = self._validar_acceso(request)
+        if redireccion:
+            return redireccion
+
         form = MaquinaForm(request.POST, request.FILES)
 
         if not form.is_valid():
