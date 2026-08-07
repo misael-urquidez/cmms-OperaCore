@@ -61,6 +61,11 @@ class DocumentoOrden(View):
         # Piezas SI se filtran por la maquina de la orden (igual que en el
         # drawer de "Mis ordenes"); las refacciones se dejan completas.
         todas_piezas = _obtener_lista(f"{settings.API_BASE_URL}/inventario/v1/piezas/list/")
+        # Movimientos de inventario (refacciones/piezas) registrados para esta orden.
+        movimientos = [
+            m for m in _obtener_lista(f"{API_URL}/v1/movimientos/list/")
+            if m.get("orden_mantenimiento") == folio
+        ]
         context = {
             "orden": orden,
             "usuario": usuario,
@@ -72,6 +77,7 @@ class DocumentoOrden(View):
             "puede_cerrar": es_tecnico and orden.get("estado_orden") == "ENPRO",
             "piezas": [p for p in todas_piezas if p.get("maquina") == orden.get("maquina")],
             "refacciones": _obtener_lista(f"{settings.API_BASE_URL}/inventario/v1/refacciones/list/"),
+            "movimientos": movimientos,
             "base_template": "base_tecni.html" if es_tecnico else "base_admin.html",
         }
         return render(request, self.template_name, context)

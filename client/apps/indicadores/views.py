@@ -1,7 +1,8 @@
 import requests
 from django.conf import settings
+from django.contrib import messages
 from django.core.cache import cache
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.views import generic
 
 API_URL = f"{settings.API_BASE_URL}/indicadores"
@@ -20,6 +21,10 @@ class Index(generic.View):
     template_name = "indicadores/index.html"
 
     def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
         response = cache.get("indicadores_ping")
         if response is None:
             try:
@@ -27,7 +32,7 @@ class Index(generic.View):
             except requests.exceptions.RequestException:
                 response = {"status": "sin conexion con el api"}
             cache.set("indicadores_ping", response, PING_TTL)
-        return render(request, self.template_name, {"modulo": "Indicadores", "api_status": response})
+        return render(request, self.template_name, {"modulo": "Indicadores", "api_status": response, "seccion": "indicadores"})
 
 
 # A partir de aqui sigue el patron de tu maestro (home/views.py):

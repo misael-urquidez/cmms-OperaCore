@@ -12,7 +12,13 @@ from .models import (
     TipoMaquinaArea,
     Maquina,
 )
-from apps.mantenimiento.models import Refaccion, OrdenMantenimiento
+from apps.mantenimiento.models import (
+    Refaccion,
+    OrdenMantenimiento,
+    TareaOrden,
+    HerraOrden,
+    TrabaOrdePersonal,
+)
 from apps.fallas.models import ReporteFalla
 # ==========================================================
 # PLANTA
@@ -197,9 +203,74 @@ class ListMaquinaSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class DetailMaquinaSerializer(serializers.ModelSerializer):
+    asociaciones = serializers.SerializerMethodField()
+
     class Meta:
         model = Maquina
         fields = "__all__"
+
+    def get_asociaciones(self, obj):
+        """Tareas, herramientas y trabajadores asociados a la maquina, agrupados
+        por orden de mantenimiento (la maquina no se relaciona directo con ellos,
+        si no via ORDEN_MANTENIMIENTO -> TAREA_ORDEN / HERRA_ORDEN /
+        TRABA_ORDE_PERSONAL)."""
+        ordenes = list(
+            OrdenMantenimiento.objects.filter(maquina=obj.codigo)
+            .select_related("estado_orden")
+            .order_by("-fechacreacion")
+        )
+        if not ordenes:
+            return {"ordenes": []}
+
+        folios = [o.folio for o in ordenes]
+        tareas = list(
+            TareaOrden.objects.filter(orden_mantenimiento__in=folios)
+            .select_related("tarea")
+            .order_by("tarea__instruccion")
+        )
+        herra = list(
+            HerraOrden.objects.filter(orden_mantenimiento__in=folios)
+            .select_related("herramienta")
+            .order_by("herramienta__nombre")
+        )
+        trabajadores = list(
+            TrabaOrdePersonal.objects.filter(orden_mantenimiento__in=folios)
+            .select_related("trabajador")
+            .order_by("trabajador__nombre")
+        )
+
+        tareas_por_orden = {}
+        for t in tareas:
+            tareas_por_orden.setdefault(t.orden_mantenimiento_id, []).append({
+                "instruccion": t.tarea.instruccion,
+                "actividad": t.tarea.actividad,
+            })
+        herra_por_orden = {}
+        for h in herra:
+            herra_por_orden.setdefault(h.orden_mantenimiento_id, []).append({
+                "nombre": h.herramienta.nombre,
+            })
+        trabajadores_por_orden = {}
+        for w in trabajadores:
+            trabajadores_por_orden.setdefault(w.orden_mantenimiento_id, []).append({
+                "numeroNomina": w.trabajador.numeroNomina,
+                "nombre": f"{w.trabajador.nombre} {w.trabajador.apellidoPat}"
+                          + (f" {w.trabajador.apellidoMat}" if w.trabajador.apellidoMat else ""),
+            })
+
+        return {
+            "ordenes": [
+                {
+                    "folio": o.folio,
+                    "estado_orden": o.estado_orden.nombre if o.estado_orden else None,
+                    "fechacreacion": o.fechacreacion.isoformat() if o.fechacreacion else None,
+                    "tareas": tareas_por_orden.get(o.folio, []),
+                    "herramientas": herra_por_orden.get(o.folio, []),
+                    "trabajadores": trabajadores_por_orden.get(o.folio, []),
+                }
+                for o in ordenes
+            ]
+        }
 
 class ValidarTipoMaquinaAreaMixin:
     """Bloquea guardar una máquina cuyo tipo_maquina no sea compatible con el

@@ -604,6 +604,75 @@
   letter-spacing: 0.01em;
 }
 
+.gestion-modal__asoc {
+  border: 1px solid var(--admin-border);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.gestion-modal__asoc-head {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.gestion-modal__asoc-estado {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+  background: rgba(0, 173, 181, 0.1);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+}
+
+.gestion-modal__asoc-fecha {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.gestion-modal__asoc-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.25rem;
+}
+
+.gestion-modal__asoc-titulo {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.gestion-modal__asoc-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.gestion-modal__asoc-bool {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
 .gestion-modal__footer {
   display: flex;
   justify-content: flex-end;

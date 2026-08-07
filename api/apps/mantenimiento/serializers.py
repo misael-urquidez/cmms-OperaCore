@@ -108,6 +108,9 @@ class ListTareaOrdenSerializer(serializers.ModelSerializer):
 
 # ------------ MOVIMIENTO ---------------------------------------------------
 class ListMovimientoSerializer(serializers.ModelSerializer):
+    refaccion_nombre = serializers.CharField(source="refaccion.nombre", read_only=True)
+    pieza_nombre = serializers.CharField(source="pieza.nombre", read_only=True)
+
     class Meta:
         model = models.Movimiento
         fields = "__all__"
