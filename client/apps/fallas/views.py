@@ -167,7 +167,7 @@ class ReporteFalla(generic.View):
 class ListTipoFalla(generic.View):
     template_name = "fallas/list_tipo_falla.html"
     context = {}
-    url_base = f"http://localhost:8000/api/{API_URL}/v1/tipo_falla/list/"
+    url_base = f"{API_URL}/v1/tipo_falla/list/"
     response = None
 
 class ListaReportes(generic.View):
