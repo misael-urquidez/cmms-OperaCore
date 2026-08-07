@@ -256,6 +256,10 @@
                     <b>{{ maquina.tipo_maquina|default:"N/D" }}</b>
                 </div>
                 <div class="info-group">
+                    <span>Horas de Operación:</span>
+                    <b>{{ maquina.horas_operacion_total|default:"0" }} hrs</b>
+                </div>
+                <div class="info-group">
                     <span>Estado Operativo:</span>
                     <b style="color: var(--accent);">{{ maquina.estado_maquina|default:"Sin estado" }}</b>
                 </div>

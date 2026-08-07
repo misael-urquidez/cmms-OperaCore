@@ -56,6 +56,28 @@
         <p class="stat-card__hint">{{ stats.trabajadores_activos|default:"—" }} activos</p>
       </div>
     </div>
+
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </div>
+      <div>
+        <p class="stat-card__label">Órdenes pendientes</p>
+        <p class="stat-card__value">{{ stats.ordenes_pendientes|default:"—" }}</p>
+        <p class="stat-card__hint">esperando ejecución</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card__icon stat-card__icon--rose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+      </div>
+      <div>
+        <p class="stat-card__label">Alertas de inventario</p>
+        <p class="stat-card__value">{{ stats.alertas_inventario|default:"—" }}</p>
+        <p class="stat-card__hint">refacciones en stock mínimo</p>
+      </div>
+    </div>
   </section>
 
   <section class="panel-grid">
@@ -111,6 +133,39 @@
   </div>
 {% else %}
   <p class="panel__empty">Aún no hay reportes de falla registrados.</p>
+{% endif %}
+    </div>
+
+    <div class="panel">
+      <div class="panel__head">
+        <h2 class="panel__title">Indicadores por máquina</h2>
+        <a class="panel__link" href="{% url 'indicadores:index' %}">Ver todos →</a>
+      </div>
+      {% if indicadores_maquinas %}
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Máquina</th>
+          <th>MTBF</th>
+          <th>MTTR</th>
+          <th>Disp.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in indicadores_maquinas %}
+          <tr>
+            <td>{{ i.nombre }}</td>
+            <td>{{ i.mtbf|default:"—" }}</td>
+            <td>{{ i.mttr|default:"—" }}</td>
+            <td>{{ i.disponibilidad|default:"—" }}%</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="panel__empty">Aún no hay indicadores calculados.</p>
 {% endif %}
     </div>
   </section>

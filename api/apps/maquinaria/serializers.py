@@ -1,6 +1,7 @@
 from rest_framework import serializers
 import os
 from django.conf import settings
+from django.db.models import Sum
 from .models import (
     Planta,
     Area,
@@ -20,6 +21,7 @@ from apps.mantenimiento.models import (
     TrabaOrdePersonal,
 )
 from apps.fallas.models import ReporteFalla
+from apps.monitoreo.models import RegistroOps
 # ==========================================================
 # PLANTA
 # ==========================================================
@@ -204,10 +206,18 @@ class ListMaquinaSerializer(serializers.ModelSerializer):
 
 class DetailMaquinaSerializer(serializers.ModelSerializer):
     asociaciones = serializers.SerializerMethodField()
+    horas_operacion_total = serializers.SerializerMethodField()
 
     class Meta:
         model = Maquina
         fields = "__all__"
+
+    def get_horas_operacion_total(self, obj):
+        """Suma de REGISTRO_OPS.horasOperacion para esta máquina (RF-05)."""
+        total = RegistroOps.objects.filter(maquina=obj.codigo).aggregate(
+            total=Sum("horasOperacion")
+        )["total"]
+        return total or 0
 
     def get_asociaciones(self, obj):
         """Tareas, herramientas y trabajadores asociados a la maquina, agrupados
