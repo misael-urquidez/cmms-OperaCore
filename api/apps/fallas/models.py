@@ -146,6 +146,7 @@ class Maquina(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.CharField(max_length=255, null=True, blank=True)
     imagen_url = models.CharField(max_length=255, null=True, blank=True)
+    modelo_3d = models.CharField(max_length=255, null=True, blank=True)
     fechaInstalacion = models.DateField()
     linea = models.ForeignKey(
         Linea, on_delete=models.DO_NOTHING, db_column="linea", null=True, blank=True
@@ -173,7 +174,7 @@ class ReporteFalla(models.Model):
     fechaResolucion = models.DateField(null=True, blank=True)
     fechaCreacion = models.DateField()
     horaCreacion = models.TimeField()
-    tiempoParo = models.IntegerField(null=True, blank=True)
+    tiempoParo = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     causaRaiz = models.CharField(max_length=500)
     descripcion = models.CharField(max_length=500, null=True, blank=True)
     imagen = models.ImageField(upload_to='fallas_images/')

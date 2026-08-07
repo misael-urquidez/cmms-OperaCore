@@ -54,23 +54,21 @@
             <a class="sidebar__link {% if seccion == 'mantenimiento' %}is-active{% endif %}" href="{% url 'mantenimiento:index' %}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
                 <span>Mantenimiento</span>
-            </a>
-            <a class="sidebar__link {% if seccion == 'gestion' %}is-active{% endif %}" href="{% url 'gestion:index' %}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-                <span>Gestión</span>
-            </a>
+            </a>           
         <div class="sidebar__group {% if seccion == 'maquinaria' %}is-open{% endif %}">
                 <button type="button" class="sidebar__link sidebar__group-toggle" aria-expanded="{% if seccion == 'maquinaria' %}true{% else %}false{% endif %}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                     <span>Maquinaria</span>
                     <svg class="sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
                 </button>
-                <div class="sidebar__submenu">
-                    <a href="{% url 'maquinaria:index' %}" class="{% if seccion == 'maquinaria' and subseccion == 'lista' %}is-active{% endif %}">Ver lista</a>
-                    <a href="{% url 'maquinaria:crear_maquina' %}" class="{% if seccion == 'maquinaria' and subseccion == 'crear' %}is-active{% endif %}">Registrar nueva</a>
-                    <a href="{% url 'maquinaria:wiki_maquinas' %}" class="{% if seccion == 'maquinaria' and subseccion == 'wiki' %}is-active{% endif %}">Wiki de equipos</a>
-                    <a href="{% url 'maquinaria:registro-ops' %}" class="{% if seccion == 'maquinaria' and subseccion == 'registro-ops' %}is-active{% endif %}">Registro de operación</a>
-                </div>
+            <div class="sidebar__submenu">
+            <div class="sidebar__submenu-inner">
+                <a href="{% url 'maquinaria:index' %}" class="{% if seccion == 'maquinaria' and subseccion == 'lista' %}is-active{% endif %}">Ver lista</a>
+                <a href="{% url 'maquinaria:crear_maquina' %}" class="{% if seccion == 'maquinaria' and subseccion == 'crear' %}is-active{% endif %}">Registrar nueva</a>
+                <a href="{% url 'maquinaria:wiki_maquinas' %}" class="{% if seccion == 'maquinaria' and subseccion == 'wiki' %}is-active{% endif %}">Wiki de equipos</a>
+                <a href="{% url 'maquinaria:registro-ops' %}" class="{% if seccion == 'maquinaria' and subseccion == 'registro-ops' %}is-active{% endif %}">Registro de operación</a>
+            </div>
+            </div>
             </div>
 
             <div class="sidebar__group {% if seccion == 'fallas' %}is-open{% endif %}">
@@ -86,6 +84,10 @@
         </div>
     </div>
 </div>
+            <a class="sidebar__link {% if seccion == 'gestion' %}is-active{% endif %}" href="{% url 'gestion:index' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                <span>Gestión</span>
+            </a>
             {# Aqui iremos agregando las demas secciones conforme esten desarrolladas #}
         </nav>
 
@@ -95,8 +97,8 @@
         </a>
 
         <div class="sidebar__foot">
-            <span class="sidebar__foot-dot"></span>
-            <span class="sidebar__foot-text">API conectada</span>
+            <span class="sidebar__foot-dot" id="elipseFootDot"></span>
+            <span class="sidebar__foot-text" id="elipseFootText">API conectada</span>
         </div>
     </aside>
 
@@ -114,6 +116,24 @@
             </div>
 
             <div class="admin-topbar__right">
+                <div class="notif-wrapper" data-notif-url="{% url 'notificaciones:notificaciones-list' %}">
+                    <button type="button" class="notif-bell" id="notifBell" aria-label="Notificaciones">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        <span class="notif-bell__badge" id="notifBadge" hidden>0</span>
+                    </button>
+                    <div class="notif-tray" id="notifTray" role="dialog" aria-label="Notificaciones">
+                        <div class="notif-tray__head">
+                            <span class="notif-tray__title">Notificaciones</span>
+                            <button type="button" class="notif-tray__close" id="notifTrayClose" aria-label="Cerrar">&times;</button>
+                        </div>
+                        <div class="notif-tray__list" id="notifTrayList">
+                            <div class="notif-tray__empty">Sin notificaciones</div>
+                        </div>
+                    </div>
+                </div>
                 {% include 'partials/user_menu.html' %}
             </div>
         </header>
@@ -136,9 +156,11 @@
 
 {% include 'partials/config_modal.html' %}
 
+<script src="{% static 'js/toast.js' %}"></script>
 <script src="{% static 'js/navbar.js' %}"></script>
 <script src="{% static 'js/theme.js' %}"></script>
 <script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/elipse-estado.js' %}"></script>
 <script>
 (function(){
   var msgs = document.querySelectorAll('.messages__item');

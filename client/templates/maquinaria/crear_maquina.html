@@ -16,10 +16,14 @@
     <div class="contenedor">
         <!-- Columna Izquierda: Campos del formulario filtrados (sin duplicar archivos) -->
         <div class="left-side">
+            <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
             {% for field in form %}
-                {% if field.name not in 'imagen_url,modelo_3d' %}
+                {% if field.name != 'imagen_url' and field.name != 'modelo_3d' %}
                     <p style="display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.75rem;">
-                        {{ field.label_tag }}
+                        <label for="{{ field.id_for_label }}">
+                            {{ field.label }}{% if field.field.required %} *{% endif %}
+                            <span id="{{ field.name }}-error"></span>
+                        </label>
                         {{ field }}
                         {{ field.errors }}
                     </p>
@@ -96,7 +100,40 @@
         });
     }
 
-    // 2. Manejo de renderizado interactivo con Three.js para el Modelo 3D
+    // 2. Cascada Marca -> Modelo: solo muestra los modelos de la marca elegida.
+    // Cada <option> de #id_modelo trae data-marca (ver forms.py: ModeloSelect).
+    const selectMarca = document.getElementById('id_marca');
+    const selectModelo = document.getElementById('id_modelo');
+    if (selectMarca && selectModelo) {
+        const opcionesModelo = Array.from(selectModelo.options);
+
+        function filtrarModelosPorMarca() {
+            const marcaElegida = selectMarca.value;
+            const modeloActual = selectModelo.value;
+            let modeloSigueValido = false;
+
+            opcionesModelo.forEach(opcion => {
+                // La opción vacía ("---------") siempre se muestra.
+                const marcaDeEsteModelo = opcion.dataset.marca;
+                const visible = !marcaDeEsteModelo || !marcaElegida || marcaDeEsteModelo === marcaElegida;
+                opcion.hidden = !visible;
+                if (visible && opcion.value === modeloActual) {
+                    modeloSigueValido = true;
+                }
+            });
+
+            // Si el modelo que estaba elegido ya no pertenece a la marca
+            // nueva, se limpia para no mandar una combinación inválida.
+            if (!modeloSigueValido) {
+                selectModelo.value = '';
+            }
+        }
+
+        selectMarca.addEventListener('change', filtrarModelosPorMarca);
+        filtrarModelosPorMarca(); // estado inicial (útil si el form vuelve con errores)
+    }
+
+    // 3. Manejo de renderizado interactivo con Three.js para el Modelo 3D
     const inputModelo = document.getElementById('id_modelo_3d');
     if (inputModelo) {
         inputModelo.addEventListener('change', function(event) {
@@ -115,4 +152,9 @@
         });
     }
 </script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/validaciones-inputs.js' %}"></script>
+<script src="{% static 'maquinaria/js/validaciones-crear-maquina.js' %}"></script>
 {% endblock %}

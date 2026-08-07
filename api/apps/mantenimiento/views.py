@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.usuarios.models import Trabajador
 from apps.maquinaria.services import cambiar_estado_maquina
+from apps.maquinaria.models import Maquina
 from django.db import transaction
 from . import models
 from . import serializers
@@ -122,11 +123,44 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateMovimientoSerializer
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        movimiento = serializer.save()
-        data = serializers.ListMovimientoSerializer(movimiento).data
-        return Response(data, status=status.HTTP_201_CREATED)
+        from apps.inventario.serializers import CreatePiezaSerializer
+
+        data = request.data.copy()
+        pieza_data = data.get("pieza_data") or None
+
+        with transaction.atomic():
+            if pieza_data:
+                # La pieza "nace" al momento de la instalacion: se crea primero
+                # y su numeroserie queda registrada como pieza_id del MOVIMIENTO.
+                pieza_campos = dict(pieza_data)
+                for k in ("pieza", "pieza_data"):
+                    pieza_campos.pop(k, None)
+                if data.get("tipoMovimiento") == "INSTA":
+                    if not pieza_campos.get("nombre") and data.get("refaccion"):
+                        ref = models.Refaccion.objects.filter(pk=data["refaccion"]).first()
+                        if ref:
+                            pieza_campos["nombre"] = ref.nombre
+                            pieza_campos.setdefault("costoinicial", ref.costo)
+                    if not pieza_campos.get("fechainstalacion") and data.get("fecha"):
+                        pieza_campos["fechainstalacion"] = data["fecha"]
+                    if not pieza_campos.get("maquina") and data.get("orden_mantenimiento"):
+                        orden = models.OrdenMantenimiento.objects.filter(
+                            pk=data["orden_mantenimiento"]
+                        ).first()
+                        if orden and orden.maquina_id:
+                            pieza_campos["maquina"] = orden.maquina_id
+                pieza_ser = CreatePiezaSerializer(data=pieza_campos)
+                pieza_ser.is_valid(raise_exception=True)
+                pieza = pieza_ser.save()
+                data["pieza"] = pieza.numeroserie
+                data.pop("pieza_data", None)
+
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            movimiento = serializer.save()
+
+        data_out = serializers.ListMovimientoSerializer(movimiento).data
+        return Response(data_out, status=status.HTTP_201_CREATED)
 
 
 # ------------ TAREA_ORDEN (llave compuesta) ------------------------------
@@ -274,11 +308,19 @@ class OrdenMantenimientoAsignarAPIView(APIView):
         return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
 
 class OrdenMantenimientoIniciarAPIView(APIView):
+    @transaction.atomic
     def patch(self, request, folio):
         try: orden = models.OrdenMantenimiento.objects.get(pk=folio)
         except models.OrdenMantenimiento.DoesNotExist as exc: raise NotFound("Orden no encontrada.") from exc
         orden.estado_orden_id = "ENPRO"; orden.save(update_fields=["estado_orden"])
-        cambiar_estado_maquina(orden.maquina_id, "MANTE", "orden_mantenimiento", orden.folio)
+        # El diagrama solo contempla OPERA -> FALLO -> MANTE: la maquina nada
+        # mas se mueve a MANTE cuando de verdad viene de una falla reportada.
+        # Preventivo/predictivo/emergencia (sin reporte_falla) no representan
+        # un paro no planificado, asi que la maquina se queda como estaba y
+        # solo se lleva el seguimiento en la propia orden.
+        maquina = Maquina.objects.get(pk=orden.maquina_id)
+        if maquina.estado_maquina_id == "FALLO":
+            cambiar_estado_maquina(orden.maquina_id, "MANTE", "orden_mantenimiento", orden.folio)
         return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
 
 class OrdenMantenimientoCerrarAPIView(APIView):
@@ -334,7 +376,12 @@ class OrdenMantenimientoCerrarAPIView(APIView):
                 refaccion=refaccion,
             )
 
-        cambiar_estado_maquina(orden.maquina_id, "ESPER", "orden_mantenimiento", orden.folio)
+        # Simetrico al guard de "iniciar": si la maquina nunca entro a MANTE
+        # (preventivo/predictivo/emergencia que no tocaron su estado) no hay
+        # nada que regresar a ESPER; se deja como esta.
+        maquina = Maquina.objects.get(pk=orden.maquina_id)
+        if maquina.estado_maquina_id == "MANTE":
+            cambiar_estado_maquina(orden.maquina_id, "ESPER", "orden_mantenimiento", orden.folio)
         return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
 
 

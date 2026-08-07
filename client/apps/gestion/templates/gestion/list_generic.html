@@ -56,7 +56,10 @@
           {% endif %}
           {% for fk_name in campos_con_fk %}
             data-{{ fk_name }}="{{ registro|get_item:fk_name|default_if_none:'' }}"
-          {% endfor %}>
+          {% endfor %}
+          {% if ubicacion_dict %}
+            data-ubicacion="{{ ubicacion_dict|get_item:pk_val|default:'' }}"
+          {% endif %}>
         <td>{{ pk_val }}</td>
         {% for col in columnas %}
           {% if not col.name|es_pk:config.pk_field %}
@@ -118,11 +121,14 @@
   ];
 
   function abrir_modal_detalles(btn) {
+    detener_visor_3d();
     var tr = btn.closest('tr');
     var body = document.getElementById('gestion-modal-body');
     var html = '<div class="gestion-modal__grid">';
     var imagenSrc = '';
     var imagenLabel = '';
+    var modelo3dSrc = '';
+    var modelo3dLabel = '';
 
     for (var i = 0; i < todasLasColumnas.length; i++) {
       var col = todasLasColumnas[i];
@@ -133,6 +139,13 @@
         if (valor) {
           imagenSrc = apiRootUrl + '/media/' + valor;
           imagenLabel = col.label;
+        }
+        continue;
+      }
+      if (col.tipo === 'file3d') {
+        if (valor) {
+          modelo3dSrc = apiRootUrl + '/media/' + valor;
+          modelo3dLabel = col.label;
         }
         continue;
       }
@@ -157,12 +170,87 @@
       html += '<img class="gestion-modal__img" src="' + imagenSrc + '" alt="' + imagenLabel + '">';
       html += '</div>';
     }
+    if (modelo3dSrc) {
+      html += '<div class="gestion-modal__section">';
+      html += '<span class="gestion-modal__label">' + modelo3dLabel + '</span>';
+      html += '<div id="gestion-modal-viewer3d" style="width:100%;height:240px;border:1px solid var(--border-color);border-radius:8px;overflow:hidden;background:var(--bg-body);"></div>';
+      html += '<p style="font-size:11px;color:var(--text-muted);margin-top:6px;">Arrastra para rotar &middot; <a href="' + modelo3dSrc + '" target="_blank" rel="noopener">Descargar .glb</a></p>';
+      html += '</div>';
+    }
+
+    var ubicacion = tr.getAttribute('data-ubicacion') || '';
+    if (ubicacion) {
+      html = '<div class="gestion-modal__ubicacion">' + ubicacion + '</div>' + html;
+    }
 
     body.innerHTML = html;
     document.getElementById('gestion-modal-detalles').classList.add('is-open');
+
+    detener_visor_3d();
+    if (modelo3dSrc) cargar_visor_3d(modelo3dSrc);
+  }
+
+  var visor3dFrameId = null;
+
+  function detener_visor_3d() {
+    if (visor3dFrameId) {
+      cancelAnimationFrame(visor3dFrameId);
+      visor3dFrameId = null;
+    }
+  }
+
+  async function cargar_visor_3d(url) {
+    var container = document.getElementById('gestion-modal-viewer3d');
+    if (!container) return;
+    try {
+      var THREE = await import('three');
+      var { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+      var { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+      var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      container.appendChild(renderer.domElement);
+
+      var controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+
+      scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+      var dirLight = new THREE.DirectionalLight(0xffffff, 2);
+      dirLight.position.set(5, 10, 7);
+      scene.add(dirLight);
+
+      new GLTFLoader().load(url, function (gltf) {
+        var model = gltf.scene;
+        var box = new THREE.Box3().setFromObject(model);
+        var center = box.getCenter(new THREE.Vector3());
+        var size = box.getSize(new THREE.Vector3());
+        var maxDim = Math.max(size.x, size.y, size.z) || 1;
+        var scale = 2.2 / maxDim;
+        model.scale.set(scale, scale, scale);
+        model.position.sub(center.multiplyScalar(scale));
+        scene.add(model);
+        camera.position.set(0, 1.5, 3.5);
+        controls.update();
+      }, undefined, function (err) {
+        console.error('Error al cargar el modelo 3D:', err);
+      });
+
+      function animate() {
+        visor3dFrameId = requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+    } catch (e) {
+      console.error('No se pudo inicializar el visor 3D:', e);
+    }
   }
 
   function cerrar_modal() {
+    detener_visor_3d();
     document.getElementById('gestion-modal-detalles').classList.remove('is-open');
   }
 

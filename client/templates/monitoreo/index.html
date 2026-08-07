@@ -206,21 +206,24 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
     </div>
-    <form id="newMachineForm" class="new-machine-form">
+    <form id="newMachineForm" class="new-machine-form" enctype="multipart/form-data">
       <p class="new-machine-form__error" id="newMachineError" hidden></p>
+      <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
       <div class="new-machine-form__grid">
-        <label>Código<input type="text" name="codigo" id="fCodigo" maxlength="10" required placeholder="MAQ007"></label>
-        <label>Nombre<input type="text" name="nombre" id="fNombre" maxlength="100" required placeholder="Pick &amp; Place 2"></label>
-        <label>Línea<select name="linea" id="fLinea"><option value="">Sin línea</option></select></label>
-        <label>Tipo de máquina<select name="tipo_maquina" id="fTipo"><option value="">Sin especificar</option></select></label>
-        <label>Marca<select name="marca" id="fMarca"><option value="">Sin especificar</option></select></label>
-        <label>Modelo<select name="modelo" id="fModelo"><option value="">Sin especificar</option></select></label>
-        <label>Estado inicial<select name="estado_maquina" id="fEstado"></select></label>
-        <label>Modo de monitoreo<select name="modo_monitoreo" id="fModo"></select></label>
+        <label>Código<span id="codigo-error"></span><input type="text" name="codigo" id="fCodigo" data-error-id="codigo-error" maxlength="10" required placeholder="MAQ007"></label>
+        <label>Nombre<span id="nombre-error"></span><input type="text" name="nombre" id="fNombre" data-error-id="nombre-error" maxlength="100" required placeholder="Pick &amp; Place 2"></label>
+        <label>Línea<select name="linea" id="fLinea"><option value="">Selecciona línea</option></select></label>
+        <label>Tipo de máquina<select name="tipo_maquina" id="fTipo"><option value="">Selecciona tipo</option></select></label>
+        <label>Marca<select name="marca" id="fMarca"><option value="">Selecciona marca</option></select></label>
+        <label>Modelo<select name="modelo" id="fModelo"><option value="">Selecciona modelo</option></select></label>
+        <label>Estado inicial<select name="estado_maquina" id="fEstado"><option value="">Selecciona estado</option></select></label>
+        <label>Modo de monitoreo<select name="modo_monitoreo" id="fModo"><option value="">Selecciona modo</option></select></label>
         <label>Umbral de vibración<input type="number" name="umbral_vibracion" id="fUmbral" step="0.1" min="0" value="4.0"></label>
-        <label>N° de serie<input type="text" name="numeroSerie" id="fSerie" maxlength="30" placeholder="Opcional"></label>
+        <label>N° de serie<span id="serie-error"></span><input type="text" name="numeroSerie" id="fSerie" data-error-id="serie-error" maxlength="30" required placeholder="MAQ007-SN001"></label>
+        <label>Imagen<input type="file" name="imagen" id="fImagen" accept="image/*"></label>
+        <label>Modelo 3D (.glb)<input type="file" name="modelo_3d_archivo" id="fModelo3d" accept=".glb,model/gltf-binary"></label>
       </div>
-      <label class="new-machine-form__full">Descripción<textarea name="descripcion" id="fDescripcion" maxlength="255" rows="2" placeholder="Opcional"></textarea></label>
+      <label class="new-machine-form__full">Descripción<span id="descripcion-error"></span><textarea name="descripcion" id="fDescripcion" data-error-id="descripcion-error" maxlength="255" rows="2" placeholder="Descripción breve del equipo..."></textarea></label>
       <div class="new-machine-form__actions">
         <button type="button" class="btn-plant-secondary" id="newMachineCancel">Cancelar</button>
         <button type="submit" class="btn-plant-new" id="newMachineSubmit">Crear máquina</button>
@@ -230,4 +233,8 @@
 </div>
 
 {% endblock %}
-{% block extra_js %}<script src="{% static 'js/monitoreo.js' %}"></script>{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/validaciones-inputs.js' %}"></script>
+<script src="{% static 'monitoreo/js/validaciones-maquina-monitoreo.js' %}"></script>
+<script src="{% static 'js/monitoreo.js' %}"></script>
+{% endblock %}

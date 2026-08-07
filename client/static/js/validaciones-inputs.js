@@ -132,7 +132,7 @@ function setupInputValidation(
 
     if (errorElement) {
       if (!result.isValid && mostrarError) {
-        errorElement.textContent = "Error: " + result.errors.join(" | ");
+        errorElement.textContent = "Revisa el formulario: " + result.errors.join(", ");
         errorElement.style.color = "red";
         inputElement.style.borderColor = "red";
         inputElement.style.borderWidth = "2px";
@@ -211,10 +211,13 @@ document.addEventListener("DOMContentLoaded", function () {
     fechaSolucion.min = `${año}-${mes}-${dia}`;
   }
 
+  const asuntoEl = document.getElementById("asunto");
+  if (!asuntoEl) return;
+
   const estadoElement = document.getElementById("estado");
 
   setupInputValidation(
-    document.getElementById("asunto"),
+    asuntoEl,
     {
       required: true,
       minLength: 2,

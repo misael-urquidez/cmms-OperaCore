@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.elipse",
     "apps.monitoreo",
     "apps.gestion",
+    "apps.notificaciones",
 ]
 
 MIDDLEWARE = [
@@ -104,3 +105,9 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Expira la sesión tras 15 minutos (15 * 60 segundos)
+SESSION_COOKIE_AGE = 900  
+
+# Reinicia el contador de 15 minutos con cada petición HTTP del usuario
+SESSION_SAVE_EVERY_REQUEST = True

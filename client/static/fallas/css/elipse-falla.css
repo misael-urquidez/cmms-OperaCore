@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Panel de Elipse en el reporte de falla — "ayudame a redactar".
+   Panel de Elipse en el reporte de falla — "ayudame a redactar / diagnosticar".
 
    Un boton abre un panel lateral (como el panel de IA de YouTube): el tecnico
    describe la falla en texto libre y Elipse rellena los campos del formulario
@@ -77,6 +77,30 @@
   margin: 0; font-size: .8rem; color: var(--color-muted); line-height: 1.5;
 }
 
+/* -------- tabs "Redactar" / "Diagnosticar" -------- */
+.elipse-falla-panel__tabs {
+  display: flex;
+  gap: .4rem;
+}
+.elipse-falla-panel__tab {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  border-radius: .5rem;
+  padding: .45rem .5rem;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+.elipse-falla-panel__tab:hover { color: var(--color-text); }
+.elipse-falla-panel__tab.is-active {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-bg));
+}
+
 /* -------- chat: burbujas de la conversacion con Elipse -------- */
 .elipse-falla-panel__chat {
   display: flex; flex-direction: column; gap: .5rem;
@@ -124,6 +148,21 @@
   margin: 0; font-size: .7rem; color: var(--color-muted); line-height: 1.4;
 }
 
+/* -------- boton "Usar esta sugerencia" dentro del chat (modo diagnosticar) -------- */
+.elipse-diag-usar {
+  background: var(--color-primary);
+  color: #04121c;
+  border: 0;
+  border-radius: .45rem;
+  padding: .4rem .75rem;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: .2rem;
+}
+.elipse-diag-usar:hover { filter: brightness(1.08); }
+.elipse-diag-usar:disabled { opacity: .6; cursor: not-allowed; filter: none; }
+
 /* -------- destello en los campos que Elipse acaba de rellenar -------- */
 @keyframes elipseFallaFlash {
   0%   { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 55%, transparent); }
@@ -131,6 +170,35 @@
 }
 .elipse-filled { animation: elipseFallaFlash 1.4s ease-out; }
 
+@keyframes elipse-msg-in {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.sugerencia-ia {
+  margin: 10px 0 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #2a2f3a);
+  background: var(--color-surface, #171b24);
+  font-size: 13px;
+  animation: elipse-msg-in 260ms ease-out;
+}
+.sugerencia-ia.local { border-color: #b58900; }
+.sugerencia-ia.generico { border-color: var(--color-muted, #6b7280); }
+.sugerencia-ia.cargando { opacity: 0.6; }
+.sugerencia-ia__head { font-weight: 600; margin-bottom: 4px; color: var(--color-primary); }
+.sugerencia-ia__causa { margin: 4px 0; color: var(--color-text, #e5e7eb); }
+.sugerencia-ia__justif { margin: 2px 0 8px; color: var(--color-muted, #94a3b8); font-size: 12px; }
+.sugerencia-ia__acciones { display: flex; gap: 8px; }
+.sugerencia-ia__usar { background: var(--color-primary); color: #fff; border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+.sugerencia-ia__cerrar { background: transparent; color: var(--color-muted, #94a3b8); border: 1px solid var(--color-border, #2a2f3a); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+
 @media (prefers-reduced-motion: reduce) {
-  .elipse-falla-panel, .elipse-falla-overlay, .elipse-filled { transition: none !important; animation: none !important; }
+  .elipse-falla-panel, .elipse-falla-overlay, .elipse-filled, .sugerencia-ia { transition: none !important; animation: none !important; }
+}
+
+.campo-sin-coincidencia {
+  border: 1px solid #f59e0b !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
 }

@@ -18,13 +18,13 @@
     
     .dashboard-header-actions p {
         margin: 0;
-        color: var(--text-muted, #94a3b8);
+        color: var(--color-muted, #94a3b8);
         font-size: 14px;
     }
 
     .nav-actions a {
-        background-color: var(--accent, #00adb5);
-        color: var(--bg-main, #0f1115);
+        background-color: var(--color-primary, #00adb5);
+        color: var(--color-bg, #0f1115);
         padding: 10px 18px;
         border-radius: 6px;
         text-decoration: none;
@@ -45,8 +45,8 @@
     }
 
     .metric-card {
-        background-color: var(--bg-card, #161920);
-        border: 1px solid var(--border-color, #2a313e);
+        background-color: var(--color-surface, #161920);
+        border: 1px solid var(--admin-border, #2a313e);
         border-radius: 12px;
         padding: 24px;
         box-sizing: border-box;
@@ -54,7 +54,7 @@
 
     .metric-card h3 {
         margin: 0 0 10px 0;
-        color: var(--text-muted, #94a3b8);
+        color: var(--color-muted, #94a3b8);
         font-size: 14px;
         font-weight: 500;
         text-transform: uppercase;
@@ -63,24 +63,24 @@
     .metric-card .value {
         font-size: 36px;
         font-weight: 700;
-        color: #ffffff;
+        color: var(--color-text, #ffffff);
         margin: 0;
     }
 
-    .metric-card.success .value { color: var(--status-success, #10b981); }
-    .metric-card.warning .value { color: var(--status-warning, #f59e0b); }
+    .metric-card.success .value { color: #10b981; }
+    .metric-card.warning .value { color: #f59e0b; }
 
     .section-title {
-        color: #ffffff;
+        color: var(--color-text, #ffffff);
         font-size: 20px;
         margin-bottom: 20px;
-        border-bottom: 1px solid var(--border-color, #2a313e);
+        border-bottom: 1px solid var(--admin-border, #2a313e);
         padding-bottom: 10px;
     }
 
     .status-table-container {
-        background-color: var(--bg-card, #161920);
-        border: 1px solid var(--border-color, #2a313e);
+        background-color: var(--color-surface, #161920);
+        border: 1px solid var(--admin-border, #2a313e);
         border-radius: 12px;
         overflow: hidden;
     }
@@ -93,13 +93,14 @@
 
     th, td {
         padding: 16px 24px;
-        border-bottom: 1px solid var(--border-color, #2a313e);
+        border-bottom: 1px solid var(--admin-border, #2a313e);
         font-size: 14px;
+        color: var(--color-text, #e3e8f0);
     }
 
     th {
-        background-color: var(--bg-info, #1f242e);
-        color: var(--text-muted, #94a3b8);
+        background-color: var(--color-bg, #1f242e);
+        color: var(--color-muted, #94a3b8);
         font-weight: 600;
     }
 
@@ -108,7 +109,7 @@
     }
 
     .table-btn {
-        color: var(--accent, #00adb5);
+        color: var(--color-primary, #00adb5);
         text-decoration: none;
         font-weight: 600;
     }
@@ -125,7 +126,9 @@
             <p>Monitoreo en tiempo real del estado general de la planta</p>
         </div>
         <div class="nav-actions">
-            <a href="{% url 'maquinaria:crear_maquina' %}">+ Registrar Nueva Máquina</a>
+            {% if usuario.rol == "ADMIN" %}
+                <a href="{% url 'maquinaria:crear_maquina' %}">+ Registrar Nueva Máquina</a>
+            {% endif %}
         </div>
     </div>
 
@@ -152,26 +155,40 @@
         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
       </svg>
       <input type="text" class="buscador-input" placeholder="Buscar en la tabla..."
-             style="background:var(--bg-card);border:1px solid var(--border-color);color:#fff;padding:.5rem .75rem;border-radius:6px;font-size:14px;width:300px;outline:none;">
+             style="background:var(--color-surface);border:1px solid var(--admin-border);color:var(--color-text);padding:.5rem .75rem;border-radius:6px;font-size:14px;width:300px;outline:none;">
       <select class="filter-select" data-filter="linea"
-              style="background:var(--bg-card);border:1px solid var(--border-color);color:#fff;padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
+              style="background:var(--color-surface);border:1px solid var(--admin-border);color:var(--color-text);padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
         <option value="">Todas las líneas</option>
         {% for l in lineas %}
           <option value="{{ l.codigo }}">{{ l.nombre }}</option>
         {% endfor %}
       </select>
       <select class="filter-select" data-filter="estado_maquina"
-              style="background:var(--bg-card);border:1px solid var(--border-color);color:#fff;padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
+              style="background:var(--color-surface);border:1px solid var(--admin-border);color:var(--color-text);padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
         <option value="">Todos los estados</option>
         {% for e in edos_maquina %}
           <option value="{{ e.codigo }}">{{ e.nombre }}</option>
         {% endfor %}
       </select>
       <select class="filter-select" data-filter="tipo_maquina"
-              style="background:var(--bg-card);border:1px solid var(--border-color);color:#fff;padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
+              style="background:var(--color-surface);border:1px solid var(--admin-border);color:var(--color-text);padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
         <option value="">Todos los tipos</option>
         {% for t in tipos_maquina %}
           <option value="{{ t.numeroregistro }}">{{ t.nombre }}</option>
+        {% endfor %}
+      </select>
+      <select class="filter-select" data-filter="marca"
+              style="background:var(--color-surface);border:1px solid var(--admin-border);color:var(--color-text);padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
+        <option value="">Todas las marcas</option>
+        {% for m in marcas %}
+          <option value="{{ m.clave }}">{{ m.nombre }}</option>
+        {% endfor %}
+      </select>
+      <select class="filter-select" data-filter="modelo"
+              style="background:var(--color-surface);border:1px solid var(--admin-border);color:var(--color-text);padding:.5rem .75rem;border-radius:6px;font-size:14px;outline:none;cursor:pointer;">
+        <option value="">Todos los modelos</option>
+        {% for mo in modelos %}
+          <option value="{{ mo.codigo }}">{{ mo.nombre }}</option>
         {% endfor %}
       </select>
     </div>
@@ -182,6 +199,8 @@
                     <th>Código</th>
                     <th>Nombre del Equipo</th>
                     <th>Tipo</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
                     <th>Línea</th>
                     <th>Estado Operativo</th>
                     <th>Acción</th>
@@ -189,13 +208,15 @@
             </thead>
             <tbody>
                 {% for maquina in maquinas %}
-                <tr data-linea="{{ maquina.linea|default:'' }}" data-estado_maquina="{{ maquina.estado_maquina|default:'' }}" data-tipo_maquina="{{ maquina.tipo_maquina|default:'' }}">
+                <tr data-linea="{{ maquina.linea|default:'' }}" data-estado_maquina="{{ maquina.estado_maquina|default:'' }}" data-tipo_maquina="{{ maquina.tipo_maquina|default:'' }}" data-marca="{{ maquina.marca|default:'' }}" data-modelo="{{ maquina.modelo|default:'' }}">
                     <td><b>{{ maquina.codigo }}</b></td>
                     <td>{{ maquina.nombre }}</td>
                     <td>{{ tipo_dict|get_item:maquina.tipo_maquina|default:maquina.tipo_maquina|default:"-" }}</td>
+                    <td>{{ marca_dict|get_item:maquina.marca|default:maquina.marca|default:"-" }}</td>
+                    <td>{{ modelo_dict|get_item:maquina.modelo|default:maquina.modelo|default:"-" }}</td>
                     <td>{{ linea_dict|get_item:maquina.linea|default:maquina.linea|default:"Sin línea" }}</td>
                     <td>
-                        <span style="color: var(--accent, #00adb5);">{{ edo_dict|get_item:maquina.estado_maquina|default:maquina.estado_maquina|default:"Sin estado" }}</span>
+                        <span style="color: var(--color-primary, #00adb5);">{{ edo_dict|get_item:maquina.estado_maquina|default:maquina.estado_maquina|default:"Sin estado" }}</span>
                     </td>
                     <td>
                         <a class="table-btn" href="{% url 'maquinaria:detail' maquina.codigo %}">Detalles de la máquina &rarr;</a>
@@ -203,7 +224,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" style="text-align: center; color: var(--text-muted, #94a3b8); padding: 40px;">
+                    <td colspan="8" style="text-align: center; color: var(--color-muted, #94a3b8); padding: 40px;">
                         No hay información de maquinaria registrada.
                     </td>
                 </tr>

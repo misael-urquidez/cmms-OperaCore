@@ -47,11 +47,14 @@ document.querySelector('details').removeAttribute('open');
         const dropZone = document.getElementById('dropZoneLabel');
 
         if (archivoArrastable && previewDrag && dropZone){
+            // ELIMINAR ESTE BLOQUE HACE QUE SE NECESITE DOBLE CLICK:
+            /*
             dropZone.addEventListener('click', function(evento){
                 if(evento.target === this || evento.target.closest('.drop-zone')){
                     archivoArrastable.click();
                 }
             });
+            */
 
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropZone.addEventListener(eventName, (evento) => {
@@ -70,17 +73,24 @@ document.querySelector('details').removeAttribute('open');
                 dropZone.style.background = '#fafcff';
                 });
 
-                dropZone.addEventListener('drop', (evento) => {
-        const dt = evento.dataTransfer;
-        const files = dt.files;
-        if (files.length > 0) {
-          archivoArrastable.files = files;
-          const event = new Event('change', { bubbles: true });
-          archivoArrastable.dispatchEvent(event);
-        }
-        dropZone.style.borderColor = '#94a3b8';
-        dropZone.style.background = '#fafcff';
-      });
+            dropZone.addEventListener('drop', (evento) => {
+                const files = evento.dataTransfer.files;
+
+                if (files.length > 0) {
+                    // Creamos un DataTransfer para asignar los archivos de forma limpia
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(files[0]); // Toma la primera imagen
+
+                    // Limpiamos e ingresamos el archivo de forma explícita
+                    archivoArrastable.files = dataTransfer.files;
+
+                    // Disparamos manualmente el evento change
+                    archivoArrastable.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+
+                dropZone.style.borderColor = '#94a3b8';
+                dropZone.style.background = '#fafcff';
+            });
 
       archivoArrastable.addEventListener('change', function() {
         actualizarPreview(this, previewDrag);

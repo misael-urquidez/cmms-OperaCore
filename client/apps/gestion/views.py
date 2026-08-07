@@ -130,9 +130,9 @@ def _resolver_choices_con_valores(config, valores=None):
 def _build_payload(config, post_data, es_edicion=False, archivos=None):
     payload = {}
     errores = []
-    file_names = {c["name"] for c in config["campos"] if c.get("tipo") == "file"}
+    file_names = {c["name"] for c in config["campos"] if c.get("tipo") in ("file", "file3d")}
     for campo in config["campos"]:
-        if campo.get("tipo") == "file":
+        if campo.get("tipo") in ("file", "file3d"):
             continue
         valor = post_data.get(campo["name"], "").strip()
         requerido = campo.get("requerido") and not (es_edicion and campo.get("tipo") == "password")
@@ -148,7 +148,7 @@ def _extraer_archivos(config, archivos):
     Usa 'file_api_name' como key si existe, si no usa el name del campo."""
     files = {}
     for campo in config["campos"]:
-        if campo.get("tipo") == "file" and campo["name"] in archivos:
+        if campo.get("tipo") in ("file", "file3d") and campo["name"] in archivos:
             api_name = campo.get("file_api_name") or campo["name"]
             files[api_name] = archivos[campo["name"]]
     return files or None
@@ -157,6 +157,22 @@ def _extraer_archivos(config, archivos):
 def _invalidar_cache(config):
     cache.delete(f"gestion_list_{config['slug']}")
     cache.delete_many(config.get("invalidate_cache_keys", []))
+
+
+def _render_form(request, config, valores, pk=None):
+    """Re-render del formulario generico preservando los valores enviados
+    (usado cuando el API rechaza el registro o la edicion)."""
+    campos = _resolver_choices_con_valores(config, valores)
+    context = {
+        "config": config,
+        "campos": campos,
+        "seccion": "gestion",
+        "subseccion": config["slug"],
+    }
+    if pk is not None:
+        context["modo"] = "editar"
+        context["pk"] = pk
+    return render(request, "gestion/form_generic.html", context)
 
 
 # ---------------------------------------------------------------------------
@@ -184,7 +200,7 @@ class GestionListView(generic.View):
             messages.warning(request, "No se pudo conectar con la API.")
 
         todas_las = [c for c in config["campos"]
-                     if c.get("tipo") not in ("password", "file")]
+                     if c.get("tipo") not in ("password", "file", "file3d")]
 
         todas_las_con_archivos = [c for c in config["campos"]
                                   if c.get("tipo") != "password"]
@@ -195,7 +211,7 @@ class GestionListView(generic.View):
         restantes = MAX_COLUMNAS - len(requeridos[:MAX_COLUMNAS])
         visibles = requeridos[:MAX_COLUMNAS] + opcionales[:restantes]
 
-        tiene_imagen = any(c.get("tipo") == "file" for c in config["campos"])
+        tiene_imagen = any(c.get("tipo") in ("file", "file3d") for c in config["campos"])
         necesita_modal = len(todas_las) > MAX_COLUMNAS or tiene_imagen
 
         EXCLUDED_FK_SLUGS = {"tarea-orden", "herra-orden", "trabajador-orden"}
@@ -216,6 +232,25 @@ class GestionListView(generic.View):
                     })
                     campos_con_fk.append(campo["name"])
 
+        ubicacion_dict = {}
+        if config["slug"] == "maquina" and registros:
+            lineas = _fetch_fk_choices("linea")
+            areas = _fetch_fk_choices("area")
+            plantas = _fetch_fk_choices("planta")
+            linea_map = {l.get("codigo"): l for l in lineas}
+            area_map = {a.get("codigo"): a for a in areas}
+            planta_map = {p.get("codigo"): p.get("nombre") for p in plantas}
+            for r in registros:
+                partes = []
+                lin = linea_map.get(r.get("linea"))
+                if lin:
+                    area = area_map.get(lin.get("area"))
+                    if area:
+                        partes.append(planta_map.get(area.get("planta")))
+                        partes.append(area.get("nombre"))
+                    partes.append(lin.get("nombre"))
+                ubicacion_dict[r.get("codigo")] = " → ".join(p for p in partes if p)
+
         context = {
             "config": config,
             "registros": registros,
@@ -228,6 +263,7 @@ class GestionListView(generic.View):
             "subseccion": slug,
             "campos_con_fk": campos_con_fk,
             "fk_filters": fk_filters,
+            "ubicacion_dict": ubicacion_dict,
         }
         return render(request, self.template_name, context)
 
@@ -253,7 +289,7 @@ class GestionCreateView(generic.View):
         if errores:
             for e in errores:
                 messages.warning(request, e)
-            return redirect("gestion:crear", slug=slug)
+            return _render_form(request, config, request.POST)
 
         url = f"{_api_base(config['api_app'])}/{config['create_path']}"
         try:
@@ -273,7 +309,7 @@ class GestionCreateView(generic.View):
         except requests.exceptions.RequestException:
             messages.warning(request, "No se pudo conectar con el servidor.")
 
-        return redirect("gestion:crear", slug=slug)
+        return _render_form(request, config, request.POST)
 
 
 class GestionEditView(generic.View):
@@ -316,7 +352,7 @@ class GestionEditView(generic.View):
         if errores:
             for e in errores:
                 messages.warning(request, e)
-            return redirect("gestion:editar", slug=slug, pk=pk)
+            return _render_form(request, config, request.POST, pk=pk)
 
         metodo = config.get("update_method", "PATCH")
         url = self._url_update(config, pk)
@@ -337,7 +373,7 @@ class GestionEditView(generic.View):
         except requests.exceptions.RequestException:
             messages.warning(request, "No se pudo conectar con el servidor.")
 
-        return redirect("gestion:editar", slug=slug, pk=pk)
+        return _render_form(request, config, request.POST, pk=pk)
 
 
 class GestionDeleteView(generic.View):

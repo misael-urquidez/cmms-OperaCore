@@ -176,6 +176,91 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Botón de eliminación / peligro */
+        .btn-danger {
+            background-color: #e63946;
+            color: #ffffff;
+            border: none;
+            width: 100%;
+            margin-top: 15px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-danger:hover {
+            background-color: #c1121f;
+            box-shadow: 0 0 12px rgba(230, 57, 70, 0.4);
+        }
+
+        /* Modal (Ventana Emergente) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: var(--bg-card);
+            border: 1px solid #e63946;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-header h3 {
+            margin: 0 0 10px 0;
+            color: #e63946;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-body p {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .modal-body p strong {
+            color: var(--text-main);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
     </style>
 
     <!-- Importmap con la subcarpeta 'controls/' corregida para OrbitControls en jsDelivr -->
@@ -198,6 +283,23 @@
         </div>
     </header>
 
+    {% if ubicacion %}
+    <div style="background:var(--bg-card);padding:12px 40px;border-bottom:1px solid var(--border-color);font-size:13px;color:var(--text-muted);">
+      <span style="color:var(--text-muted);margin-right:4px;">Ubicación:</span>
+      {% if ubicacion.planta %}
+        <span style="color:var(--text-main);">{{ ubicacion.planta }}</span>
+        <span style="margin:0 8px;color:var(--border-color);">→</span>
+      {% endif %}
+      {% if ubicacion.area %}
+        <span style="color:var(--text-main);">{{ ubicacion.area }}</span>
+        <span style="margin:0 8px;color:var(--border-color);">→</span>
+      {% endif %}
+      {% if ubicacion.linea %}
+        <span style="color:var(--accent);font-weight:600;">{{ ubicacion.linea }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <div class="container">
         {% if maquina %}
         <div class="content-grid">
@@ -205,9 +307,8 @@
             <div class="viewer-card">
                 <h3>Fotografía del Equipo</h3>
                 <div class="image-container">
-                    {% if maquina.modelo_3d and maquina.modelo_3d != "None" %}
-                        <!-- Esto toma 'images/YamahaYS12.glb', corta la extensión y le pone .png con la ruta estática correcta -->
-                        <img src="{% get_static_prefix %}maquinaria/{{ maquina.modelo_3d|slice:":-4" }}.png" alt="{{ maquina.nombre }}">
+                    {% if imagen_url_resuelta %}
+                        <img src="{{ imagen_url_resuelta }}" alt="{{ maquina.nombre }}">
                     {% else %}
                         <div style="color: var(--text-muted); font-size: 13px; padding: 20px;">Sin imagen disponible</div>
                     {% endif %}
@@ -243,6 +344,16 @@
                     <span>Estado Operativo:</span>
                     <b style="color: var(--accent);">{{ maquina.estado_maquina|default:"Sin estado" }}</b>
                 </div>
+                <!-- Botones dinámicos según el Estado -->
+                {% if maquina.estado_maquina == "DESHA" or maquina.estado_maquina == "Inactiva" %}
+                    <button id="btnAbrirModalReactivar" class="btn-action" style="background-color: #2ec4b6; color: #000; font-weight: bold; width: 100%; margin-top: 15px;">
+                        Reactivar Equipo
+                    </button>
+                {% else %}
+                    <button id="btnAbrirModalBaja" class="btn-danger">
+                        Dar de Baja Máquina
+                    </button>
+                {% endif %}
             </div>
 
             <!-- Columna 3 (Derecha): Cuadrito con el visor 3D -->
@@ -267,9 +378,9 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
         const container = document.getElementById('canvas-container');
-        const modelPath = "{{ maquina.modelo_3d }}";
+        const modelUrl = "{{ modelo_3d_url_resuelta|default:'' }}";
 
-        if (container && modelPath && modelPath !== "None" && modelPath.trim() !== "") {
+        if (container && modelUrl) {
             // 1. Escena, Cámara y Renderizador
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
@@ -302,10 +413,12 @@
             topLight.position.set(0, 10, 0);
             scene.add(topLight);
 
-            // 4. Carga segura del archivo .glb apuntando a static/maquinaria/images/...
+            // 4. Carga segura del archivo .glb (imagen_url_resuelta ya viene
+            // resuelta desde views.py: apunta al static del cliente si es
+            // una máquina de catálogo, o al media del API si es un modelo
+            // subido de verdad).
             const loader = new GLTFLoader();
-            const staticUrl = "{% get_static_prefix %}";
-            const fullUrl = staticUrl + 'maquinaria/' + modelPath;
+            const fullUrl = modelUrl;
 
             loader.load(fullUrl, function (gltf) {
                 const model = gltf.scene;
@@ -353,5 +466,63 @@
             });
         }
     </script>
+    {% if maquina.estado_maquina == "DESHA" or maquina.estado_maquina == "Inactiva" %}
+        <!-- Modal para Reactivar -->
+        <div id="modalReactivar" class="modal-overlay">
+            <div class="modal-content" style="border-color: #2ec4b6;">
+                <div class="modal-header">
+                    <h3 style="color: #2ec4b6;"> Confirmar Reactivación</h3>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        ¿Deseas volver a poner en operación la máquina 
+                        <strong>{{ maquina.nombre }}</strong> (Código: <strong>{{ maquina.codigo }}</strong>)?
+                    </p>
+                    <p style="font-size: 12px; color: #2ec4b6;">
+                        Esta acción actualizará el estado del equipo a OPERATIVA en el sistema OperaCore.
+                    </p>
+                </div>
+                <div class="modal-actions">
+                    <button id="btnCancelarReactivar" type="button" class="btn-action btn-secondary" style="cursor: pointer;">Cancelar</button>
+                    
+                    <form id="formReactivarMaquina" method="POST" action="{% url 'maquinaria:reactivar_maquina' maquina.codigo %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-action" style="background-color: #2ec4b6; color: #000; font-weight: bold; border: none; cursor: pointer;">
+                            Confirmar Operativa
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Modal para Dar de Baja -->
+        <div id="modalBaja" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3> Confirmar Baja de Equipo</h3>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        ¿Estás seguro de que deseas dar de baja la máquina 
+                        <strong>{{ maquina.nombre }}</strong> (Código: <strong>{{ maquina.codigo }}</strong>)?
+                    </p>
+                    <p style="font-size: 12px; color: #e63946;">
+                        Esta acción cambiará el estado del equipo a DESHABILITADO en el sistema OperaCore.
+                    </p>
+                </div>
+                <div class="modal-actions">
+                    <button id="btnCancelarBaja" type="button" class="btn-action btn-secondary" style="cursor: pointer;">Cancelar</button>
+                    
+                    <form id="formEliminarMaquina" method="POST" action="{% url 'maquinaria:eliminar_maquina' maquina.codigo %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-action" style="background-color: #e63946; color: #fff; border: none; cursor: pointer;">
+                            Confirmar Baja
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    <script src="{% static 'maquinaria/js/eliminar_maquina.js' %}"></script>
 </body>
 </html>

@@ -6,12 +6,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from django.views.generic import TemplateView
+from django.views.generic import RedirectView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
 
-    path("", TemplateView.as_view(template_name="home.html"), name="home"),
+    path("", RedirectView.as_view(pattern_name="usuarios:index", permanent=False), name="home"),
 
     path("usuarios/", include("apps.usuarios.urls")),
     path("maquinaria/", include("apps.maquinaria.urls")),
@@ -22,6 +22,7 @@ urlpatterns = [
     path("elipse/", include("apps.elipse.urls")),
     path("monitoreo/", include("apps.monitoreo.urls")),
     path("gestion/", include("apps.gestion.urls")),
+    path("notificaciones/", include("apps.notificaciones.urls")),
 ]
 
 if settings.DEBUG:

@@ -20,24 +20,24 @@
     <div class="contenedor">
       <div class="left-side">
         <label for="nombre">Nombre de la empresa / Proveedor</label>
-        <input type="text" name="nombre" id="nombre" required maxlength="255" />
+        <input type="text" name="nombre" id="nombre" required maxlength="255" value="{{ datos.nombre|default:'' }}" />
 
         <label for="rfc">RFC / Tax ID</label>
-        <input type="text" name="rfc" id="rfc" maxlength="20" />
+        <input type="text" name="rfc" id="rfc" maxlength="20" value="{{ datos.rfc|default:'' }}" />
 
         <label for="contacto">Persona de contacto</label>
-        <input type="text" name="contacto" id="contacto" maxlength="255" />
+        <input type="text" name="contacto" id="contacto" maxlength="255" value="{{ datos.contacto|default:'' }}" />
       </div>
 
       <div class="right-side">
         <label for="telefono">Teléfono</label>
-        <input type="text" name="telefono" id="telefono" maxlength="50" />
+        <input type="text" name="telefono" id="telefono" maxlength="50" value="{{ datos.telefono|default:'' }}" />
 
         <label for="email">Correo electrónico</label>
-        <input type="email" name="email" id="email" maxlength="255" />
+        <input type="email" name="email" id="email" maxlength="255" value="{{ datos.email|default:'' }}" />
 
         <label for="direccion">Dirección física</label>
-        <input type="text" name="direccion" id="direccion" maxlength="255" />
+        <input type="text" name="direccion" id="direccion" maxlength="255" value="{{ datos.direccion|default:'' }}" />
 
         <div class="contenedor-botones">
           <button type="submit">Guardar proveedor</button>

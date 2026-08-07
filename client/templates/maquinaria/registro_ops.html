@@ -14,9 +14,9 @@
         flex-wrap: wrap;
     }
     .ops-select {
-        background: var(--bg-card, #161920);
-        border: 1px solid var(--border-color, #2a313e);
-        color: #fff;
+        background: var(--color-surface, #161920);
+        border: 1px solid var(--admin-border, #2a313e);
+        color: var(--color-text, #e3e8f0);
         padding: .5rem .75rem;
         border-radius: 6px;
         font-size: 14px;
@@ -25,11 +25,11 @@
         min-width: 250px;
     }
     .ops-select:focus {
-        border-color: var(--accent, #00adb5);
+        border-color: var(--color-primary, #00adb5);
     }
     .status-table-container {
-        background-color: var(--bg-card, #161920);
-        border: 1px solid var(--border-color, #2a313e);
+        background-color: var(--color-surface, #161920);
+        border: 1px solid var(--admin-border, #2a313e);
         border-radius: 12px;
         overflow: hidden;
     }
@@ -40,12 +40,13 @@
     }
     th, td {
         padding: 12px 16px;
-        border-bottom: 1px solid var(--border-color, #2a313e);
+        border-bottom: 1px solid var(--admin-border, #2a313e);
         font-size: 14px;
+        color: var(--color-text, #e3e8f0);
     }
     th {
-        background-color: var(--bg-info, #1f242e);
-        color: var(--text-muted, #94a3b8);
+        background-color: var(--color-bg, #1f242e);
+        color: var(--color-muted, #94a3b8);
         font-weight: 600;
     }
     tr:last-child td {
@@ -64,9 +65,9 @@
         display: none;
     }
     .ops-edit-input {
-        background: var(--bg-main, #0f1115);
-        border: 1px solid var(--border-color, #2a313e);
-        color: #fff;
+        background: var(--color-bg, #0f1115);
+        border: 1px solid var(--admin-border, #2a313e);
+        color: var(--color-text, #e3e8f0);
         padding: 4px 8px;
         border-radius: 4px;
         font-size: 13px;
@@ -74,7 +75,7 @@
         box-sizing: border-box;
     }
     .ops-edit-input:focus {
-        border-color: var(--accent, #00adb5);
+        border-color: var(--color-primary, #00adb5);
         outline: none;
     }
     .ops-actions {
@@ -83,8 +84,8 @@
     }
     .btn-icon {
         background: none;
-        border: 1px solid var(--border-color, #2a313e);
-        color: var(--text-muted, #94a3b8);
+        border: 1px solid var(--admin-border, #2a313e);
+        color: var(--color-muted, #94a3b8);
         padding: 4px 8px;
         border-radius: 4px;
         cursor: pointer;
@@ -92,24 +93,24 @@
         transition: all .15s;
     }
     .btn-icon:hover {
-        border-color: var(--accent, #00adb5);
-        color: #fff;
+        border-color: var(--color-primary, #00adb5);
+        color: var(--color-text, #e3e8f0);
     }
     .btn-icon.btn-danger:hover {
         border-color: #ef4444;
         color: #ef4444;
     }
     .btn-icon.btn-save {
-        border-color: var(--accent, #00adb5);
-        color: var(--accent, #00adb5);
+        border-color: var(--color-primary, #00adb5);
+        color: var(--color-primary, #00adb5);
     }
     .btn-icon.btn-save:hover {
-        background: var(--accent, #00adb5);
-        color: var(--bg-main, #0f1115);
+        background: var(--color-primary, #00adb5);
+        color: var(--color-bg, #0f1115);
     }
     .ops-empty {
         text-align: center;
-        color: var(--text-muted, #94a3b8);
+        color: var(--color-muted, #94a3b8);
         padding: 40px;
     }
     .feedback-msg {
@@ -130,7 +131,7 @@
 {% endblock %}
 {% block content %}
 <div class="ops-header">
-    <label for="maquinaSelect" style="color:var(--text-muted, #94a3b8);font-size:14px;">Máquina</label>
+    <label for="maquinaSelect" style="color:var(--color-muted, #94a3b8);font-size:14px;">Máquina</label>
     <select id="maquinaSelect" class="ops-select">
         <option value="">Selecciona una máquina</option>
         {% for m in maquinas %}

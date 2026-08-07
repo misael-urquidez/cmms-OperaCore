@@ -19,7 +19,13 @@ def _obtener_orden(folio):
     except (requests.exceptions.RequestException, ValueError):
         return None
 
-
+def _obtener_lista(url):
+    try:
+        r = SESSION.get(url, timeout=5)
+        r.raise_for_status()
+        return r.json()
+    except requests.RequestException:
+        return []
 
 class Index(View):
     template_name = "mantenimiento/index.html"
@@ -52,15 +58,23 @@ class DocumentoOrden(View):
 
         es_tecnico = usuario.get("rol") == "TECNI"
         orden_cerrada = orden.get("estado_orden") in ("CERRA", "CANCE")
+        # Piezas SI se filtran por la maquina de la orden (igual que en el
+        # drawer de "Mis ordenes"); las refacciones se dejan completas.
+        todas_piezas = _obtener_lista(f"{settings.API_BASE_URL}/inventario/v1/piezas/list/")
         context = {
             "orden": orden,
             "usuario": usuario,
             "es_tecnico": es_tecnico,
             "puede_modificar": (not es_tecnico) or (not orden_cerrada),
+            # Estas dos controlan si se muestra el bloque "Completar orden"
+            # (tecnico + orden abierta) y en que paso: iniciar o cerrar.
+            "puede_iniciar": es_tecnico and orden.get("estado_orden") == "PROGR",
+            "puede_cerrar": es_tecnico and orden.get("estado_orden") == "ENPRO",
+            "piezas": [p for p in todas_piezas if p.get("maquina") == orden.get("maquina")],
+            "refacciones": _obtener_lista(f"{settings.API_BASE_URL}/inventario/v1/refacciones/list/"),
             "base_template": "base_tecni.html" if es_tecnico else "base_admin.html",
         }
         return render(request, self.template_name, context)
-
 
 class ProxyOrden(View):
     action = None

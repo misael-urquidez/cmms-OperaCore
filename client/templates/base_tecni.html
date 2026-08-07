@@ -67,8 +67,10 @@
                     <svg class="tecni-sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
                 </button>
                 <div class="tecni-sidebar__submenu">
-                    <a href="{% url 'maquinaria:index' %}" class="{% if seccion == 'maquinaria' and subseccion == 'lista' %}is-active{% endif %}">Ver lista</a>
+                    <div class="tecni-sidebar__submenu-inner">
+                        <a href="{% url 'maquinaria:index' %}" class="{% if seccion == 'maquinaria' and subseccion == 'lista' %}is-active{% endif %}">Ver lista</a>
                     <a href="{% url 'maquinaria:registro-ops' %}" class="{% if seccion == 'maquinaria' and subseccion == 'registro-ops' %}is-active{% endif %}">Registro de operación</a>
+                    </div>
                 </div>
             </div>
 
@@ -90,8 +92,8 @@
         </nav>
 
         <div class="tecni-sidebar__foot">
-            <span class="tecni-sidebar__foot-dot"></span>
-            <span class="tecni-sidebar__foot-text">Modo técnico</span>
+            <span class="tecni-sidebar__foot-dot" id="elipseFootDot"></span>
+            <span class="tecni-sidebar__foot-text" id="elipseFootText">API conectada</span>
         </div>
     </aside>
 
@@ -109,6 +111,24 @@
             </div>
 
             <div class="tecni-topbar__right">
+                <div class="notif-wrapper" data-notif-url="{% url 'notificaciones:notificaciones-list' %}">
+                    <button type="button" class="notif-bell" id="notifBell" aria-label="Notificaciones">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        <span class="notif-bell__badge" id="notifBadge" hidden>0</span>
+                    </button>
+                    <div class="notif-tray" id="notifTray" role="dialog" aria-label="Notificaciones">
+                        <div class="notif-tray__head">
+                            <span class="notif-tray__title">Notificaciones</span>
+                            <button type="button" class="notif-tray__close" id="notifTrayClose" aria-label="Cerrar">&times;</button>
+                        </div>
+                        <div class="notif-tray__list" id="notifTrayList">
+                            <div class="notif-tray__empty">Sin notificaciones</div>
+                        </div>
+                    </div>
+                </div>
                 {% include 'partials/user_menu.html' %}
             </div>
         </header>
@@ -131,9 +151,11 @@
 
 {% include 'partials/config_modal_tecni.html' %}
 
+<script src="{% static 'js/toast.js' %}"></script>
 <script src="{% static 'js/navbar.js' %}"></script>
 <script src="{% static 'js/tecni-theme.js' %}"></script>
 <script src="{% static 'js/tecni-sidebar.js' %}"></script>
+<script src="{% static 'js/elipse-estado.js' %}"></script>
 <script>
 (function(){
   var msgs = document.querySelectorAll('.messages__item');
