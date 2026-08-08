@@ -12,7 +12,7 @@ from reportlab.lib import colors
 from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from rest_framework import generics, status
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.usuarios.models import Trabajador
@@ -29,6 +29,7 @@ class PingAPIView(APIView):
 
     def get(self, request):
         return Response({"modulo": "mantenimiento", "status": "ok"}, status=status.HTTP_200_OK)
+
 
 
 # ------------ ESTADO_ORDEN --------------------------------------------
@@ -190,6 +191,20 @@ class TareaOrdenDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         )
         self.check_object_permissions(self.request, obj)
         return obj
+
+    def perform_update(self, serializer):
+        orden = serializer.instance.orden_mantenimiento
+        if orden.estado_orden_id != "ENPRO":
+            raise PermissionDenied("Solo se pueden marcar tareas con la orden en progreso (ENPRO).")
+        # TAREA_ORDEN tiene llave compuesta (tarea, orden_mantenimiento) que
+        # Django no sabe modelar: save() sobre la instancia cae en un INSERT
+        # (pk duplicada). Se actualiza por queryset, igual que en el resto
+        # del modulo, y el porcentaje se recalcula despues.
+        models.TareaOrden.objects.filter(
+            tarea=serializer.instance.tarea_id,
+            orden_mantenimiento=orden,
+        ).update(**serializer.validated_data)
+        serializers._recalcular_porcentaje(orden)
 
 
 # ------------ HERRA_ORDEN (llave compuesta) -------------------------------
@@ -396,6 +411,32 @@ class OrdenMantenimientoUpdateAPIView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
+
+
+class OrdenMantenimientoCancelarAPIView(APIView):
+    """Cancelacion suave de una orden: se marca como CANCE (no se borra
+    fisicamente). Se desliga el reporte de falla para que vuelva a estar
+    disponible y, si la maquina quedo en MANTE por esta orden, se le
+    regresa a ESPER. No se setea fechaCierre a proposito: el trigger
+    tg_actualizar_mttr_orden solo se dispara en UPDATE con fechaCierre
+    pasando de NULL a valor, y una orden cancelada no es una reparacion."""
+
+    @transaction.atomic
+    def patch(self, request, folio):
+        try:
+            orden = models.OrdenMantenimiento.objects.get(pk=folio)
+        except models.OrdenMantenimiento.DoesNotExist as exc:
+            raise NotFound("Orden no encontrada.") from exc
+        if orden.estado_orden_id in ("CERRA", "CANCE"):
+            return Response({"detail": "Esta orden ya está cerrada o cancelada."}, status=400)
+        orden.estado_orden_id = "CANCE"
+        orden.reporte_falla = None
+        orden.save(update_fields=["estado_orden", "reporte_falla"])
+        if orden.maquina_id:
+            maquina = Maquina.objects.get(pk=orden.maquina_id)
+            if maquina.estado_maquina_id == "MANTE":
+                cambiar_estado_maquina(orden.maquina_id, "ESPER", "orden_mantenimiento", orden.folio)
         return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
 
 

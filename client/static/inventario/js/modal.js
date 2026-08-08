@@ -49,6 +49,7 @@
       });
   };
 
+
   /* ---- cerrar modal ---- */
   function cerrarModal(container) {
     if (!container.classList.contains("is-open")) return;
@@ -79,3 +80,4 @@
     }
   });
 })();
+

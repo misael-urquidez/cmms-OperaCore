@@ -57,5 +57,99 @@
     {% endfor %}
   </tbody>
 </table></div>
+
+ 
+  <!-- <form method="post" action="{% url 'inventario:crear_pieza' %}">
+    {% csrf_token %}
+    <div class="contenedor">
+      <div class="left-side">
+        <label for="numeroserie">Número de serie</label>
+        <input type="text" name="numeroserie" id="numeroserie" required maxlength="100" value="{{ datos.numeroserie|default:'' }}" />
+
+        <label for="codigoetiqueta">Código de etiqueta / QR</label>
+        <input type="text" name="codigoetiqueta" id="codigoetiqueta" required maxlength="100" value="{{ datos.codigoetiqueta|default:'' }}" />
+
+        <label for="nombre">Nombre de la pieza</label>
+        <input type="text" name="nombre" id="nombre" required maxlength="255" value="{{ datos.nombre|default:'' }}" />
+
+        <label for="costoinicial">Costo inicial ($)</label>
+        <input type="number" step="0.01" name="costoinicial" id="costoinicial" required min="0" placeholder="0.00" value="{{ datos.costoinicial|default:'' }}" />
+
+        <label for="horasoperacion">Horas acumuladas de operación</label>
+        <input type="number" name="horasoperacion" id="horasoperacion" value="{{ datos.horasoperacion|default:'0' }}" min="0" />
+
+        <label for="tiempovidautil">Tiempo de vida útil estimado (Horas)</label>
+        <input type="number" name="tiempovidautil" id="tiempovidautil" required min="0" value="{{ datos.tiempovidautil|default:'' }}" />
+      </div>
+
+      <div class="right-side">
+        <label for="depresacionanual">Depreciación anual (%)</label>
+        <input type="number" step="0.01" name="depresacionanual" id="depresacionanual" value="{{ datos.depresacionanual|default:'0' }}" min="0" />
+
+        <label for="valorresidual">Valor residual ($)</label>
+        <input type="number" step="0.01" name="valorresidual" id="valorresidual" value="{{ datos.valorresidual|default:'0' }}" min="0" />
+
+        <label for="fechainstalacion">Fecha de instalación</label>
+        <input type="date" name="fechainstalacion" id="fechainstalacion" value="{{ datos.fechainstalacion|default:'' }}" />
+
+        <label for="fechagarantia">Fecha fin de garantía</label>
+        <input type="date" name="fechagarantia" id="fechagarantia" value="{{ datos.fechagarantia|default:'' }}" />
+
+        <label for="tipo_pieza">Tipo de pieza</label>
+        <select name="tipo_pieza" id="tipo_pieza" required>
+          <option value="">Seleccione...</option>
+          {% for tp in catalogos.tipos_pieza %}
+            <option value="{{ tp.numeroregistro }}" {% if datos.tipo_pieza == tp.numeroregistro %}selected{% endif %}>{{ tp.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="edo_pieza">Estado físico/operativo</label>
+        <select name="edo_pieza" id="edo_pieza" required>
+          <option value="">Seleccione...</option>
+          {% for ep in catalogos.estados_pieza %}
+            <option value="{{ ep.codigo }}" {% if datos.edo_pieza == ep.codigo %}selected{% endif %}>{{ ep.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <div class="contenedor-botones">
+          <button type="submit">Guardar pieza</button>
+          <a class="btn-cancel" href="{% url 'inventario:lista_piezas' %}">Cancelar</a>
+        </div>
+      </di>v
+    </div>
+  </form> -->
+
+<div class="new-pieza-modal" id="newPiezaModal" aria-hidden="true" style="display: none;">
+  <div class="new-pieza-modal__backdrop" id="newPiezaBackdrop"></div>
+  <div class="new-pieza-modal__panel" role="dialog" aria-modal="true" aria-labelledby="newPiezaTitle">
+    <div class="new-pieza-modal__head">
+      <h2 id="newPiezaTitle">Nueva máquina</h2>
+      <button type="button" class="Pieza-drawer__close" id="newPiezaClose" aria-label="Cerrar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="newPiezaForm" class="new-pieza-form">
+      <p class="new-pieza-form__error" id="newPiezaError" hidden></p>
+      <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
+      <div class="new-pieza-form__grid">
+        <label>Código<span id="codigo-error"></span><input type="text" name="codigo" id="fCodigo" data-error-id="codigo-error" maxlength="10" required placeholder="MAQ007"></label>
+        <label>Nombre<span id="nombre-error"></span><input type="text" name="nombre" id="fNombre" data-error-id="nombre-error" maxlength="100" required placeholder="Pick &amp; Place 2"></label>
+        <label>Línea<select name="linea" id="fLinea"><option value="">Selecciona línea</option></select></label>
+        <label>Tipo de máquina<select name="tipo_maquina" id="fTipo"><option value="">Selecciona tipo</option></select></label>
+        <label>Marca<select name="marca" id="fMarca"><option value="">Selecciona marca</option></select></label>
+        <label>Modelo<select name="modelo" id="fModelo"><option value="">Selecciona modelo</option></select></label>
+        <label>Estado inicial<select name="estado_maquina" id="fEstado"><option value="">Selecciona estado</option></select></label>
+        <label>Modo de monitoreo<select name="modo_monitoreo" id="fModo"><option value="">Selecciona modo</option></select></label>
+        <label>Umbral de vibración<input type="number" name="umbral_vibracion" id="fUmbral" step="0.1" min="0" value="4.0"></label>
+        <label>N° de serie<span id="serie-error"></span><input type="text" name="numeroSerie" id="fSerie" data-error-id="serie-error" maxlength="30" required placeholder="MAQ007-SN001"></label>
+      </div>
+      <label class="new-pieza-form__full">Descripción<span id="descripcion-error"></span><textarea name="descripcion" id="fDescripcion" data-error-id="descripcion-error" maxlength="255" rows="2" placeholder="Descripción breve del equipo..."></textarea></label>
+      <div class="new-pieza-form__actions">
+        <button type="button" class="btn-plant-secondary" id="newPiezaCancel">Cancelar</button>
+        <button type="submit" class="btn-plant-new" id="newPiezaSubmit">Crear máquina</button>
+      </div>
+    </form>
+  </div>
+</div>
 <script src="{% static 'js/buscador.js' %}"></script>
 {% endblock %}

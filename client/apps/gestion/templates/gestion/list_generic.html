@@ -47,7 +47,8 @@
   <tbody>
     {% for registro in registros %}
       {% with pk_val=registro|pk_valor:config.pk_field %}
-      <tr {% if necesita_modal %}
+      <tr data-pk="{{ pk_val }}"
+            {% if necesita_modal %}
             {% for col in todas_las_columnas %}
               {% if not col.name|es_pk:config.pk_field %}
                 data-col-{{ col.name }}="{{ registro|get_item:col.name|default_if_none:'' }}"
@@ -112,6 +113,7 @@
 <script>
 (function() {
   var apiRootUrl = "{{ api_root_url }}";
+  var configSlug = "{{ config.slug }}";
   var todasLasColumnas = [
     {% for col in todas_las_columnas %}
       {% if not col.name|es_pk:config.pk_field %}
@@ -188,6 +190,83 @@
 
     detener_visor_3d();
     if (modelo3dSrc) cargar_visor_3d(modelo3dSrc);
+
+    if (configSlug === 'maquina' && tr.getAttribute('data-pk')) {
+      cargar_asociaciones_maquina(tr.getAttribute('data-pk'));
+    }
+  }
+
+  function escapar_html(texto) {
+    return String(texto == null ? '' : texto)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function cargar_asociaciones_maquina(pk) {
+    var body = document.getElementById('gestion-modal-body');
+    var contenedor = document.createElement('div');
+    contenedor.className = 'gestion-modal__section';
+    contenedor.innerHTML = '<span class="gestion-modal__label">Órdenes de mantenimiento</span>' +
+      '<span class="gestion-modal__value">Cargando asociaciones...</span>';
+    body.appendChild(contenedor);
+
+    var url = apiRootUrl + '/api/maquinaria/v1/maquina/' + encodeURIComponent(pk) + '/';
+    fetch(url)
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (data) {
+        var ordenes = (data.asociaciones && data.asociaciones.ordenes) || [];
+        if (!ordenes.length) {
+          contenedor.innerHTML = '<span class="gestion-modal__label">Órdenes de mantenimiento</span>' +
+            '<span class="gestion-modal__value">Sin órdenes de mantenimiento registradas.</span>';
+          return;
+        }
+        var html = '<span class="gestion-modal__label">Órdenes de mantenimiento</span>';
+        ordenes.forEach(function (orden) {
+          html += '<div class="gestion-modal__asoc">';
+          html += '<div class="gestion-modal__asoc-head">Folio ' + escapar_html(orden.folio) +
+            '<span class="gestion-modal__asoc-estado">' + escapar_html(orden.estado_orden || 'Sin estado') + '</span></div>';
+          if (orden.fechacreacion) {
+            html += '<div class="gestion-modal__asoc-fecha">Creada: ' + escapar_html(orden.fechacreacion) + '</div>';
+          }
+
+          html += '<div class="gestion-modal__asoc-grupo"><span class="gestion-modal__asoc-titulo">Tareas</span>';
+          if (orden.tareas.length) {
+            html += '<ul class="gestion-modal__asoc-list">' + orden.tareas.map(function (t) {
+              return '<li>' + escapar_html(t.instruccion) + (t.actividad ? ' <span class="gestion-modal__asoc-bool">activa</span>' : '') + '</li>';
+            }).join('') + '</ul>';
+          } else {
+            html += '<span class="gestion-modal__value">Sin tareas.</span>';
+          }
+          html += '</div>';
+
+          html += '<div class="gestion-modal__asoc-grupo"><span class="gestion-modal__asoc-titulo">Herramientas</span>';
+          if (orden.herramientas.length) {
+            html += '<ul class="gestion-modal__asoc-list">' + orden.herramientas.map(function (h) {
+              return '<li>' + escapar_html(h.nombre) + '</li>';
+            }).join('') + '</ul>';
+          } else {
+            html += '<span class="gestion-modal__value">Sin herramientas.</span>';
+          }
+          html += '</div>';
+
+          html += '<div class="gestion-modal__asoc-grupo"><span class="gestion-modal__asoc-titulo">Trabajadores</span>';
+          if (orden.trabajadores.length) {
+            html += '<ul class="gestion-modal__asoc-list">' + orden.trabajadores.map(function (w) {
+              return '<li>' + escapar_html(w.nombre) + '</li>';
+            }).join('') + '</ul>';
+          } else {
+            html += '<span class="gestion-modal__value">Sin trabajadores.</span>';
+          }
+          html += '</div>';
+
+          html += '</div>';
+        });
+        contenedor.innerHTML = html;
+      })
+      .catch(function () {
+        contenedor.innerHTML = '<span class="gestion-modal__label">Órdenes de mantenimiento</span>' +
+          '<span class="gestion-modal__value">No se pudieron cargar las asociaciones.</span>';
+      });
   }
 
   var visor3dFrameId = null;

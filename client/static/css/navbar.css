@@ -605,3 +605,91 @@
         right: 0.5rem;
     }
 }
+
+
+/* ==========================================================================
+   Botón de creación rápida (+)
+   ========================================================================== */
+
+.quick-add-wrapper {
+    position: relative;
+}
+
+.quick-add-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+    margin-right: 0.25rem;
+}
+.quick-add-btn:hover,
+.quick-add-btn[aria-expanded="true"] {
+    color: var(--color-text);
+    border-color: var(--color-primary);
+    background: rgba(56, 189, 248, 0.08);
+}
+.quick-add-btn[aria-expanded="true"] svg {
+    transform: rotate(45deg);
+}
+.quick-add-btn svg {
+    transition: transform 0.15s ease;
+}
+
+.quick-add-menu {
+    position: absolute;
+    top: calc(100% + 0.6rem);
+    right: 0;
+    z-index: 40;
+    width: 260px;
+    background: var(--color-surface);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+    padding: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.quick-add-menu.is-open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+.quick-add-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    color: var(--color-text);
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: background 0.12s ease;
+}
+.quick-add-menu__item:hover {
+    background: rgba(56, 189, 248, 0.1);
+}
+.quick-add-menu__item svg {
+    flex: 0 0 auto;
+    color: var(--color-primary);
+}
+
+@media (max-width: 480px) {
+    .quick-add-menu {
+        width: 230px;
+        right: -0.5rem;
+    }
+}

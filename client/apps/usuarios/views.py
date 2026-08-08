@@ -87,7 +87,7 @@ class AuthView(generic.View):
             },
         )
 
-
+ 
 class LoginView(generic.View):
     """Procesa el login: identificador puede ser correo o usuario."""
 
@@ -411,10 +411,28 @@ class AdminDashboardView(generic.View):
         except (requests.RequestException, ValueError):
             pass
 
+        # Indicadores clave (RF-26): MTBF/MTTR/disponibilidad por maquina
+        # (tabla), ordenes pendientes y alertas de inventario (tarjetas).
+        indicadores_maquinas = []
+        try:
+            resumen = SESSION.get(
+                f"{settings.API_BASE_URL}/indicadores/v1/resumen/", timeout=3
+            ).json()
+            indicadores_maquinas = resumen.get("por_maquina", [])
+            stats["ordenes_pendientes"] = resumen.get("ordenes_pendientes")
+            stats["alertas_inventario"] = resumen.get("alertas_inventario")
+        except (requests.RequestException, ValueError):
+            pass
+
         return render(
             request,
             self.template_name,
-            {"seccion": "dashboard", "stats": stats, "ultimas_fallas": ultimas_fallas},
+            {
+                "seccion": "dashboard",
+                "stats": stats,
+                "ultimas_fallas": ultimas_fallas,
+                "indicadores_maquinas": indicadores_maquinas,
+            }
         )
 
 

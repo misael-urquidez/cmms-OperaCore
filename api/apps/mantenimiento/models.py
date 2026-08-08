@@ -28,7 +28,7 @@ class TipoMantenimiento(models.Model):
 class Tareas(models.Model):
     numeroregistro = models.AutoField(db_column='numeroRegistro', primary_key=True)  # Field name made lowercase.
     instruccion = models.CharField(max_length=100)
-    actividad = models.IntegerField()
+    actividad = models.BooleanField()
 
     class Meta:
         managed = False
@@ -108,7 +108,7 @@ class TareaOrden(models.Model):
     fechacierre = models.DateField(db_column='fechaCierre', blank=True, null=True)  # Field name made lowercase.
     horainicio = models.TimeField(db_column='horaInicio')  # Field name made lowercase.
     horafin = models.TimeField(blank=True, null=True)
-    verificacion = models.IntegerField(blank=True, null=True)
+    verificacion = models.BooleanField(blank=True, null=True)
     observaciones = models.CharField(max_length=250, blank=True, null=True)
 
     class Meta:

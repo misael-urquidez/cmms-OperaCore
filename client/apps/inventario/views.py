@@ -287,7 +287,7 @@ class CrearPieza(generic.View):
             "base_template": _base_template(request),
         }
         return render(request, self.template_name, context)
-
+ 
     def post(self, request):
         payload = {
             "numeroserie": request.POST.get("numeroserie"),

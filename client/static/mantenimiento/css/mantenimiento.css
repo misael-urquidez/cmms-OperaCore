@@ -230,3 +230,62 @@ dialog#ordenDrawer #ordenMsg.error { color:#fca5a5; }
 .orden-mov__form select { background:var(--input-bg); border:1px solid var(--line); border-radius:.4rem; padding:.5rem .6rem; color:inherit; font:inherit; }
 .orden-mov__error { font-size:.8rem; color:#fca5a5; margin:0; }
 .orden-mov__form-actions { display:flex; gap:.5rem; justify-content:flex-end; }
+
+/* -------- asignaciones (equipo / herramientas / tareas) -------- */
+.orden-asig { display:grid; gap:.45rem; }
+dialog#newOrdenModal #newOrdenForm div.orden-asig,
+dialog#ordenDrawer #ordenDrawerEdit div.orden-asig { display:grid; gap:.45rem; justify-content:stretch; }
+.orden-asig__label { font-size:.78rem; color:var(--color-muted); margin:0; text-transform:uppercase; letter-spacing:.04em; }
+.orden-asig__lista { display:flex; flex-wrap:wrap; gap:.4rem; }
+.orden-asig__chip {
+  display:inline-flex; align-items:center; gap:.4rem; border:1px solid var(--line) !important;
+  border-radius:999px; padding:.35rem .7rem !important; background:var(--input-bg) !important;
+  color:var(--color-text) !important; font-size:.78rem; cursor:pointer; width:auto !important;
+  font-weight:600 !important; text-align:left;
+}
+.orden-asig__chip:hover { border-color:var(--color-primary) !important; color:var(--color-primary) !important; filter:none !important; }
+.orden-asig__chip--sel { background:var(--color-primary) !important; color:#04121c !important; border-color:var(--color-primary) !important; }
+.orden-asig__chip--sel:hover { color:#04121c !important; }
+.orden-asig__chip:disabled { opacity:.55; cursor:not-allowed; filter:none; }
+.orden-asig__nueva { display:flex; gap:.4rem; align-items:center; }
+.orden-asig__nueva input { flex:1; min-width:0; }
+dialog#newOrdenModal #newOrdenForm .orden-asig__nueva button,
+dialog#ordenDrawer #ordenDrawerEdit .orden-asig__nueva button { width:auto !important; padding:.45rem .8rem !important; font-size:.78rem !important; }
+
+/* -------- checklist de tareas (tecnico) -------- */
+.orden-asig__progreso { text-transform:none; letter-spacing:0; color:var(--color-primary); font-weight:700; }
+.orden-checklist { display:grid; gap:.35rem; }
+.orden-checklist__item {
+  display:flex; gap:.55rem; align-items:flex-start; cursor:pointer;
+  border:1px solid var(--line); border-radius:.5rem; padding:.45rem .6rem;
+  background:var(--input-bg); font-size:.82rem; line-height:1.35;
+}
+.orden-checklist__item:has(input:checked) { border-color:var(--color-primary); }
+.orden-checklist__item input { margin-top:.15rem; accent-color:var(--color-primary); cursor:pointer; }
+.orden-checklist__item input:disabled { cursor:not-allowed; opacity:.55; }
+
+/* -------- multiselect con buscador (equipo/herramientas/tareas) -------- */
+.orden-ms__buscar {
+  width:100%; padding:.5rem .65rem; border:1px solid var(--line); border-radius:.5rem;
+  background:var(--input-bg); color:var(--color-text); font-size:.82rem; box-sizing:border-box;
+}
+.orden-ms__buscar:focus { outline:none; border-color:var(--color-primary); box-shadow:0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent); }
+.orden-ms {
+  width:100%; min-height:0; border:1px solid var(--line); border-radius:.5rem;
+  background:var(--input-bg); color:var(--color-text); font-size:.82rem; padding:.25rem;
+  box-sizing:border-box; max-height:11rem;
+}
+.orden-ms option { padding:.3rem .5rem; border-radius:.35rem; }
+.orden-ms option:checked { background:var(--color-primary) !important; color:#04121c !important; font-weight:700; }
+.orden-ms option[hidden] { display:none; }
+.orden-ms__contador { font-size:.72rem; color:var(--color-muted); margin-top:.25rem; }
+
+/* -------- cancelar orden (drawer) -------- */
+dialog#confirmCancelarOrdenModal { border:none; padding:0; background:transparent; position:fixed; inset:0; margin:auto; color:var(--color-text); }
+dialog#confirmCancelarOrdenModal::backdrop { background:rgba(2,6,15,.72); backdrop-filter:blur(2px); }
+dialog#confirmCancelarOrdenModal[open] {
+  width:min(420px,92vw); background:var(--color-surface); border:1px solid var(--line);
+  border-radius:.75rem; padding:1.25rem; box-shadow:0 20px 50px rgba(0,0,0,.45); display:grid; gap:.75rem;
+}
+dialog#confirmCancelarOrdenModal h2 { margin:0; font-size:1.05rem; }
+#confirmCancelarOrdenTexto { margin:0; font-size:.85rem; color:var(--color-muted); }

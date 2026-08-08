@@ -3,7 +3,7 @@
 
   var root = document.querySelector(".monitoring");
   if (!root) return;
-
+ 
   var DATOS_URL = root.dataset.datosUrl;
   var INDICADORES_TPL = root.dataset.indicadoresUrlBase;
   var HISTORIAL_TPL = root.dataset.historialUrlBase;

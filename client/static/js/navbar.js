@@ -504,6 +504,7 @@ function pintarAvatar(fotoUrl, nombreParaInicial) {
   function abrirTray() {
     if (!notifTray) return;
     cerrarDropdown();
+    cerrarQuickAdd();
     notifTray.classList.add("is-open");
     if (notifBell) notifBell.setAttribute("aria-expanded", "true");
   }
@@ -535,6 +536,43 @@ function pintarAvatar(fotoUrl, nombreParaInicial) {
 
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") cerrarTray();
+  });
+
+  /* ---------- botón de creación rápida (+) ---------- */
+  const quickAddWrapper = document.getElementById("quickAddWrapper");
+  const quickAddBtn = document.getElementById("quickAddBtn");
+  const quickAddMenu = document.getElementById("quickAddMenu");
+
+  function cerrarQuickAdd() {
+    if (!quickAddMenu) return;
+    quickAddMenu.classList.remove("is-open");
+    if (quickAddBtn) quickAddBtn.setAttribute("aria-expanded", "false");
+  }
+  function abrirQuickAdd() {
+    if (!quickAddMenu) return;
+    cerrarTray();
+    cerrarDropdown();
+    quickAddMenu.classList.add("is-open");
+    if (quickAddBtn) quickAddBtn.setAttribute("aria-expanded", "true");
+  }
+
+  if (quickAddBtn) {
+    quickAddBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (quickAddMenu && quickAddMenu.classList.contains("is-open")) {
+        cerrarQuickAdd();
+      } else {
+        abrirQuickAdd();
+      }
+    });
+  }
+
+  document.addEventListener("click", function (e) {
+    if (quickAddWrapper && !quickAddWrapper.contains(e.target)) cerrarQuickAdd();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") cerrarQuickAdd();
   });
 
   // Carga inicial + polling cada 30s

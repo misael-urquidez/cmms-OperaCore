@@ -5,6 +5,7 @@ app_name = "indicadores"
 
 urlpatterns = [
     path("ping/", views.PingAPIView.as_view(), name="ping"),
+    path("v1/resumen/", views.ResumenIndicadoresAPIView.as_view(), name="resumen"),
 
     # v1 / v2 como en las clases de tu maestro, agrega aqui conforme crees
     # tus vistas de list/detail/create/update/delete:
