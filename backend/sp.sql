@@ -51,7 +51,7 @@ begin
 
     -- 1) validar que la maquina exista(.-.)
     select count(*) into existe_maquina
-    FROM maquina 
+    FROM MAQUINA 
     where codigo = maquinita;
     
     IF existe_maquina = 0 then
@@ -62,7 +62,7 @@ begin
     -- 2) ubicar el periodo abierto de la maquina
     select numeroRegistro, fechaInicio, mtbf, mttr
     into id_abierto, fecha_inicio,mtbf_actual, mttr_actual
-    from indicador
+    from INDICADOR
     where maquina = maquinita and fechaFin IS NULL
     order BY numeroRegistro desc
     LIMIT 1;
@@ -75,21 +75,35 @@ begin
     -- 3) validar la fecha de cierre
     IF fecha_fin < fecha_inicio then
         signal sqlstate '45000'
-        set message_text = "ka fecga de fin no puede ser anterior al inicio del periodo";
+        set message_text = "la fecha de fin no puede ser anterior al inicio del periodo";
     end if;
 
     -- 4) cerrar el periodo vigente
-    UPDATE indicador
+    UPDATE INDICADOR
     set fechaFin = fecha_fin
     where numeroRegistro = id_abierto;
 
     -- 5) abrir el periodo siguiente, heredando el ultimo mtbf,mttr
-    INSERT into indicador( maquina,fechaInicio,mtbf,mttr)
+    INSERT into INDICADOR( maquina,fechaInicio,mtbf,mttr)
     values( maquinita, date_add(fecha_fin, interval 1 DAY), mtbf_actual, mttr_actual);
     end $$
 
 Delimiter ;
 
+
+ select numeroRegistro, fechaInicio, mtbf, mttr
+    from INDICADOR
+    where maquina = "MAQ001" and fechaFin IS NULL
+    order BY numeroRegistro desc
+    LIMIT 1;
+
+SHOW TABLES;
+select * from MAQUINA WHERE CODIGO = "MAQ001"
+select * from INDICADOR
+call  sp_cerrar_periodo_indicador("MAQ001","2027-02-28")
+
+INSERT into INDICADOR( maquina,fechaInicio,mtbf,mttr)
+    values( "MAQ001","2027-01-31" , 0, 0);
 
  =====================================================================
 -- Procedimiento 2: sp_reporte_disponibilidad_planta
@@ -207,6 +221,7 @@ END $$
 
 DELIMITER ;
 
+call sp
 -- =====================================================================
 -- Procedimiento 3: sp_registrar_salida_refaccion
 -- =====================================================================
@@ -237,7 +252,6 @@ Delimiter $$
 
 CREATE PROCEDURE sp_registrar_salida_refaccion(
     in p_refaccion int,
-    in cantidad int,
     in orden varchar(15),
     in descripcioncita varchar(255)
 )
@@ -247,14 +261,14 @@ BEGIN
     declare stock_minimo int;
 
     -- 1) validar que la cantidad sea valida
-    if cantidad <= 0 THEN
-        signal sqlstate '45000'
-        set message_text = "la cantidad debe ser mayor a cero";
-    end IF;
+    -- if cantidad <= 0 THEN
+    --     signal sqlstate '45000'
+    --     set message_text = "la cantidad debe ser mayor a cero";
+    -- end IF;
 
     -- 2) ubicar la refaccion y su stock actual
     select stock, stockMinimo into stock_Actual, stock_minimo
-    from refaccion
+    from REFACCION
     where numeroRegistro = p_refaccion;
 
     if stock_Actual is NULL then
@@ -263,24 +277,184 @@ BEGIN
     end IF;
 
     -- 3) validar que haya stock suficiente
-    if stock_Actual < cantidad then
-        signal sqlstate '45000'
-        set message_text = "stock insuficiente para esta salida.";
-    end IF;
+    -- if stock_Actual < cantidad then
+    --     signal sqlstate '45000'
+    --     set message_text = "stock insuficiente para esta salida.";
+    -- end IF;
 
     -- 4) descontar el stock
-    UPDATE refaccion
-    set stock = stock - cantidad
+    UPDATE REFACCION
+    set stock = stock - 1 
     where numeroRegistro = p_refaccion;
 
     -- 5) dejar el registro de auditoria en movimiento
-    INSERT into movimiento(descripcion,fecha,hora,tipomovimiento,orden_mantenimiento, refaccion)
-    values (descripcioncita, curdate(), curtime(), 'SALIDA', orden, p_refaccion);
+    INSERT into MOVIMIENTO (descripcion,fecha,hora,tipomovimiento,orden_mantenimiento, refaccion)
+    values (descripcioncita, curdate(), curtime(), 'INSTA', orden, p_refaccion);
 
     -- 6) informar el resultado a quien llamo el procedimiento
-    select (stock_Actual - cantidad) as stock_resultante,
+    select (stock_Actual - 1) as stock_resultante,
            stock_minimo as stock_minimo_out,
-           (stock_Actual - cantidad) <= stock_minimo as requiere_reabastecimiento;
+           (stock_Actual - 1) <= stock_minimo as requiere_reabastecimiento;
 
 end $$
 Delimiter ;
+
+select * from REFACCION
+call  sp_registrar_salida_refaccion(1, "OMP260807080459", "Descripcoion de prueba")
+-- HORAS 
+
+SELECT * FROM  ORDEN_MANTENIMIENTO
+
+-- =====================================================================
+-- Procedimiento 4: sp_rendimiento_trabajador
+-- =====================================================================
+-- Objetivo: devolver el rendimiento de un trabajador (modulo de
+--           trabajadores) mediante parametros de SALIDA (OUT).
+--           Mismo patron que sp_ventasXVend: un SELECT con CONCAT + COUNT
+--           ... INTO <variables OUT> ... GROUP BY.
+-- Parámetros:
+--   p_nomina            -> TRABAJADOR.numeroNomina (IN)
+--   p_nombre            -> OUT: nombre completo del trabajador
+--   p_ordenes_asignadas -> OUT: total de ordenes asignadas al trabajador
+--   p_ordenes_cerradas  -> OUT: total de ordenes cerradas (estado CERRA)
+-- Lógica:
+--   1) Cruza TRABAJADOR con ORDEN_MANTENIMIENTO por numeroNomina.
+--   2) Concatena nombre + apellidoPat + apellidoMat (con COALESCE por si
+--      el segundo apellido no existe).
+--   3) Cuenta el total de ordenes asignadas y las cerradas (SUM(CASE)).
+--   4) Agrupa por trabajador y devuelve los tres valores por OUT.
+-- =====================================================================
+
+DROP PROCEDURE IF EXISTS sp_rendimiento_trabajador;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_rendimiento_trabajador(
+    IN  p_nomina            VARCHAR(15),
+    OUT p_nombre            VARCHAR(250),
+    OUT p_ordenes_asignadas INT,
+    OUT p_ordenes_cerradas  INT
+)
+BEGIN
+    SELECT
+        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', COALESCE(t.apellidoMat, '')),
+        COUNT(o.folio),
+        SUM(CASE WHEN o.estado_orden = 'CERRA' THEN 1 ELSE 0 END)
+    INTO p_nombre, p_ordenes_asignadas, p_ordenes_cerradas
+    FROM TRABAJADOR t
+    INNER JOIN ORDEN_MANTENIMIENTO o ON o.trabajador = t.numeroNomina
+    WHERE t.numeroNomina = p_nomina
+    GROUP BY t.numeroNomina;
+END $$
+
+DELIMITER ;
+
+-- Llamada (igual que el ejemplo):
+-- call sp_rendimiento_trabajador('NOM-001', @nombre, @asignadas, @cerradas);
+-- select @nombre as Nombre, @asignadas as Ordenes_Asignadas, @cerradas as Ordenes_Cerradas;
+
+-- =====================================================================
+-- Procedimiento 5: sp_calcular_depreciacion_pieza
+-- =====================================================================
+-- Objetivo: calcular la depreciacion anual de una pieza usando un
+--           parametro INOUT. Mismo patron que sp_comisiones: entra la
+--           tasa de depreciacion en p_factor, dentro del SP se combina
+--           con PIEZA.costoInicial (set p_factor = p_factor * costo) y
+--           el mismo parametro sale con el resultado. Asi queda la
+--           evidencia del "campo calculado" depresacionAnual.
+-- Parámetros:
+--   p_pieza  -> PIEZA.numeroSerie (IN)
+--   p_factor -> INOUT: entra la tasa (ej. 0.08) y sale la depreciacion
+--               anual (tasa * costoInicial), redondeada a 2 decimales
+-- Lógica:
+--   1) Valida que la pieza exista (SIGNAL si no).
+--   2) Multiplica la tasa entrante por el costoInicial de la pieza.
+--   3) Devuelve el resultado en el mismo parametro INOUT.
+-- =====================================================================
+
+DROP PROCEDURE IF EXISTS sp_calcular_depreciacion_pieza;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_calcular_depreciacion_pieza(
+    IN  p_pieza    VARCHAR(30),
+    INOUT p_factor FLOAT
+)
+BEGIN
+    DECLARE v_costo FLOAT;
+
+    SELECT costoInicial INTO v_costo
+    FROM PIEZA
+    WHERE numeroSerie = p_pieza;
+
+    IF v_costo IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La pieza especificada no existe';
+    END IF;
+
+    SET p_factor = ROUND(p_factor * v_costo, 2);
+END $$
+
+DELIMITER ;
+
+-- Llamada (igual que el ejemplo):
+-- set @factor = 0.08;
+-- call sp_calcular_depreciacion_pieza('PS-6205-001', @factor);
+-- select @factor as DepreciacionAnual;
+
+-- =====================================================================
+-- Procedimiento 6: sp_resumen_maquina
+-- =====================================================================
+-- Objetivo: devolver la ficha de una maquina mediante parametros de
+--           SALIDA (OUT). Mismo patron que sp_ventasXVend: un SELECT
+--           con JOIN + COUNT ... INTO <variables OUT> ... GROUP BY.
+-- Parámetros:
+--   p_maquina          -> MAQUINA.codigo (IN)
+--   p_nombre           -> OUT: nombre de la maquina
+--   p_estado           -> OUT: MAQUINA.estado_maquina
+--   p_total_fallas     -> OUT: total de reportes de falla de la maquina
+--   p_total_ordenes    -> OUT: total de ordenes de mantenimiento
+--   p_horas_operacion  -> OUT: suma de horas operacion (REGISTRO_OPS)
+-- Lógica:
+--   1) Cruza MAQUINA con REPORTE_FALLA, ORDEN_MANTENIMIENTO y
+--      REGISTRO_OPS (LEFT JOIN para no perder la maquina si no tiene
+--      registros en alguna tabla).
+--   2) Cuenta con COUNT(DISTINCT ...) para que el cruce triple no
+--      infle los totales.
+--   3) Agrupa por maquina y devuelve los cinco valores por OUT.
+-- =====================================================================
+
+DROP PROCEDURE IF EXISTS sp_resumen_maquina;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_resumen_maquina(
+    IN  p_maquina           VARCHAR(10),
+    OUT p_nombre            VARCHAR(100),
+    OUT p_estado            VARCHAR(5),
+    OUT p_total_fallas      INT,
+    OUT p_total_ordenes     INT,
+    OUT p_horas_operacion   INT
+)
+BEGIN
+    SELECT
+        m.nombre,
+        m.estado_maquina,
+        COUNT(DISTINCT rf.numeroRegistro),
+        COUNT(DISTINCT om.folio),
+        IFNULL(SUM(ro.horasOperacion), 0)
+    INTO p_nombre, p_estado, p_total_fallas, p_total_ordenes, p_horas_operacion
+    FROM MAQUINA m
+    LEFT JOIN REPORTE_FALLA rf ON rf.maquina = m.codigo
+    LEFT JOIN ORDEN_MANTENIMIENTO om ON om.maquina = m.codigo
+    LEFT JOIN REGISTRO_OPS ro ON ro.maquina = m.codigo
+    WHERE m.codigo = p_maquina
+    GROUP BY m.codigo, m.nombre, m.estado_maquina;
+END $$
+
+DELIMITER ;
+
+-- Llamada (igual que el ejemplo):
+-- call sp_resumen_maquina('MAQ001', @nombre, @estado, @fallas, @ordenes, @horas);
+-- select @nombre as Nombre, @estado as Estado, @fallas as Fallas,
+--        @ordenes as Ordenes, @horas as Horas_Operacion;
