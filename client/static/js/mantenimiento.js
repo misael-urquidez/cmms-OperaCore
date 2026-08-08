@@ -446,6 +446,14 @@
     var btnCancelar = document.getElementById("newOrdenCancel");
     if (btnCancelar) btnCancelar.addEventListener("click", function (ev) { ev.preventDefault(); cerrarModal(); });
 
+    (function abrirNuevaOrdenDesdeQuickAdd() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get("nueva_orden") === "1") {
+        abrirModal();
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    })();
+
     (function prellenarDesdeMonitoreo() {
       var params = new URLSearchParams(window.location.search);
       var maquinaParam = params.get("maquina");
