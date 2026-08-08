@@ -1,7 +1,6 @@
 /* ==========================================================================
-   Apariencia del técnico: SOLO permite elegir entre 3 temas fijos
-   (Oscuro/Claro/Plano). No hay fondo, degradado ni personalización avanzada
-   — a propósito, por eso este archivo es mucho más corto que theme.js.
+   Apariencia del técnico: 3 temas fijos + color personalizado para el logo.
+   El color del logo se guarda por usuario y se aplica como CSS variable.
    ========================================================================== */
 (function () {
   const body = document.body;
@@ -12,18 +11,26 @@
   function leer() {
     try {
       const raw = JSON.parse(localStorage.getItem(KEY) || "{}");
-      return { theme: raw.theme === "light" || raw.theme === "plain" ? raw.theme : "dark" };
+      return {
+        theme: raw.theme === "light" || raw.theme === "plain" ? raw.theme : "dark",
+        logoColor: raw.logoColor || "#38bdf8"  // azul por defecto
+      };
     } catch (e) {
-      return { theme: "dark" };
+      return { theme: "dark", logoColor: "#38bdf8" };
     }
   }
+
   function guardar(prefs) {
     try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch (e) {}
   }
 
   function aplicar(prefs) {
+    // Tema
     if (prefs.theme === "light" || prefs.theme === "plain") body.dataset.theme = prefs.theme;
     else delete body.dataset.theme;
+
+    // Color del logo
+    document.documentElement.style.setProperty("--brand-color", prefs.logoColor);
   }
 
   let prefs = leer();
@@ -41,22 +48,55 @@
 
   /* selector de tema */
   const themeToggle = document.getElementById("themeToggle");
-  function pintar() {
+  function pintarTema() {
     if (!themeToggle) return;
     themeToggle.querySelectorAll("[data-theme-value]").forEach((b) => {
       b.classList.toggle("is-active", b.dataset.themeValue === prefs.theme);
     });
   }
-  pintar();
+  pintarTema();
 
   if (themeToggle) {
     themeToggle.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-theme-value]");
       if (!btn) return;
-      prefs = { theme: btn.dataset.themeValue };
+      prefs.theme = btn.dataset.themeValue;
       guardar(prefs);
       aplicar(prefs);
-      pintar();
+      pintarTema();
+    });
+  }
+
+  /* selector de color del logo */
+  const logoSwatches = document.getElementById("logoColorSwatches");
+  const logoColorInput = document.getElementById("logoColorInput");
+
+  function pintarColor() {
+    if (!logoSwatches || !logoColorInput) return;
+    logoSwatches.querySelectorAll("button").forEach((b) => {
+      b.classList.toggle("is-active", b.dataset.color === prefs.logoColor);
+    });
+    logoColorInput.value = prefs.logoColor;
+  }
+  pintarColor();
+
+  if (logoSwatches) {
+    logoSwatches.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-color]");
+      if (!btn) return;
+      prefs.logoColor = btn.dataset.color;
+      guardar(prefs);
+      aplicar(prefs);
+      pintarColor();
+    });
+  }
+
+  if (logoColorInput) {
+    logoColorInput.addEventListener("input", (e) => {
+      prefs.logoColor = e.target.value;
+      guardar(prefs);
+      aplicar(prefs);
+      pintarColor();
     });
   }
 })();

@@ -81,6 +81,7 @@ class ReporteFalla(generic.View):
             "seccion": "fallas",
             "subseccion": "reporte",
             "usuario": usuario,
+            "es_tecnico": usuario.get("rol") == "TECNI",
             "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
         }
 

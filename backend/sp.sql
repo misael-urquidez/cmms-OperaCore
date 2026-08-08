@@ -90,20 +90,20 @@ begin
 
 Delimiter ;
 
-
- select numeroRegistro, fechaInicio, mtbf, mttr
-    from INDICADOR
-    where maquina = "MAQ001" and fechaFin IS NULL
-    order BY numeroRegistro desc
-    LIMIT 1;
-
-SHOW TABLES;
-select * from MAQUINA WHERE CODIGO = "MAQ001"
-select * from INDICADOR
-call  sp_cerrar_periodo_indicador("MAQ001","2027-02-28")
-
-INSERT into INDICADOR( maquina,fechaInicio,mtbf,mttr)
-    values( "MAQ001","2027-01-31" , 0, 0);
+-- Líneas de prueba eliminadas:
+-- select numeroRegistro, fechaInicio, mtbf, mttr
+--     from INDICADOR
+--     where maquina = "MAQ001" and fechaFin IS NULL
+--     order BY numeroRegistro desc
+--     LIMIT 1;
+--
+-- SHOW TABLES;
+-- select * from MAQUINA WHERE CODIGO = "MAQ001"
+-- select * from INDICADOR
+-- call  sp_cerrar_periodo_indicador("MAQ001","2027-02-28")
+--
+-- INSERT into INDICADOR( maquina,fechaInicio,mtbf,mttr)
+--     values( "MAQ001","2027-01-31" , 0, 0);
 
  =====================================================================
 -- Procedimiento 2: sp_reporte_disponibilidad_planta
@@ -221,7 +221,7 @@ END $$
 
 DELIMITER ;
 
-call sp
+-- call sp  -- Línea huérfana eliminada
 -- =====================================================================
 -- Procedimiento 3: sp_registrar_salida_refaccion
 -- =====================================================================
@@ -299,8 +299,9 @@ BEGIN
 end $$
 Delimiter ;
 
-select * from REFACCION
-call  sp_registrar_salida_refaccion(1, "OMP260807080459", "Descripcoion de prueba")
+-- Líneas de prueba eliminadas:
+-- select * from REFACCION
+-- call  sp_registrar_salida_refaccion(1, "OMP260807080459", "Descripcoion de prueba")
 -- HORAS 
 
 SELECT * FROM  ORDEN_MANTENIMIENTO

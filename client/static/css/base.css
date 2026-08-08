@@ -143,3 +143,9 @@ body {
     padding: 0 0.25rem;
 }
 .toast__close:hover { color: var(--color-text); }
+
+/* Anillo central del logo de OperaCore: usa el color personalizado del
+   usuario (--brand-color) si existe, o si no, el acento normal del tema. */
+.brand-logo__accent {
+    fill: var(--brand-color, var(--color-primary));
+}
