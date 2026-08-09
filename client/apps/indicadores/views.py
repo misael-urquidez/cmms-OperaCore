@@ -1,3 +1,5 @@
+import json
+
 import requests
 from django.conf import settings
 from django.contrib import messages
@@ -109,6 +111,76 @@ class ReporteKPIExportProxy(View):
         response = HttpResponse(respuesta.content, content_type=respuesta.headers["Content-Type"])
         response["Content-Disposition"] = respuesta.headers["Content-Disposition"]
         return response
+
+
+class CerrarPeriodoProxy(View):
+    """Reenvia POST /indicadores/v2/cerrar-periodo/ al api/. Boton manual
+    del panel de KPIs: el admin elige maquina + fecha de cierre, esto
+    dispara sp_cerrar_periodo_indicador en la BD via el api/."""
+
+    def post(self, request):
+        try:
+            payload = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "JSON invalido."}, status=400)
+
+        maquina = payload.get("maquina")
+        fecha_fin = payload.get("fecha_fin")
+        if not maquina or not fecha_fin:
+            return JsonResponse(
+                {"detail": "Faltan 'maquina' y/o 'fecha_fin'."}, status=400
+            )
+
+        try:
+            respuesta = SESSION.post(
+                f"{API_URL}/v2/cerrar-periodo/",
+                json={"maquina": maquina, "fecha_fin": fecha_fin},
+                timeout=10,
+            )
+        except requests.exceptions.RequestException:
+            return JsonResponse(
+                {"detail": "No fue posible conectar con el API."}, status=502
+            )
+
+        # Reenviamos tal cual el status y el body: si el SP truena (SIGNAL
+        # 45000: maquina no existe, no hay periodo abierto, fecha invalida)
+        # el api/ ya lo mapea a 400 con el mensaje real del SP.
+        try:
+            data = respuesta.json()
+        except ValueError:
+            data = {"detail": "Respuesta invalida del API."}
+        return JsonResponse(data, status=respuesta.status_code, safe=False)
+
+
+class ReporteDisponibilidadProxy(View):
+    """Reenvia GET /indicadores/v1/reporte-disponibilidad/ al api/, para
+    el reporte de disponibilidad/MTBF/MTTR por linea en un rango de
+    fechas elegido a mano (sp_reporte_disponibilidad_planta)."""
+
+    def get(self, request):
+        fecha_inicio = request.GET.get("fecha_inicio")
+        fecha_fin = request.GET.get("fecha_fin")
+        if not fecha_inicio or not fecha_fin:
+            return JsonResponse(
+                {"detail": "Faltan 'fecha_inicio' y/o 'fecha_fin'."}, status=400
+            )
+
+        try:
+            respuesta = SESSION.get(
+                f"{API_URL}/v1/reporte-disponibilidad/",
+                params={"fecha_inicio": fecha_inicio, "fecha_fin": fecha_fin},
+                timeout=10,
+            )
+        except requests.exceptions.RequestException:
+            return JsonResponse(
+                {"detail": "No fue posible conectar con el API."}, status=502
+            )
+
+        try:
+            data = respuesta.json()
+        except ValueError:
+            data = {"detail": "Respuesta invalida del API."}
+        return JsonResponse(data, status=respuesta.status_code, safe=False)
 
 
 # A partir de aqui sigue el patron de tu maestro (home/views.py):

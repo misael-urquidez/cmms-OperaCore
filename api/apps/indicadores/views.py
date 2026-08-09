@@ -67,7 +67,14 @@ TITULOS_KPI = {
     "reportes-atencion": "Reportes en atención",
     "stock": "Stock de refacciones",
     "monitoreo-predictivo": "Monitoreo predictivo",
+    "disponibilidad-por-rango": "Reporte de disponibilidad por rango",
 }
+
+# Slug especial: NO es una vista de VISTAS_KPI (no sale de un SELECT * FROM
+# v_..., sino de sp_reporte_disponibilidad_planta con el rango que el
+# usuario ya generó en la sección "Reporte de disponibilidad por línea"
+# del panel de KPI's).
+SLUG_DISPONIBILIDAD_RANGO = "disponibilidad-por-rango"
 
 # Traduce alias crudos de SQL (CamelCase) a etiquetas legibles.
 # Si una columna no está en el override, se separa automáticamente
@@ -87,6 +94,13 @@ COLUMNAS_OVERRIDE = {
     "Umbral": "Umbral de vibración",
     "Vibracion": "Vibración",
     "Excede": "¿Excede umbral?",
+    # Columnas de sp_reporte_disponibilidad_planta (snake_case, no las
+    # separa el humanizador automatico porque ese solo parte CamelCase).
+    "linea": "Línea",
+    "nombrelinea": "Línea",
+    "disponibilidad_promedio": "Disponibilidad promedio (%)",
+    "mtbf_promedio": "MTBF promedio (hrs)",
+    "mttr_promedio": "MTTR promedio (hrs)",
 }
 
 
@@ -476,6 +490,11 @@ class ReporteKPIExportAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # El slug especial de disponibilidad-por-rango no vive en VISTAS_KPI
+        # (no es una vista SQL), asi que se separa antes de validar el resto.
+        incluir_dispo_rango = SLUG_DISPONIBILIDAD_RANGO in vistas_slugs
+        vistas_slugs = [v for v in vistas_slugs if v != SLUG_DISPONIBILIDAD_RANGO]
+
         # Validar vistas
         vistas_invalidas = [v for v in vistas_slugs if v not in VISTAS_KPI]
         if vistas_invalidas:
@@ -514,6 +533,25 @@ class ReporteKPIExportAPIView(APIView):
                     data = [fila for fila in data if _fila_en_periodo(fila, fecha_inicio, fecha_fin)]
 
                 vistas_data.append((slug, data))
+
+        # Vista especial: reporte de disponibilidad por rango. Usa su propio
+        # rango de fechas (el que el usuario ya generó arriba en el panel,
+        # no el fecha_inicio/fecha_fin genericos del resto del reporte).
+        # Si no se mandan esos parametros (el usuario nunca le dio a
+        # "Generar" en esa seccion), sale vacia -- mismo trato que
+        # cualquier otra vista sin datos: no aparece en el archivo.
+        if incluir_dispo_rango:
+            rango_inicio = request.query_params.get("reporte_dispo_fecha_inicio")
+            rango_fin = request.query_params.get("reporte_dispo_fecha_fin")
+            data_rango = []
+            if rango_inicio and rango_fin:
+                try:
+                    with connection.cursor() as cur:
+                        cur.callproc("sp_reporte_disponibilidad_planta", [rango_inicio, rango_fin])
+                        data_rango = _filas_a_dicts(cur)
+                except Exception:
+                    data_rango = []
+            vistas_data.append((SLUG_DISPONIBILIDAD_RANGO, data_rango))
 
         # Generar archivo
         if formato == "csv":

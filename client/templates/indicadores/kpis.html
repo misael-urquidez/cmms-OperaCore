@@ -37,8 +37,51 @@
     <button type="button" class="kpi__btn" id="kpiRecargarTodo">Actualizar todo</button>
   </div>
 
+  <section class="kpi__panel kpi__panel--wide">
+    <div class="kpi__panel-head">
+      <div>
+        <p class="kpi__panel-title">Reporte de disponibilidad por línea</p>
+        <p class="kpi__panel-sub">Disponibilidad, MTBF y MTTR promedio por línea, más fallas y órdenes cerradas, para el rango que elijas.</p>
+      </div>
+    </div>
+    <div class="kpi__toolbar">
+      <label class="kpi__filtro kpi__filtro--fecha">Desde
+        <input type="date" id="reporteDispoFechaInicio">
+      </label>
+      <label class="kpi__filtro kpi__filtro--fecha">Hasta
+        <input type="date" id="reporteDispoFechaFin">
+      </label>
+      <button type="button" class="kpi__btn kpi__btn--primary" id="reporteDispoGenerar">Generar</button>
+    </div>
+    <div class="kpi__table-wrap" id="reporteDispoResultado">
+      <p class="kpi__table-empty">Elige un rango de fechas y da clic en "Generar".</p>
+    </div>
+  </section>
+
   <div class="kpi__vista-grid" id="kpiVistaGrid">
     <!-- Cada tarjeta se genera desde kpis-tablas.js a partir de la lista VISTAS -->
+  </div>
+
+  <div class="kpi__modal" id="kpiModalCerrarPeriodo" role="dialog" aria-modal="true" aria-labelledby="kpiModalCerrarPeriodoTitulo">
+    <div class="kpi__modal-backdrop" data-kpi-cerrar-modal-periodo></div>
+    <div class="kpi__modal-dialog">
+      <div class="kpi__modal-head">
+        <h3 id="kpiModalCerrarPeriodoTitulo">Cerrar periodo de indicador</h3>
+        <button type="button" class="kpi__modal-close" data-kpi-cerrar-modal-periodo aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="kpi__modal-body">
+        <label class="kpi__filtro">Máquina
+          <select id="cerrarPeriodoMaquina"></select>
+        </label>
+        <label class="kpi__filtro">Fecha de cierre
+          <input type="date" id="cerrarPeriodoFecha">
+        </label>
+        <p class="kpi__modal-nota" id="cerrarPeriodoMsg"></p>
+      </div>
+      <div class="kpi__modal-foot">
+        <button type="button" class="kpi__btn kpi__btn--primary" id="cerrarPeriodoConfirmar">Cerrar periodo</button>
+      </div>
+    </div>
   </div>
 
   <div class="kpi__modal" id="kpiModalReporte" role="dialog" aria-modal="true" aria-labelledby="kpiModalReporteTitulo">
@@ -67,4 +110,5 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="{% static 'indicadores/js/kpis-tablas.js' %}"></script>
+<script src="{% static 'indicadores/js/kpis-acciones.js' %}"></script>
 {% endblock %}

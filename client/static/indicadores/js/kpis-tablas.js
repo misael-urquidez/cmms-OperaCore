@@ -387,7 +387,7 @@
       check.checked = true;
       check.addEventListener("change", function () {
         var checks = listaVistas.querySelectorAll("input[type='checkbox']:checked");
-        checkTodas.checked = checks.length === VISTAS.length;
+        checkTodas.checked = checks.length === listaVistas.querySelectorAll("input[type='checkbox']").length;
       });
 
       var label = document.createElement("label");
@@ -399,16 +399,45 @@
       listaVistas.appendChild(li);
     });
 
+    // Checkbox extra: reporte de disponibilidad por rango (sp_reporte_
+    // disponibilidad_planta), el de la sección "Reporte de disponibilidad
+    // por línea" arriba en la página. Usa el rango que ya se generó ahí;
+    // si nunca se generó, sale vacío en el archivo.
+    var SLUG_DISPO_RANGO = "disponibilidad-por-rango";
+    var liDispoRango = document.createElement("li");
+    var checkDispoRango = document.createElement("input");
+    checkDispoRango.type = "checkbox";
+    checkDispoRango.id = "check-" + SLUG_DISPO_RANGO;
+    checkDispoRango.value = SLUG_DISPO_RANGO;
+    checkDispoRango.checked = true;
+    checkDispoRango.addEventListener("change", function () {
+      var checks = listaVistas.querySelectorAll("input[type='checkbox']:checked");
+      checkTodas.checked = checks.length === listaVistas.querySelectorAll("input[type='checkbox']").length;
+    });
+    var labelDispoRango = document.createElement("label");
+    labelDispoRango.htmlFor = checkDispoRango.id;
+    labelDispoRango.textContent = "Reporte de disponibilidad por rango (el de arriba)";
+    liDispoRango.appendChild(checkDispoRango);
+    liDispoRango.appendChild(labelDispoRango);
+    listaVistas.appendChild(liDispoRango);
+
     // Botones de descarga
     modal.querySelectorAll(".kpi__modal-foot .kpi__btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var formato = btn.dataset.formato;
-        var vistasSeleccionadas = Array.from(listaVistas.querySelectorAll("input[type='checkbox']:checked")).map(function (check) {
+        var checksMarcados = Array.from(listaVistas.querySelectorAll("input[type='checkbox']:checked")).map(function (check) {
           return check.value;
-        }).join(",");
+        });
+        var vistasSeleccionadas = checksMarcados.join(",");
 
         var params = new URLSearchParams();
         params.append("vistas", vistasSeleccionadas);
+
+        if (checksMarcados.indexOf(SLUG_DISPO_RANGO) !== -1 &&
+            window.kpiReporteDispoRango && window.kpiReporteDispoRango.generado) {
+          params.append("reporte_dispo_fecha_inicio", window.kpiReporteDispoRango.fechaInicio);
+          params.append("reporte_dispo_fecha_fin", window.kpiReporteDispoRango.fechaFin);
+        }
 
         if (filtroPeriodo.value === "custom") {
           if (fechaInicioInput.value) params.append("fecha_inicio", fechaInicioInput.value);
