@@ -351,7 +351,7 @@ def _pdf_titulo_seccion(titulo):
                             textColor=BRAND_DARK, leading=14)
     barra = Table([[""]], colWidths=[3], rowHeights=[16])
     barra.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), BRAND_ACCENT)]))
-    cuerpo = Table([[barra, Paragraph(titulo, style)]], colWidths=[3, 300])
+    cuerpo = Table([[barra, Paragraph(titulo, style)]], colWidths=[3, 300], hAlign="LEFT")
     cuerpo.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("LEFTPADDING", (0, 0), (0, 0), 0),
@@ -422,7 +422,7 @@ def _generar_pdf(vistas_data, nombre_archivo="reporte_kpi", fecha_inicio=None, f
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer, pagesize=landscape(letter),
-        topMargin=34 * mm, bottomMargin=26 * mm,
+        topMargin=46 * mm, bottomMargin=26 * mm,
         leftMargin=20 * mm, rightMargin=20 * mm,
         title="Reporte de indicadores OperaCore",
     )
