@@ -16,6 +16,9 @@
 --   v_kpi_indicadores_actuales    -> tabla MTTR/MTBF/Disponibilidad
 --   v_kpi_disponibilidad_linea    -> linea de disponibilidad por periodo
 --   v_kpi_monitoreo_predictivo    -> ultima lectura de sensor por maquina
+--   v_periodo_abierto_maquina     -> apoyo a sp_cerrar_periodo_indicador (sp.sql)
+--   v_refaccion_inventario        -> apoyo a sp_registrar_salida_refaccion (sp.sql);
+--                                    base de v_kpi_stock
 -- =====================================================================
 
 USE operacore;
@@ -150,6 +153,34 @@ select m.codigo as Codigo, m.nombre as Maquina, m.umbral_vibracion as Umbral,
 from LECTURA_SENSOR s
 inner join MAQUINA m on m.codigo = s.maquina
 where s.numeroRegistro = (select max(s2.numeroRegistro) from LECTURA_SENSOR s2 where s2.maquina = s.maquina);
+
+-- =====================================================================
+-- 11. v_periodo_abierto_maquina: periodos vigentes (fechaFin NULL)
+--     Vista de apoyo consumida por sp_cerrar_periodo_indicador (sp.sql):
+--     encapsula el concepto de "periodo vigente" que el SP necesita
+--     localizar para cerrar y abrir el siguiente.
+-- =====================================================================
+DROP VIEW IF EXISTS v_periodo_abierto_maquina;
+
+CREATE VIEW v_periodo_abierto_maquina as
+select numeroRegistro, maquina, fechaInicio, mtbf, mttr
+from INDICADOR
+where fechaFin IS NULL;
+
+-- =====================================================================
+-- 12. v_refaccion_inventario: catalogo de refacciones con su stock
+--     Vista de apoyo consumida por sp_registrar_salida_refaccion (sp.sql):
+--     entrega los datos de stock y stockMinimo que el SP usa para
+--     descontar y evaluar el reabastecimiento. v_kpi_stock es un
+--     filtro de esta vista (solo refacciones en/bajo el stock minimo).
+-- =====================================================================
+DROP VIEW IF EXISTS v_refaccion_inventario;
+
+CREATE VIEW v_refaccion_inventario as
+select r.numeroRegistro, r.nombre, r.codigoSku, r.stock, r.stockMinimo,
+       r.costo, r.puntoReorden, c.nombre as clasificacion
+from REFACCION r
+left join CLASIFICACION c on c.codigo = r.clasificacion;
 
 -- =====================================================================
 -- FIN DE VISTAS KPI
