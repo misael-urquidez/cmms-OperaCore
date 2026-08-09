@@ -177,7 +177,7 @@ class ReporteFalla(models.Model):
     tiempoParo = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     causaRaiz = models.CharField(max_length=500)
     descripcion = models.CharField(max_length=500, null=True, blank=True)
-    imagen = models.ImageField(upload_to='fallas_images/')
+    imagen = models.ImageField(upload_to='fallas_images/', null=True, blank=True)
     maquina = models.ForeignKey(
         Maquina, on_delete=models.DO_NOTHING, db_column="maquina"
     )

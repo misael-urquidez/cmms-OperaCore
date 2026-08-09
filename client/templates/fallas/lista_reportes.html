@@ -5,200 +5,263 @@
 {% block page_title %}Reportes de falla{% endblock %}
 
 {% block content %}
+<div class="dashboard-container">
 
-  <section class="panel">
-    <div class="panel__head">
-      <h2 class="panel__title">Reportes registrados</h2>
-      <div class="panel__actions">
-        <a class="btn-primary-sm" href="{% url 'fallas:reporte' %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          Nuevo reporte
-        </a>
+  <!-- TOP WIDGETS -->
+  <div class="top-widgets">
+   
+    <!-- TARJETA IZQUIERDA: MÉTRICAS GENERALES -->
+    <div class="widget-card">
+      <div class="widget-header">
+        <div class="widget-title">
+          <h3>Métricas Generales</h3>
+          <span class="subtext">Acumulado histórico total del sistema</span>
+        </div>
+      </div>
+
+      <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="kpi-box">
+          <span class="kpi-label">Reportes Totales</span>
+          <span class="kpi-value text-totales">{{ kpi_totales }}</span>
+        </div>
+        <div class="kpi-box">
+          <span class="kpi-label">En espera</span>
+          <span class="kpi-value text-espera">{{ kpi_espera }}</span>
+        </div>
+        <div class="kpi-box">
+          <span class="kpi-label">Abiertos</span>
+          <span class="kpi-value text-abiertos">{{ kpi_abiertos }}</span>
+        </div>
+      </div>
+
+      <hr class="widget-divider">
+
+      <div class="widget-header" style="margin-bottom: 0.5rem;">
+        <div class="widget-title">
+          <h4 style="margin: 0; color: var(--color-muted); font-size: 0.85rem;">Resultados del mes</h4>
+        </div>
+        <form method="GET" class="filter-form-inline" id="formMes">
+          <input type="hidden" name="anio" value="{{ anio_actual }}">
+          <input type="month" name="mes" value="{{ mes_actual }}" onchange="document.getElementById('formMes').submit();" class="input-date-dark">
+        </form>
+      </div>
+
+      <div class="kpi-grid secondary" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="kpi-box-sm">
+          <span class="kpi-label">Cancelados</span>
+          <span class="kpi-value-sm text-cancelados">{{ kpi_cancelados }}</span>
+        </div>
+        <div class="kpi-box-sm">
+          <span class="kpi-label">Resueltos</span>
+          <span class="kpi-value-sm text-resueltos">{{ kpi_resueltos }}</span>
+        </div>
       </div>
     </div>
 
-    {% if reportes %}
-<div class="inv-search" data-buscador-target="#tabla-reportes">
-  <svg class="inv-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-  </svg>
-  <input type="text" class="buscador-input" placeholder="Buscar en la tabla...">
-  <select class="filter-select" data-filter="tipo_severidad">
-    <option value="">Todas las severidades</option>
-    {% for s in severidades %}
-      <option value="{{ s.codigo }}">{{ s.nombre }}</option>
-    {% endfor %}
-  </select>
-  <select class="filter-select" data-filter="maquina">
-    <option value="">Todas las máquinas</option>
-    {% for m in maquinas %}
-      <option value="{{ m.codigo }}">{{ m.nombre }}</option>
-    {% endfor %}
-  </select>
-</div>
-
-      <div class="data-table-wrap">
-        <table class="data-table" id="tabla-reportes">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Asunto</th>
-              <th>Fecha</th>
-              <th>Severidad</th>
-              <th>Máquina</th>
-              <th>Trabajador</th>
-              <th colspan="3">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for r in reportes %}
-              <tr data-tipo_severidad="{{ r.tipo_severidad|default:'' }}" data-maquina="{{ r.maquina|default:'' }}">
-                <td>{{ r.numeroRegistro }}</td>
-                <td>{{ r.asunto }}</td>
-                <td>{{ r.fechaCreacion }}</td>
-                <td><span class="badge">{{ r.tipo_severidad_nombre|default:"-" }}</span></td>
-                <td>{{ r.maquina_nombre|default:"-" }}</td>
-                <td>{{ r.trabajador_nombre|default:"-" }}</td>
-                <td><button type="button" onclick="abrir_modal_detalle({{ r.numeroRegistro }})">Ver detalles</button></td>
-                <td><a href="{% url 'fallas:actualizar_reporte' pk=r.numeroRegistro %}">Actualizar</a></td>
-                <td><button type="button" class="btn-export-row" onclick="abrir_modal_exportar({{ r.numeroRegistro }})">Exportar</button></td>
-              </tr>
+    <!-- TARJETA DERECHA: TOTAL DE FALLAS POR MES -->
+    <div class="widget-card">
+      <div class="widget-header">
+        <div class="widget-title">
+          <h3>Total de fallas</h3>
+          <span class="subtext">Fallas registradas por mes</span>
+        </div>
+        <form method="GET" class="filter-form-inline" id="formAnio">
+          <input type="hidden" name="mes" value="{{ mes_actual }}">
+          <select name="anio" onchange="document.getElementById('formAnio').submit();" class="select-dark">
+            {% for a in anios_disponibles %}
+              <option value="{{ a }}" {% if a == anio_actual %}selected{% endif %}>Año {{ a }}</option>
             {% endfor %}
-          </tbody>
-        </table>
+          </select>
+        </form>
       </div>
-    {% else %}
-      <p class="panel__empty">No hay reportes de falla registrados todavía.</p>
-    {% endif %}
-  </section>
 
-  <div class="fallas-modal" id="detalle-falla" role="dialog">
+      <div class="chart-container">
+        <canvas id="chartTiempoAtencion"></canvas>
+      </div>
+    </div>
+
   </div>
 
-  <div class="fallas-modal" id="exportar-falla" role="dialog">
-    <div class="fallas-modal__backdrop" data-dismiss="modal-export"></div>
-    <div class="fallas-modal__dialog">
-      <div class="fallas-modal__content">
-        <div class="fallas-modal__header">
-          <h3 class="fallas-modal__title">Exportar reporte</h3>
-          <button class="fallas-modal__close" data-dismiss="modal-export">&times;</button>
+  <!-- SECCIÓN PRINCIPAL: RECUADROS DE REPORTES -->
+  <section class="panel-main">
+    <div class="panel-header-flex">
+      <h2>Reportes de falla</h2>
+     
+      <div class="tab-filters">
+        <button type="button" class="tab-btn active" data-tab-status="">Todos {{ kpi_totales }}</button>
+        <button type="button" class="tab-btn" data-tab-status="En espera">En espera</button>
+        <button type="button" class="tab-btn" data-tab-status="Abierto">Abiertos</button>
+        <button type="button" class="tab-btn" data-tab-status="Cancelado">Cancelados</button>
+        <button type="button" class="tab-btn" data-tab-status="Resuelto">Resueltos</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="inputBuscar" placeholder="Buscar por asunto, máquina o técnico...">
+      </div>
+
+      <div class="dropdown-filters">
+        <select id="filterMaquina" class="select-dark">
+          <option value="">Máquina: Todas</option>
+          {% for m in maquinas %}
+            <option value="{{ m.nombre }}">{{ m.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <select id="filterSeveridad" class="select-dark">
+          <option value="">Severidad: Todas</option>
+          {% for s in severidades %}
+            <option value="{{ s.nombre }}">{{ s.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <div class="date-range">
+          <label>Desde</label>
+          <input type="date" id="filterDesde" class="input-date-dark">
+          <label>Hasta</label>
+          <input type="date" id="filterHasta" class="input-date-dark">
         </div>
-        <div class="fallas-modal__body" style="text-align:center;padding:2rem;">
-          <p style="margin-bottom:1.5rem;color:var(--color-muted);">
-            Reporte #<strong id="export-pk"></strong> &mdash; Selecciona el formato
-          </p>
-          <div class="export-options">
-            <a class="export-btn export-btn--csv" id="export-csv-link" href="#">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-              CSV
-            </a>
-            <a class="export-btn export-btn--xlsx" id="export-xlsx-link" href="#">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="6" y1="10" x2="18" y2="10"/><line x1="6" y1="14" x2="18" y2="14"/><line x1="6" y1="18" x2="12" y2="18"/></svg>
-              Excel
-            </a>
-            <a class="export-btn export-btn--pdf" id="export-pdf-link" href="#">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h6"/><path d="M12 12v6"/></svg>
-              PDF
-            </a>
+      </div>
+    </div>
+
+    <!-- CARDS DE REPORTES -->
+    <div class="report-cards-list" id="listaReportesCards">
+      {% for r in reportes %}
+        <div class="report-card-item"
+             data-asunto="{{ r.asunto|lower }}"
+             data-maquina="{{ r.maquina_codigo|default:'' }} {{ r.maquina_nombre|default:r.maquina }}"
+             data-severidad="{{ r.severidad_evaluada }}"
+             data-estado="{{ r.estado_evaluado }}"
+             data-fecha="{{ r.fechaCreacion }}">
+         
+          <div class="col-id">
+            <span class="label-sub">Reporte</span>
+            <strong>#{{ r.numeroRegistro|stringformat:"04d" }}</strong>
+          </div>
+
+          <div class="col-asunto">
+            <span class="label-sub">Asunto</span>
+            <span class="text-main">{{ r.asunto }}</span>
+          </div>
+
+          <div class="col-maquina">
+            <span class="label-sub">Máquina</span>
+            <span class="text-muted-custom">{{ r.maquina_nombre|default:"-" }}</span>
+          </div>
+
+          <div class="col-tipo-falla">
+            <span class="label-sub">Tipo de falla</span>
+            <span class="text-muted-custom">
+              {% if r.fallas_asociadas %}
+                {% for f in r.fallas_asociadas %}{{ f.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+              {% else %}
+                {{ r.tipo_falla_nombre|default:"Mecánica" }}
+              {% endif %}
+            </span>
+          </div>
+
+          <div class="col-badge">
+            <span class="label-sub">Severidad</span>
+            <span class="badge-custom badge-sev-{{ r.severidad_evaluada|slugify }}">
+              {{ r.severidad_evaluada }}
+            </span>
+          </div>
+
+          <div class="col-badge">
+            <span class="label-sub">Estado</span>
+            <span class="badge-custom badge-est-{{ r.estado_evaluado|slugify }}">
+              {{ r.estado_evaluado }}
+            </span>
+          </div>
+
+          <div class="col-actions">
+            <button type="button" class="btn-ver-mas" onclick="abrir_modal_detalle({{ r.numeroRegistro }})">Ver más</button>
+            <a class="btn-actualizar" href="{% url 'fallas:actualizar_reporte' pk=r.numeroRegistro %}">Editar</a>
+            <button type="button" class="btn-exportar" onclick="abrir_modal_exportar({{ r.numeroRegistro }})">Exportar</button>
           </div>
         </div>
+      {% empty %}
+        <p class="panel__empty">No hay reportes de falla registrados todavía.</p>
+      {% endfor %}
+    </div>
+
+  </section>
+
+</div>
+
+<!-- CONTENEDORES MODALES -->
+<div class="fallas-modal" id="detalle-falla" role="dialog"></div>
+
+<div class="fallas-modal" id="exportar-falla" role="dialog">
+  <div class="fallas-modal__backdrop" data-dismiss="modal-export"></div>
+  <div class="fallas-modal__dialog">
+    <div class="fallas-modal__content">
+      <div class="fallas-modal__header">
+        <h3 class="fallas-modal__title">Exportar reporte</h3>
+        <button class="fallas-modal__close" data-dismiss="modal-export">&times;</button>
+      </div>
+      <div class="fallas-modal__body" style="text-align:center;padding:2rem;">
+        <p style="margin-bottom:1.5rem;color:var(--color-muted);">
+          Reporte #<strong id="export-pk"></strong> &mdash; Selecciona el formato
+        </p>
+        <div class="export-options">
+          <a class="export-btn export-btn--csv" id="export-csv-link" href="#">CSV</a>
+          <a class="export-btn export-btn--xlsx" id="export-xlsx-link" href="#">Excel</a>
+          <a class="export-btn export-btn--pdf" id="export-pdf-link" href="#">PDF</a>
+        </div>
       </div>
     </div>
   </div>
+</div>
 
-{% endblock %}
-{% block extra_css %}
 <link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">
 <link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}">
-<style>
-  .btn-export-row {
-    background: none;
-    border: 1px solid var(--line);
-    color: var(--color-muted);
-    padding: 0.3rem 0.7rem;
-    border-radius: 0.375rem;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: background 0.15s, color 0.15s;
-  }
-  .btn-export-row:hover {
-    background: var(--color-primary);
-    color: var(--color-bg);
-    border-color: var(--color-primary);
-  }
-  .export-options {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  .export-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    font-size: 0.9rem;
-    text-decoration: none;
-    transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
-    cursor: pointer;
-    border: none;
-  }
-  .export-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-  }
-  .export-btn--csv {
-    background: #10b981;
-    color: #fff;
-  }
-  .export-btn--xlsx {
-    background: #22c55e;
-    color: #fff;
-  }
-  .export-btn--pdf {
-    background: #ef4444;
-    color: #fff;
-  }
-</style>
-{% endblock %}
-{% block extra_js %}
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="{% static 'js/buscador.js' %}"></script>
-<script src="{% static 'fallas/js/modal.js' %}"></script>
-<script>
-function abrir_modal_exportar(pk) {
-  document.getElementById('export-pk').textContent = pk;
-  document.getElementById('export-csv-link').href  = '{% url "fallas:exportar_csv" pk=0 %}'.replace('0', pk);
-  document.getElementById('export-xlsx-link').href = '{% url "fallas:exportar_xlsx" pk=0 %}'.replace('0', pk);
-  document.getElementById('export-pdf-link').href  = '{% url "fallas:exportar_pdf" pk=0 %}'.replace('0', pk);
-  document.getElementById('exportar-falla').classList.add('is-open');
-}
 
-$(function() {
-  $(document).on('click', '[data-dismiss="modal-export"]', function() {
-    $('#exportar-falla').removeClass('is-open');
-  });
-  $(document).on('keydown', function(e) {
-    if (e.key === 'Escape') $('#exportar-falla').removeClass('is-open');
-  });
-});
-</script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'fallas/js/modal.js' %}"></script>
+<script src="{% static 'fallas/js/filtros.js' %}"></script>
+
+<!-- Script para la Gráfica de Chart.js -->
 <script>
-(function () {
-  var params = new URLSearchParams(window.location.search);
-  if (params.get("levantar_orden") !== "1") return;
-  var reporte = params.get("reporte");
-  var asunto = params.get("asunto") || "";
-  var maquina = params.get("maquina") || "";
-  window.history.replaceState({}, "", window.location.pathname);
-  if (!reporte) return;
-  var quiere = confirm("Reporte #" + reporte + " registrado.\n¿Deseas levantar la orden de mantenimiento correctiva ahora?");
-  if (quiere) {
-    window.location.href = "{% url 'mantenimiento:index' %}?maquina=" + encodeURIComponent(maquina) +
-      "&tipo=CORRE&reporte=" + encodeURIComponent(reporte) + "&asunto=" + encodeURIComponent(asunto);
-  }
-})();
+  document.addEventListener("DOMContentLoaded", function () {
+    const ctx = document.getElementById('chartTiempoAtencion');
+    if (!ctx) return;
+
+    const dataFallas = {{ grafica_data|safe }};
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+        datasets: [{
+          label: 'Total de fallas',
+          data: dataFallas,
+          borderColor: '#00adb5',
+          backgroundColor: 'rgba(0, 173, 181, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointBackgroundColor: '#00adb5',
+          pointRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } },
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#64748b', font: { size: 10 }, precision: 0 },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  });
 </script>
 {% endblock %}

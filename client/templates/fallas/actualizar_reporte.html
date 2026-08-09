@@ -32,13 +32,10 @@
         <input type="date" name="fechaSolucion" id="fechaSolucion"
                value="{{ reporte.fechaResolucion|cut:' ' }}" />
 
+        <!-- Máquina en modo Solo Lectura -->
         <label for="maquina">Maquina</label>
-        <select name="maquina" id="maquina" required>
-          <option value="">Seleccione...</option>
-          {% for m in maquinas %}
-            <option value="{{ m.codigo }}" {% if reporte.maquina == m.codigo %}selected{% endif %}>{{ m.nombre }}</option>
-          {% endfor %}
-        </select>
+        <input type="text" value="{{ reporte.maquina_nombre|default:reporte.maquina }}" class="input-date-dark" readonly style="opacity: 0.8; cursor: not-allowed; background: #181f2e;" />
+        <input type="hidden" name="maquina" value="{{ reporte.maquina }}" />
 
         <label for="tipo_severidad">Severidad</label>
         <select name="tipo_severidad" id="tipo_severidad" required>
@@ -61,21 +58,34 @@
             <button type="button" onclick="anadirFalla()">+ Añadir</button>
         </div>
 
-        <label for="estado_reporte">Estado del reporte</label>
+
+        <!-- Estado del reporte -->
+      <label for="estado_reporte">Estado del reporte</label>
+      {% if reporte.estado_reporte == "ENESP" %}
+        <!-- Si está En Espera, se deshabilita la edición -->
+        <select name="estado_reporte" id="estado_reporte" class="input-date-dark" disabled style="opacity: 0.8; cursor: not-allowed; background: #181f2e;">
+          <option value="ENESP" selected>En Espera</option>
+        </select>
+        <input type="hidden" name="estado_reporte" value="ENESP" />
+        <small style="color: #a0aec0; display: block; margin-top: 4px;">Un reporte 'En Espera' no puede cambiar de estado directamente.</small>
+      {% else %}
+        <!-- Opciones permitidas: Solo Abierto y Cancelado -->
         <select name="estado_reporte" id="estado_reporte" required>
           <option value="">Seleccione...</option>
           {% for e in estados %}
-            <option value="{{ e.codigo }}" {% if reporte.estado_reporte == e.codigo %}selected{% endif %}>{{ e.nombre }}</option>
+            {% if e.codigo == "ABIER" or e.codigo == "CANCE" %}
+              <option value="{{ e.codigo }}" {% if reporte.estado_reporte == e.codigo %}selected{% endif %}>
+                {{ e.nombre }}
+              </option>
+            {% endif %}
           {% endfor %}
         </select>
+      {% endif %}
 
-        <label for="trabajador">Selecciona el trabajador</label>
-        <select name="trabajador" id="trabajador" required>
-          <option value="">Seleccione...</option>
-          {% for t in trabajadores %}
-            <option value="{{ t.numeroNomina }}" {% if reporte.trabajador == t.numeroNomina %}selected{% endif %}>{{ t.nombre }} {{ t.apellidoPat }}</option>
-          {% endfor %}
-        </select>
+        <!-- Trabajador en modo Solo Lectura -->
+        <label for="trabajador">Trabajador que reporta</label>
+        <input type="text" value="{{ reporte.trabajador_nombre|default:reporte.trabajador }}" class="input-date-dark" readonly style="opacity: 0.8; cursor: not-allowed; background: #181f2e;" />
+        <input type="hidden" name="trabajador" value="{{ reporte.trabajador }}" />
 
       </div>
 

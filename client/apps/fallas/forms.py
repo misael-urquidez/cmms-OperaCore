@@ -31,6 +31,6 @@ class CrearReporteFalla(forms.Form):
     descripcion = forms.CharField(max_length=500, required=False)
     imagen = forms.CharField(max_length=255, required=False)
     maquina = forms.ModelChoiceField(queryset=Maquina.objects.all(), required=False)
-    trabajador = forms.ModelChoiceField(queryset=Trabajador.objects.all(), required=False)
+    trabajador = forms.ModelChoiceField(queryset=Trabajador.objects.all(), required=False, widget=forms.HiddenInput())
     tipo_falla = forms.ModelChoiceField(queryset=TipoFalla.objects.all(), required=False)
     tipo_severidad = forms.ModelChoiceField(queryset=TipoSeveridad.objects.all(), required=False)

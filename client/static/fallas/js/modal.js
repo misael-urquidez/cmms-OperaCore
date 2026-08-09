@@ -1,7 +1,6 @@
 $(function () {
 
     /* ---- abrir modal de detalle (solo lectura) ---- */
-
     function abrir_modal_detalle(pk) {
         var $modal = $("#detalle-falla");
         $modal.empty();
@@ -17,6 +16,7 @@ $(function () {
                     '<div class="fallas-modal__content">' +
                     '<div class="fallas-modal__header">' +
                     '<h2 class="fallas-modal__title">Error</h2>' +
+                    '<button class="fallas-modal__close" data-dismiss="modal">&times;</button>' +
                     '</div>' +
                     '<div class="fallas-modal__body">' +
                     '<p>No se pudo cargar el detalle del reporte.</p>' +
@@ -27,28 +27,31 @@ $(function () {
             });
     }
 
-    /* ---- cerrar modal ---- */
+    /* ---- abrir modal de exportación ---- */
+    function abrir_modal_exportar(pk) {
+        $("#export-pk").text(pk);
+        $("#export-csv-link").attr("href", "/fallas/reporte/" + pk + "/export/csv/");
+        $("#export-xlsx-link").attr("href", "/fallas/reporte/" + pk + "/export/xlsx/");
+        $("#export-pdf-link").attr("href", "/fallas/reporte/" + pk + "/export/pdf/");
+        $("#exportar-falla").addClass("is-open");
+    }
 
-    function cerrar_modal() {
-        var $modal = $("#detalle-falla");
-        // Escape se escucha siempre, tambien con el modal cerrado: sin este
-        // guard avisariamos "se cerro" sin que hubiera nada abierto, y quien
-        // escucha restauraria su contexto sin venir al caso.
-        if (!$modal.hasClass("is-open")) return;
-        $modal.removeClass("is-open").empty();
-        // Quien nos abrio (p.ej. el drawer de mantenimiento, que se cierra
-        // para no taparnos) puede escuchar esto y restaurar su contexto.
+    /* ---- cerrar modales ---- */
+    function cerrar_modales() {
+        $(".fallas-modal").removeClass("is-open");
+        $("#detalle-falla").empty();
         document.dispatchEvent(new CustomEvent("fallas:modal-cerrado"));
     }
 
-    $(document).on("click", "[data-dismiss='modal']", cerrar_modal);
-    $(document).on("click", ".fallas-modal__backdrop", cerrar_modal);
+    // Delegación de eventos para cerrar modales (tanto el de detalle como exportar)
+    $(document).on("click", "[data-dismiss='modal'], [data-dismiss='modal-export']", cerrar_modales);
+    $(document).on("click", ".fallas-modal__backdrop", cerrar_modales);
     $(document).on("keydown", function (e) {
-        if (e.key === "Escape") cerrar_modal();
+        if (e.key === "Escape") cerrar_modales();
     });
 
-    /* ---- exponer al global ---- */
-
+    /* ---- exponer funciones al scope global ---- */
     window.abrir_modal_detalle = abrir_modal_detalle;
+    window.abrir_modal_exportar = abrir_modal_exportar;
 
 });

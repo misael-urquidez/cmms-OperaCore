@@ -1,11 +1,11 @@
+import datetime
 from django.shortcuts import render, redirect
 from django.urls import reverse
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.views import generic
 from django.contrib import messages
 import requests
 from urllib.parse import quote
-
 from django.conf import settings
 from django.core.cache import cache
 
@@ -59,25 +59,24 @@ def _cargar_catalogos():
 
     return severidades, tipos_falla, maquinas, estados, trabajadores, True
 
-
 class ReporteFalla(generic.View):
     template_name = "fallas/reporte_falla.html"
     context = {}
     url_create = f"{API_URL}/v2/reportes/create/"
-    response = None
-    payload = {}
 
     def _contexto_base(self, request):
         usuario = request.session.get("usuario")
         severidades, tipos_falla, maquinas, estados, trabajadores, ok = _cargar_catalogos()
         if not ok:
             messages.warning(request, "No se pudo conectar con la API para cargar los catálogos.")
+
+        # Filtrar solo máquinas operativas para la selección en el formulario
+        maquinas_operativas = [m for m in maquinas if str(m.get("estado_maquina", "")).upper() == "OPERA" or str(m.get("estado", "")).upper() == "OPERA"]
+
         return {
             "severidades": severidades,
             "tipos_falla": tipos_falla,
-            "maquinas": maquinas,
-            "estados": estados,
-            "trabajadores": trabajadores,
+            "maquinas": maquinas_operativas if maquinas_operativas else maquinas,
             "seccion": "fallas",
             "subseccion": "reporte",
             "usuario": usuario,
@@ -99,21 +98,32 @@ class ReporteFalla(generic.View):
             messages.warning(request, "Inicia sesión para continuar.")
             return redirect("usuarios:index")
 
+        tiempo_paro_raw = request.POST.get("tiempoParo")
+        try:
+            tiempo_paro = float(tiempo_paro_raw) if tiempo_paro_raw else 0.0
+        except ValueError:
+            tiempo_paro = 0.0
+
+        fecha_resolucion = request.POST.get("fechaSolucion")
+        if not fecha_resolucion or fecha_resolucion.strip() == "":
+            fecha_resolucion = None
+
+        # Forzamos estado "ABIER" y el trabajador tomando de la sesión
         self.payload = {
-            "asunto": request.POST.get("asunto"),
-            "descripcion": request.POST.get("descripcion"),
-            "causaRaiz": request.POST.get("causaRaiz"),
-            "tiempoParo": request.POST.get("tiempoParo"),
-            "fechaResolucion": request.POST.get("fechaSolucion") or None,
+            "asunto": request.POST.get("asunto", "").strip(),
+            "descripcion": request.POST.get("descripcion", "").strip(),
+            "causaRaiz": request.POST.get("causaRaiz", "").strip(),
+            "tiempoParo": tiempo_paro,
+            "fechaResolucion": fecha_resolucion,
             "maquina": request.POST.get("maquina"),
-            "trabajador": request.POST.get("trabajador"),
+            "trabajador": usuario.get("numeroNomina"),
             "tipo_severidad": request.POST.get("tipo_severidad"),
-            "estado_reporte": request.POST.get("estado_reporte"),
+            "estado_reporte": "ABIER",
         }
 
         tipo_falla_ids = []
         valor_base = request.POST.get("tipo_falla")
-        if valor_base:
+        if valor_base and valor_base.isdigit():
             tipo_falla_ids.append(int(valor_base))
 
         idx = 1
@@ -121,25 +131,32 @@ class ReporteFalla(generic.View):
             val = request.POST.get(f"tipo_falla_{idx}")
             if val is None:
                 break
-            if val:
+            if val and val.isdigit():
                 tipo_falla_ids.append(int(val))
             idx += 1
 
         self.payload["tipo_falla_ids"] = tipo_falla_ids
 
         archivo = request.FILES.get("imagen")
-        files = {"imagen": archivo} if archivo else None
+        files = {"imagen": (archivo.name, archivo.read(), archivo.content_type)} if archivo else None
+
         try:
-            self.response = SESSION.post(url=self.url_create, data=self.payload, files=files, timeout=10)
+            self.response = SESSION.post(
+                url=self.url_create,
+                data=self.payload,
+                files=files,
+                timeout=10
+            )
         except requests.exceptions.RequestException:
-            messages.warning(request, "No se pudo conectar con la API para registrar el reporte")
+            messages.warning(request, "No se pudo conectar con la API para registrar el reporte.")
             return self._render_error(request)
+
         if self.response.status_code == 201:
-            # invalidar el cache de la lista: el reporte recien creado debe
-            # aparecer de inmediato en "Ver reportes" y en el dashboard.
             cache.delete("fallas_reportes_list")
             creado = self.response.json()
-            messages.success(request, "El reporte de falla ha sido registrado")
+            messages.success(request, "El reporte de falla ha sido registrado correctamente.")
+            
+            from urllib.parse import quote
             return redirect(
                 "{}?levantar_orden=1&reporte={}&asunto={}&maquina={}".format(
                     reverse("fallas:lista"),
@@ -160,7 +177,7 @@ class ReporteFalla(generic.View):
         context = self._contexto_base(request)
         context["datos"] = self.payload
         return render(request, self.template_name, context)
-
+    
 #---------------------------------------------------------------------------
 #------------TIPO FALLA ----------------------------------------------------
 #---------------------------------------------------------------------------
@@ -172,9 +189,7 @@ class ListTipoFalla(generic.View):
 
 class ListaReportes(generic.View):
     template_name = "fallas/lista_reportes.html"
-    context = {}
     url_base = f"{API_URL}/v1/reportes/list/"
-    response = None
 
     def get(self, request):
         usuario = request.session.get("usuario")
@@ -182,29 +197,133 @@ class ListaReportes(generic.View):
             messages.warning(request, "Inicia sesión para continuar.")
             return redirect("usuarios:index")
 
-        # mismo cache key que usa el dashboard de usuarios: si alguien entro
-        # a cualquiera de las dos pantallas hace menos de 15 seg, se reusa.
-        reportes = cache.get("fallas_reportes_list")
-        if reportes is None:
-            try:
-                reportes = SESSION.get(url=self.url_base, timeout=5).json()
-                cache.set("fallas_reportes_list", reportes, REPORTES_TTL)
-            except (requests.exceptions.RequestException, ValueError):
-                reportes = []
-                messages.warning(request, "No se pudo conectar con la API para cargar los reportes.")
+        try:
+            reportes = SESSION.get(url=self.url_base, timeout=5).json()
+            cache.set("fallas_reportes_list", reportes, REPORTES_TTL)
+        except (requests.exceptions.RequestException, ValueError):
+            reportes = []
+            messages.warning(request, "No se pudo conectar con la API para cargar los reportes.")
 
+        from .views import _cargar_catalogos
         severidades, tipos_falla, maquinas, estados, trabajadores, _ = _cargar_catalogos()
 
-        self.context = {
+        # Mapeo de estados sin ENATE ni CERRA
+        MAPA_ESTADOS = {
+            "ABIER": "Abierto",
+            "CANCE": "Cancelado",
+            "ENESP": "En espera",
+            "RESUE": "Resuelto"
+        }
+
+        MAPA_SEVERIDADES = {
+            "ALTA": "Alta",
+            "MEDIA": "Media",
+            "BAJA": "Baja",
+            "CRIT": "Crítica",
+            "CRITI": "Crítica"
+        }
+
+        hoy = datetime.date.today()
+
+        mes_str = request.GET.get("mes")
+        if mes_str:
+            try:
+                anio_sel, mes_sel = map(int, mes_str.split("-"))
+            except ValueError:
+                anio_sel, mes_sel = hoy.year, hoy.month
+                mes_str = f"{hoy.year}-{hoy.month:02d}"
+        else:
+            anio_sel, mes_sel = hoy.year, hoy.month
+            mes_str = f"{hoy.year}-{hoy.month:02d}"
+
+        # Contadores ajustados
+        kpi_totales = len(reportes)
+        kpi_espera = 0
+        kpi_abiertos = 0
+        kpi_cancelados = 0
+        kpi_resueltos = 0
+
+        anio_str = request.GET.get("anio", str(hoy.year))
+        try:
+            anio_grafica = int(anio_str)
+        except ValueError:
+            anio_grafica = hoy.year
+
+        total_fallas_meses = [0] * 12
+
+        for r in reportes:
+            raw_est = (
+                r.get("estado_reporte") or 
+                r.get("estado_reporte_codigo") or 
+                r.get("estado_reporte_nombre") or
+                r.get("estado")
+            )
+
+            if isinstance(raw_est, dict):
+                raw_est = raw_est.get("codigo") or raw_est.get("nombre")
+
+            code_est = str(raw_est or "").strip().upper()
+            nombre_estado = MAPA_ESTADOS.get(code_est, code_est.capitalize() if code_est else "Abierto")
+
+            r["estado_evaluado"] = nombre_estado
+            r["estado_reporte_nombre"] = nombre_estado
+
+            raw_sev = r.get("tipo_severidad_nombre") or r.get("tipo_severidad")
+            if isinstance(raw_sev, dict):
+                raw_sev = raw_sev.get("codigo") or raw_sev.get("nombre")
+
+            code_sev = str(raw_sev or "").strip().upper()
+            nombre_sev = MAPA_SEVERIDADES.get(code_sev, str(raw_sev or "Crítica").capitalize())
+
+            r["severidad_evaluada"] = nombre_sev
+            r["tipo_severidad_nombre"] = nombre_sev
+
+            # Conteos Generales
+            if code_est in ["ENESP", "EN ESPERA"]:
+                kpi_espera += 1
+            elif code_est in ["ABIER", "ABIERTO"]:
+                kpi_abiertos += 1
+
+            # Conteos y datos de gráfica por fecha
+            fecha_val = r.get("fechaCreacion")
+            if fecha_val:
+                try:
+                    f_str = str(fecha_val)[:10]
+                    f_creac = datetime.datetime.strptime(f_str, "%Y-%m-%d").date()
+
+                    if f_creac.year == anio_sel and f_creac.month == mes_sel:
+                        if code_est in ["CANCE", "CANCELADO"]:
+                            kpi_cancelados += 1
+                        elif code_est in ["RESUE", "RESUELTO"]:
+                            kpi_resueltos += 1
+
+                    if f_creac.year == anio_grafica:
+                        m_idx = f_creac.month - 1
+                        total_fallas_meses[m_idx] += 1
+
+                except ValueError:
+                    pass
+
+        context = {
             "reportes": reportes,
             "severidades": severidades,
             "maquinas": maquinas,
+            "estados": estados,
             "seccion": "fallas",
             "subseccion": "lista",
             "usuario": usuario,
             "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
+            "kpi_totales": kpi_totales,
+            "kpi_espera": kpi_espera,
+            "kpi_abiertos": kpi_abiertos,
+            "kpi_cancelados": kpi_cancelados,
+            "kpi_resueltos": kpi_resueltos,
+            "mes_actual": mes_str,
+            "anio_actual": anio_grafica,
+            "grafica_data": total_fallas_meses,
+            "anios_disponibles": [hoy.year, hoy.year - 1, hoy.year - 2],
         }
-        return render(request, self.template_name, self.context)
+        return render(request, self.template_name, context)
     
 
 class DetailReporte(generic.View):

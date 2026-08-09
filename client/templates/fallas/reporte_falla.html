@@ -102,25 +102,15 @@
         </div>
 
 
+       <!-- Estado del reporte fijo en 'Abierto' -->
         <label for="estado_reporte">Estado del reporte</label>
-        <select name="estado_reporte" id="estado_reporte" required>
-          <option value="">Seleccione...</option>
-          {% for e in estados %}
-            <option value="{{ e.codigo }}" {% if datos.estado_reporte == e.codigo %}selected{% endif %}>{{ e.nombre }}</option>
-          {% endfor %}
-        </select>
+        <input type="text" value="Abierto" class="input-date-dark" readonly style="opacity: 0.8; cursor: not-allowed; background: #181f2e;">
+        <input type="hidden" name="estado_reporte" value="ABIER">
 
-        <label for="trabajador">Selecciona el trabajador</label>
-        <select name="trabajador" id="trabajador" required>
-          <option value="">Seleccione...</option>
-          {% for t in trabajadores %}
-            <option value="{{ t.numeroNomina }}" {% if datos.trabajador == t.numeroNomina %}selected{% elif not datos and usuario.numeroNomina == t.numeroNomina %}selected{% endif %}>{{ t.nombre }} {{ t.apellidoPat }}</option>
-          {% endfor %}
-        </select>
-
-
-
-
+        <!-- Trabajador fijo tomado de la sesión del usuario -->
+        <label for="trabajador">Trabajador que reporta</label>
+        <input type="text" value="{{ usuario.nombre }} {{ usuario.apellidoPat }}" class="input-date-dark" readonly style="opacity: 0.8; cursor: not-allowed; background: #181f2e;">
+        <input type="hidden" name="trabajador" value="{{ usuario.numeroNomina }}">
       </div>
 
       <div class="right-side">
@@ -183,7 +173,45 @@
     </form>
     <p class="elipse-falla-panel__footnote" id="elipseFallaFootnote">Elipse solo propone texto; nada se guarda hasta que tú das "Reportar falla".</p>
   </aside>
+ <!-- MODAL DE CONFIRMACIÓN DE REPORTE -->
+  <div class="fallas-modal" id="modalConfirmarReporte" role="dialog" 
+       style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9999; align-items:center; justify-content:center;">
+    
+    <!-- Backdrop oscuro de fondo -->
+    <div class="fallas-modal__backdrop" 
+         style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0, 0, 0, 0.75); backdrop-filter:blur(4px); z-index:10000;"></div>
+    
+    <!-- Contenedor flotante -->
+    <div class="fallas-modal__dialog" style="position:relative; z-index:10001; width:90%; max-width:500px; margin:auto;">
+      <div class="fallas-modal__content" style="background:#111622; border:1px solid #1e293b; border-radius:12px; padding:1.5rem; color:#fff; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">
+        
+        <div class="fallas-modal__header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1e293b; padding-bottom:0.75rem;">
+          <h3 style="margin:0; font-size:1.1rem; color:#00adb5;">📋 Confirmar Datos del Reporte</h3>
+          <button type="button" class="fallas-modal__close" id="btnCerrarConfirm" style="background:none; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+       
+        <div class="fallas-modal__body" style="padding: 1rem 0; font-size: 0.85rem; display:flex; flex-direction:column; gap:0.6rem; color:#cbd5e1;">
+          <div><strong>Asunto:</strong> <span id="confAsunto" style="color:#fff;"></span></div>
+          <div><strong>Máquina:</strong> <span id="confMaquina" style="color:#fff;"></span></div>
+          <div><strong>Severidad:</strong> <span id="confSeveridad" style="color:#fff;"></span></div>
+          <div><strong>Causa Raíz:</strong> <span id="confCausa" style="color:#fff;"></span></div>
+          <div><strong>Tiempo de Paro:</strong> <span id="confTiempo" style="color:#fff;"></span> hrs</div>
+          <div><strong>Trabajador:</strong> <span style="color:#fff;">{{ usuario.nombre }} {{ usuario.apellidoPat }}</span></div>
+          <div><strong>Estado Inicial:</strong> <span style="color:#10b981; font-weight:600;">Abierto</span></div>
+          <div id="confImagenContainer" style="display:none; margin-top:0.5rem;">
+            <strong>Evidencia:</strong><br>
+            <img id="confImagenPreview" src="" style="max-height:100px; border-radius:6px; margin-top:0.3rem; object-fit:cover;">
+          </div>
+        </div>
 
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem; border-top:1px solid #1e293b; padding-top:0.75rem;">
+          <button type="button" id="btnCancelarConfirm" style="background:transparent; border:1px solid #334155; color:#e2e8f0; padding:0.4rem 0.85rem; border-radius:6px; cursor:pointer;">Corregir</button>
+          <button type="button" id="btnGuardarDefinitivo" style="background:#00adb5; border:none; color:#0b0f17; font-weight:700; padding:0.4rem 1rem; border-radius:6px; cursor:pointer;">Confirmar y Guardar</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
 {% endblock %}
 {% block extra_js %}
 <script>
@@ -242,4 +270,5 @@
 <script src="{% static 'js/extraer-texto-doc.js' %}"></script>
 <script src="{% static 'fallas/js/elipse-falla.js' %}"></script>
 <script src="{% static 'fallas/js/sugerencia-diagnostico.js' %}"></script>
+<script src="{% static 'fallas/js/confirmar-reporte.js' %}"></script>
 {% endblock %}
