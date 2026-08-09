@@ -9,6 +9,36 @@
 
 .gestion-header a:not(.btn-primary-sm):hover { text-decoration: underline; }
 
+/* -------- tarjetas de estado (KPIs / selector de tipo de movimiento) --------
+   Definiendo aqui (no en tecni.css) quedan disponibles en ambas bases
+   (admin y tecnico). Se usan var() que existen en themes.css y tecni-themes.css. */
+.tecni-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+.tecni-stat-card {
+    background: var(--color-surface);
+    border: 1px solid var(--line);
+    border-radius: 0.8rem;
+    padding: 1.1rem 1.2rem;
+    display: flex; align-items: flex-start; gap: 0.9rem;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.tecni-stat-card:hover { border-color: var(--color-primary); transform: translateY(-2px); }
+.tecni-stat-card__icon {
+    width: 40px; height: 40px; border-radius: 0.6rem;
+    display: grid; place-items: center; flex-shrink: 0;
+}
+.tecni-stat-card__icon svg { width: 20px; height: 20px; }
+.tecni-stat-card__icon--green  { background: rgba(52, 211, 153, 0.14);  color: #34d399; }
+.tecni-stat-card__icon--amber  { background: rgba(251, 191, 36, 0.14);  color: #fbbf24; }
+.tecni-stat-card__icon--rose   { background: rgba(251, 113, 133, 0.14); color: #fb7185; }
+.tecni-stat-card__label { margin: 0; font-size: 0.74rem; color: var(--color-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.tecni-stat-card__value { margin: 0.15rem 0 0; font-size: 1.55rem; font-weight: 700; line-height: 1.1; }
+.tecni-stat-card__hint  { margin: 0.2rem 0 0; font-size: 0.72rem; color: var(--color-muted); }
+
 /* -------- calculadora de depreciacion (SP 5) -------- */
 .inv-drawer__dep-calc { display:flex; align-items:center; gap:.4rem; margin-top:.4rem; flex-wrap:wrap; }
 .inv-drawer__dep-calc-input { width:6.5rem; padding:.3rem .5rem; font-size:.75rem; border-radius:.4rem; border:1px solid var(--line); background:var(--color-bg); color:var(--color-text); }

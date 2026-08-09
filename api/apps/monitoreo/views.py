@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.db import connection
 from django.db.models import Prefetch
 from django.utils import timezone
 from rest_framework import status
@@ -13,7 +14,7 @@ from apps.fallas.models import (
 from apps.usuarios.models import Trabajador
 
 from . import services
-from .models import IndicadorActual, LecturaSensor, RegistroOps
+from .models import LecturaSensor, RegistroOps
 from .serializers import (
     CrearMaquinaSerializer, LecturaSensorSerializer, ModoMonitoreoSerializer, ReparacionManualSerializer,
     RegistroOpsSerializer, ReporteFallaManualSerializer,
@@ -57,17 +58,54 @@ class MaquinaListAPIView(APIView):
 
 
 class IndicadoresMaquinaAPIView(APIView):
+    """Ficha de indicadores de una máquina para el drawer de Monitoreo.
+
+    Obtiene los valores llamando al procedimiento almacenado
+    sp_resumen_maquina (backend/sp.sql), que a su vez lee la vista de
+    apoyo v_kpi_indicadores_actuales (backend/vistas_kpi.sql). Reemplazó
+    la lectura directa por ORM de IndicadorActual: ahora toda la ficha
+    sale de un único SP con parámetros OUT."""
+
     def get(self, request, codigo):
-        indicador = IndicadorActual.objects.filter(Codigo=codigo).first()
+        with connection.cursor() as cur:
+            # args: 1 IN + 9 OUT; MySQLdb expone los OUT como @_sp_resumen_maquina_1.._9
+            cur.callproc(
+                "sp_resumen_maquina",
+                [codigo] + [None] * 9,
+            )
+            cur.execute(
+                "SELECT @_sp_resumen_maquina_1, @_sp_resumen_maquina_2, "
+                "@_sp_resumen_maquina_3, @_sp_resumen_maquina_4, "
+                "@_sp_resumen_maquina_5, @_sp_resumen_maquina_6, "
+                "@_sp_resumen_maquina_7, @_sp_resumen_maquina_8, "
+                "@_sp_resumen_maquina_9"
+            )
+            fila = cur.fetchone()
+
+        if fila is None or fila[0] is None:
+            # Sin indicadores para la máquina: mismos vacíos que antes.
+            return Response({
+                "mtbf": None,
+                "mttr": None,
+                "disponibilidad": None,
+                "total_horas_operacion": 0,
+                "numero_fallas": 0,
+                "tiempo_inactividad": 0,
+                "numero_reparaciones": 0,
+            })
+
+        (_nombre, _estado, p_mttr, p_mtbf, p_disponibilidad,
+         p_total_horas, p_numero_fallas, p_tiempo_inactividad,
+         p_numero_reparaciones) = fila
 
         return Response({
-            "mtbf": indicador.MTBF if indicador else None,
-            "mttr": indicador.MTTR if indicador else None,
-            "disponibilidad": indicador.Disponibilidad if indicador else None,
-            "total_horas_operacion": indicador.TotalHorasOperacion if indicador else 0,
-            "numero_fallas": indicador.TotalFallas if indicador else 0,
-            "tiempo_inactividad": indicador.TiempoTotalParo if indicador else 0,
-            "numero_reparaciones": indicador.NumReparaciones if indicador else 0,
+            "mtbf": p_mtbf,
+            "mttr": p_mttr,
+            "disponibilidad": p_disponibilidad,
+            "total_horas_operacion": p_total_horas if p_total_horas is not None else 0,
+            "numero_fallas": p_numero_fallas if p_numero_fallas is not None else 0,
+            "tiempo_inactividad": p_tiempo_inactividad if p_tiempo_inactividad is not None else 0,
+            "numero_reparaciones": p_numero_reparaciones if p_numero_reparaciones is not None else 0,
         })
 
 

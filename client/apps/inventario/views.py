@@ -11,6 +11,7 @@ from django.views import generic
 from apps.gestion.registry import get_tabla
 
 API_URL = f"{settings.API_BASE_URL}/inventario"
+MANTENIMIENTO_API_URL = f"{settings.API_BASE_URL}/mantenimiento"
 
 # Sesion HTTP a nivel de modulo: reusa la conexion TCP con el api/.
 SESSION = requests.Session()
@@ -35,6 +36,36 @@ def _cargar_catalogos():
     except requests.exceptions.RequestException:
         pass
     return {}, False
+
+def _columnas_config(nombres):
+    """Convierte nombres de columna (strings) en dicts {name, label},
+    que es lo que esperan los templates de lista (patrón de gestion)."""
+    etiquetas = {
+        "numeroregistro": "Registro",
+        "numeroserie": "No. serie",
+        "codigosku": "Código SKU",
+        "codigoinventario": "Código inventario",
+        "stockminimo": "Stock mínimo",
+        "puntoreorden": "Punto de reorden",
+        "tiempoentregaapr": "Tiempo entrega",
+        "porcentaje_desgaste": "% Desgaste",
+        "depresacionanual": "Dep. anual",
+        "costoinicial": "Costo inicial",
+        "valorresidual": "Valor residual",
+        "horasoperacion": "Horas operación",
+        "tiempovidautil": "Vida útil",
+        "fechainstalacion": "Fecha instalación",
+        "fechagarantia": "Fecha garantía",
+        "edo_pieza": "Estado",
+        "tipo_pieza": "Tipo",
+        "tipo_refaccion": "Tipo",
+    }
+    def etiqueta(nombre):
+        if nombre in etiquetas:
+            return etiquetas[nombre]
+        return nombre.replace("_", " ").capitalize()
+    return [{"name": n, "label": etiqueta(n)} for n in nombres]
+
 
 def _base_template(request):
     """Devuelve el template base a usar (admin o tecnico)."""
@@ -68,14 +99,15 @@ class Index(generic.View):
 class ListaRefacciones(generic.View):
     """Lista de refacciones con buscador, filtros y exportación."""
 
-    template_name = "inventario/lista_refaccion.html"
+    template_name = "inventario/lista_refacciones.html"
 
     def get(self, request):
         config = request.session.get("config_inventario", {})
+        config.setdefault("pk_field", "numeroregistro")
+        config.setdefault("pk_label", "ID")
         visibles = config.get("columnas", ["nombre", "codigosku", "stock", "stockminimo"])
         todas_las = ["nombre", "codigosku", "stock", "stockminimo", "descripcion", "costo", "proveedor", "clasificacion", "tipo", "ubicacion"]
         necesita_modal = any(c not in visibles for c in ["proveedor", "clasificacion", "tipo"])
-
         try:
             res = SESSION.get(f"{API_URL}/v1/refacciones/list/", timeout=8)
             if res.status_code != 200:
@@ -101,8 +133,8 @@ class ListaRefacciones(generic.View):
         context = {
             "config": config,
             "registros": registros,
-            "columnas": visibles,
-            "todas_las_columnas": todas_las,
+            "columnas": _columnas_config(visibles),
+            "todas_las_columnas": _columnas_config(todas_las),
             "necesita_modal": necesita_modal,
             "seccion": "inventario",
             "subseccion": "refacciones",
@@ -166,8 +198,10 @@ class ListaPiezas(generic.View):
 
     def get(self, request):
         config = request.session.get("config_inventario_piezas", {})
-        visibles = config.get("columnas", ["nombre", "numeroserie", "maquina", "estado", "tipo", "porcentaje_desgaste"])
-        todas_las = ["nombre", "numeroserie", "maquina", "estado", "tipo", "porcentaje_desgaste", "costo", "fecha_instalacion", "descripcion"]
+        config.setdefault("pk_field", "numeroserie")
+        config.setdefault("pk_label", "Serie")
+        visibles = config.get("columnas", ["nombre", "numeroserie", "maquina", "edo_pieza", "tipo_pieza", "porcentaje_desgaste"])
+        todas_las = ["nombre", "numeroserie", "maquina", "edo_pieza", "tipo_pieza", "porcentaje_desgaste", "costoinicial", "fecha_instalacion", "descripcion"]
 
         try:
             res = SESSION.get(f"{API_URL}/v1/piezas/list/", timeout=8)
@@ -183,16 +217,24 @@ class ListaPiezas(generic.View):
         for pieza in piezas:
             maquinas_con_piezas[pieza["maquina"]].append(pieza)
 
+        try:
+            res = SESSION.get(f"{settings.API_BASE_URL}/fallas/v1/maquinas/", timeout=5)
+            maquinas = res.json() if res.status_code == 200 else []
+        except requests.exceptions.RequestException:
+            maquinas = []
+
         catalogos, _ = _cargar_catalogos()
         estados_pieza = catalogos.get("estados_pieza", [])
         tipos_pieza = catalogos.get("tipos_pieza", [])
 
         context = {
             "config": config,
+            "registros": piezas,
             "piezas": piezas,
+            "maquinas": maquinas,
             "maquinas_con_piezas": dict(maquinas_con_piezas),
-            "columnas": visibles,
-            "todas_las_columnas": todas_las,
+            "columnas": _columnas_config(visibles),
+            "todas_las_columnas": _columnas_config(todas_las),
             "seccion": "inventario",
             "subseccion": "piezas",
             "base_template": _base_template(request),
@@ -251,7 +293,7 @@ class CrearPieza(generic.View):
 class ListaHerramientas(generic.View):
     """Lista de herramientas con buscador y filtros."""
 
-    template_name = "inventario/lista_herramienta.html"
+    template_name = "inventario/lista_herramientas.html"
 
     def get(self, request):
         config = request.session.get("config_inventario_herramientas", {})
@@ -343,9 +385,15 @@ class ListaMovimientos(generic.View):
 
         context = {
             "config": config,
+            "registros": movimientos,
             "movimientos": movimientos,
             "columnas": visibles,
             "todas_las_columnas": todas_las,
+            "tipos_movimiento": [
+                {"codigo": "INSTA", "descripcion": "Instalación"},
+                {"codigo": "DESMO", "descripcion": "Desmontaje"},
+                {"codigo": "REHA", "descripcion": "Rehabilitación"},
+            ],
             "seccion": "inventario",
             "subseccion": "movimientos",
             "base_template": _base_template(request),
@@ -357,48 +405,110 @@ class CrearMovimiento(generic.View):
     template_name = "inventario/crear_movimiento.html"
 
     def get(self, request):
-        catalogos, ok = _cargar_catalogos()
-        if not ok:
-            messages.warning(request, "No se pudo conectar con la API para cargar catálogos.")
-
-        try:
-            res = SESSION.get(f"{API_URL}/v1/refacciones/list/", timeout=5)
-            refacciones = res.json() if res.status_code == 200 else []
-        except requests.exceptions.RequestException:
-            refacciones = []
-
-        context = {
-            "catalogos": catalogos,
-            "refacciones": refacciones,
-            "seccion": "inventario",
-            "subseccion": "crear_movimiento",
-            "base_template": _base_template(request),
-        }
-        return render(request, self.template_name, context)
+        datos = {}
+        orden_pre = request.GET.get("orden")
+        if orden_pre:
+            datos["orden_mantenimiento"] = orden_pre
+        return render(request, self.template_name, _contexto_movimiento(request, datos))
 
     def post(self, request):
         payload = {
-            "tipo": request.POST.get("tipo"),
-            "refaccion": request.POST.get("refaccion"),
-            "cantidad": request.POST.get("cantidad"),
-            "notas": request.POST.get("notas"),
+            "tipoMovimiento": request.POST.get("tipoMovimiento"),
+            "fecha": request.POST.get("fecha"),
+            "hora": request.POST.get("hora"),
+            "orden_mantenimiento": request.POST.get("orden_mantenimiento") or None,
+            "refaccion": request.POST.get("refaccion") or None,
+            "pieza": request.POST.get("pieza") or None,
+            "descripcion": request.POST.get("descripcion") or None,
         }
+        pieza_data = {
+            k[len("pieza_"):]: v
+            for k, v in request.POST.items()
+            if k.startswith("pieza_") and v
+        }
+        if pieza_data:
+            payload["pieza_data"] = pieza_data
+
         try:
-            res = SESSION.post(f"{API_URL}/v2/movimientos/create/", json=payload, timeout=10)
+            res = SESSION.post(
+                f"{MANTENIMIENTO_API_URL}/v2/movimientos/create/",
+                json=payload,
+                timeout=10,
+            )
             if res.status_code == 201:
-                messages.success(request, "Movimiento registrado correctamente.")
+                data = res.json()
+                mensaje = "Movimiento registrado correctamente."
+                if data.get("requiere_reabastecimiento"):
+                    mensaje += (
+                        " La refacción quedó en o por debajo del stock mínimo"
+                        f" ({data.get('stock_minimo')}): considera reabastecerla."
+                    )
+                messages.success(request, mensaje)
                 return redirect("inventario:lista_movimientos")
             else:
-                messages.error(request, f"Error: {res.json().get('detail', 'No se pudo registrar el movimiento.')}")
+                try:
+                    body = res.json()
+                except ValueError:
+                    body = {}
+                detail = body.get("detail", "No se pudo registrar el movimiento.") if isinstance(body, dict) else (body or "No se pudo registrar el movimiento.")
+                if isinstance(detail, list):
+                    detail = "; ".join(str(d) for d in detail)
+                elif not isinstance(detail, str):
+                    detail = str(detail)
+                messages.error(request, f"Error: {detail}")
         except requests.exceptions.RequestException:
             messages.error(request, "No se pudo conectar con el API.")
-        return redirect("inventario:crear_movimiento")
+
+        # Error: re-render con los datos del formulario para no perder lo escrito.
+        datos = {
+            "tipoMovimiento": request.POST.get("tipoMovimiento") or "",
+            "fecha": request.POST.get("fecha") or "",
+            "hora": request.POST.get("hora") or "",
+            "orden_mantenimiento": request.POST.get("orden_mantenimiento") or "",
+            "refaccion": request.POST.get("refaccion") or "",
+            "descripcion": request.POST.get("descripcion") or "",
+        }
+        pieza_value = request.POST.get("pieza")
+        if pieza_value:
+            datos["pieza"] = [pieza_value]
+        for k, v in pieza_data.items():
+            datos[f"pieza_{k}"] = [v]
+        return render(request, self.template_name, _contexto_movimiento(request, datos))
+
+
+def _contexto_movimiento(request, datos):
+    """Contexto compartido del alta de movimiento: catalogos y listas que el
+    template y movimiento.js esperan (refacciones, piezas, ordenes, maquinas)."""
+    catalogos, ok = _cargar_catalogos()
+    if not ok:
+        messages.warning(request, "No se pudo conectar con la API para cargar catálogos.")
+
+    def _get(url):
+        try:
+            res = SESSION.get(url, timeout=5)
+            return res.json() if res.status_code == 200 else []
+        except requests.exceptions.RequestException:
+            return []
+
+    return {
+        "datos": datos,
+        "catalogos": catalogos,
+        "refacciones": _get(f"{API_URL}/v1/refacciones/list/"),
+        "piezas": _get(f"{API_URL}/v1/piezas/list/"),
+        "ordenes": _get(f"{MANTENIMIENTO_API_URL}/v1/ordenes/list/"),
+        "maquinas": _get(f"{settings.API_BASE_URL}/fallas/v1/maquinas/"),
+        "tipos_pieza": catalogos.get("tipos_pieza", []),
+        "estados_pieza": catalogos.get("estados_pieza", []),
+        "seccion": "inventario",
+        "subseccion": "crear_movimiento",
+        "base_template": _base_template(request),
+    }
 
 
 class ListaProveedores(generic.View):
     """Lista de proveedores con buscador."""
 
-    template_name = "inventario/lista_proveedor.html"
+    template_name = "inventario/lista_proveedores.html"
 
     def get(self, request):
         config = request.session.get("config_inventario_proveedores", {})
@@ -461,7 +571,7 @@ class CrearProveedor(generic.View):
 class ListaClasificaciones(generic.View):
     """Lista de clasificaciones con buscador."""
 
-    template_name = "inventario/lista_clasificacion.html"
+    template_name = "inventario/lista_clasificaciones.html"
 
     def get(self, request):
         config = request.session.get("config_inventario_clasificaciones", {})
@@ -520,7 +630,7 @@ class CrearClasificacion(generic.View):
 class ListaEstadosHerramienta(generic.View):
     """Lista de estados de herramienta con buscador."""
 
-    template_name = "inventario/lista_edo_herramienta.html"
+    template_name = "inventario/lista_estados_herramienta.html"
 
     def get(self, request):
         config = request.session.get("config_inventario_estados_herramienta", {})
@@ -549,7 +659,7 @@ class ListaEstadosHerramienta(generic.View):
 
 
 class CrearEstadoHerramienta(generic.View):
-    template_name = "inventario/crear_edo_herramienta.html"
+    template_name = "inventario/crear_estado_herramienta.html"
 
     def get(self, request):
         context = {
@@ -579,7 +689,7 @@ class CrearEstadoHerramienta(generic.View):
 class ListaEstadosPieza(generic.View):
     """Lista de estados de pieza con buscador."""
 
-    template_name = "inventario/lista_edo_pieza.html"
+    template_name = "inventario/lista_estados_pieza.html"
 
     def get(self, request):
         config = request.session.get("config_inventario_estados_pieza", {})
@@ -608,7 +718,7 @@ class ListaEstadosPieza(generic.View):
 
 
 class CrearEstadoPieza(generic.View):
-    template_name = "inventario/crear_edo_pieza.html"
+    template_name = "inventario/crear_estado_pieza.html"
 
     def get(self, request):
         context = {
@@ -638,7 +748,7 @@ class CrearEstadoPieza(generic.View):
 class ListaEstadosRefaccion(generic.View):
     """Lista de estados de refacción con buscador."""
 
-    template_name = "inventario/lista_edo_refaccion.html"
+    template_name = "inventario/lista_estados_refaccion.html"
 
     def get(self, request):
         config = request.session.get("config_inventario_estados_refaccion", {})
@@ -667,7 +777,7 @@ class ListaEstadosRefaccion(generic.View):
 
 
 class CrearEstadoRefaccion(generic.View):
-    template_name = "inventario/crear_edo_refaccion.html"
+    template_name = "inventario/crear_estado_refaccion.html"
 
     def get(self, request):
         context = {
@@ -697,7 +807,7 @@ class CrearEstadoRefaccion(generic.View):
 class ListaTiposHerramienta(generic.View):
     """Lista de tipos de herramienta con buscador."""
 
-    template_name = "inventario/lista_tipo_herramienta.html"
+    template_name = "inventario/lista_tipos_herramienta.html"
 
     def get(self, request):
         config = request.session.get("config_inventario_tipos_herramienta", {})
@@ -756,7 +866,7 @@ class CrearTipoHerramienta(generic.View):
 class ListaTiposPieza(generic.View):
     """Lista de tipos de pieza con buscador."""
 
-    template_name = "inventario/lista_tipo_pieza.html"
+    template_name = "inventario/lista_tipos_pieza.html"
 
     def get(self, request):
         config = request.session.get("config_inventario_tipos_pieza", {})
@@ -815,7 +925,7 @@ class CrearTipoPieza(generic.View):
 class ListaTiposRefaccion(generic.View):
     """Lista de tipos de refacción con buscador."""
 
-    template_name = "inventario/lista_tipo_refaccion.html"
+    template_name = "inventario/lista_tipos_refaccion.html"
 
     def get(self, request):
         config = request.session.get("config_inventario_tipos_refaccion", {})
