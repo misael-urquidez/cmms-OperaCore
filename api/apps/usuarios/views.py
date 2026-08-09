@@ -1,5 +1,7 @@
 from django.contrib.auth.hashers import check_password, identify_hasher, make_password
+from django.db import connection
 from django.db.models import Q
+from django.db.utils import OperationalError
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -160,3 +162,39 @@ class LoginAPIView(APIView):
 
         data = serializers.TrabajadorSerializer(trabajador, context={"request": request}).data
         return Response(data, status=status.HTTP_200_OK)
+
+
+class RendimientoTrabajadorAPIView(APIView):
+    """Rendimiento de un trabajador (ordenes asignadas vs cerradas), via
+    sp_rendimiento_trabajador. GET /usuarios/v1/trabajadores/<numeroNomina>/rendimiento/"""
+
+    def get(self, request, numeroNomina):
+        try:
+            with connection.cursor() as cur:
+                cur.execute(
+                    "CALL sp_rendimiento_trabajador(%s, @nombre, @asignadas, @cerradas)",
+                    [numeroNomina],
+                )
+                cur.execute("SELECT @nombre, @asignadas, @cerradas")
+                nombre, asignadas, cerradas = cur.fetchone()
+        except OperationalError as e:
+            detalle = str(e.args[1]) if e.args and len(e.args) >= 2 else str(e)
+            return Response({"detail": detalle}, status=status.HTTP_400_BAD_REQUEST)
+
+        if nombre is None:
+            # INNER JOIN del SP no encontro filas: o la nomina no existe,
+            # o existe pero no tiene ninguna orden asignada todavia.
+            return Response(
+                {"detail": "Sin órdenes registradas para esa nómina (o la nómina no existe)."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(
+            {
+                "numero_nomina": numeroNomina,
+                "nombre": nombre,
+                "ordenes_asignadas": asignadas,
+                "ordenes_cerradas": cerradas,
+            },
+            status=status.HTTP_200_OK,
+        )

@@ -9,6 +9,16 @@
 
 .gestion-header a:not(.btn-primary-sm):hover { text-decoration: underline; }
 
+/* -------- calculadora de depreciacion (SP 5) -------- */
+.inv-drawer__dep-calc { display:flex; align-items:center; gap:.4rem; margin-top:.4rem; flex-wrap:wrap; }
+.inv-drawer__dep-calc-input { width:6.5rem; padding:.3rem .5rem; font-size:.75rem; border-radius:.4rem; border:1px solid var(--line); background:var(--color-bg); color:var(--color-text); }
+.inv-drawer__dep-calc-btn { padding:.3rem .6rem; font-size:.72rem; border-radius:.4rem; border:1px solid var(--color-primary); background:transparent; color:var(--color-primary); cursor:pointer; white-space:nowrap; }
+.inv-drawer__dep-calc-btn:hover { background:var(--color-primary); color:#fff; }
+.inv-drawer__dep-calc-btn:disabled { opacity:.5; cursor:not-allowed; }
+.inv-drawer__dep-calc-msg { font-size:.7rem; }
+.inv-drawer__dep-calc-msg--ok { color:#34d399; }
+.inv-drawer__dep-calc-msg--error { color:#fb7185; }
+
 /* Acciones (si se agregan en el futuro) */
 .gestion-acciones a { color: var(--color-primary); }
 

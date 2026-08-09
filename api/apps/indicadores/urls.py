@@ -10,6 +10,8 @@ urlpatterns = [
     path("v1/kpi/<str:vista>/", views.KPIVistaAPIView.as_view(), name="kpi_vista"),
     path("v1/reporte-disponibilidad/", views.ReporteDisponibilidadPlantaAPIView.as_view(), name="reporte_disponibilidad"),
     path("v2/cerrar-periodo/", views.CerrarPeriodoIndicadorAPIView.as_view(), name="cerrar_periodo"),
+    path("v1/rendimiento-trabajadores/", views.RendimientoTrabajadoresAPIView.as_view(), name="rendimiento_trabajadores"),
+    path("v1/rendimiento-trabajador/<str:nomina>/", views.RendimientoTrabajadorDetailAPIView.as_view(), name="rendimiento_trabajador_detalle"),
 ]
 
 urlpatterns += [

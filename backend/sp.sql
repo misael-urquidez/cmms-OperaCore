@@ -352,6 +352,9 @@ DELIMITER ;
 -- Llamada (igual que el ejemplo):
 -- call sp_rendimiento_trabajador('NOM-001', @nombre, @asignadas, @cerradas);
 -- select @nombre as Nombre, @asignadas as Ordenes_Asignadas, @cerradas as Ordenes_Cerradas;
+-- Llamada (igual que el ejemplo):
+-- call sp_rendimiento_trabajador('NOM-001', @nombre, @asignadas, @cerradas);
+-- select @nombre as Nombre, @asignadas as Ordenes_Asignadas, @cerradas as Ordenes_Cerradas;
 
 -- =====================================================================
 -- Procedimiento 5: sp_calcular_depreciacion_pieza

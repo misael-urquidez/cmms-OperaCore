@@ -7,6 +7,7 @@ from django.db.models import F
 from apps.monitoreo.models import Indicador
 from apps.mantenimiento.models import OrdenMantenimiento
 from apps.inventario.models import Refaccion
+from apps.usuarios.models import Trabajador
 from . import models
 from . import serializers
 
@@ -672,6 +673,90 @@ class ResumenIndicadoresAPIView(APIView):
             ).count(),
         }
         return Response(data, status=status.HTTP_200_OK)
+
+
+class RendimientoTrabajadoresAPIView(APIView):
+    """Rendimiento de todos los trabajadores (SP 4: sp_rendimiento_trabajador).
+    El SP solo acepta una nomina a la vez (IN p_nomina + 3 OUT), asi que
+    aqui se recorre cada TRABAJADOR y se arma la lista completa para el
+    modulo 'Rendimiento' de Indicadores.
+    GET /indicadores/v1/rendimiento-trabajadores/"""
+
+    def get(self, request):
+        trabajadores = list(Trabajador.objects.order_by("numeroNomina"))
+
+        data = []
+        with connection.cursor() as cur:
+            for t in trabajadores:
+                # mysqlclient no regresa los OUT params directo en Python:
+                # el driver los deja en variables de sesion @_<sp>_<posicion>
+                # (ver docstring de MySQLdb.cursor.callproc) y hay que
+                # leerlas aparte con un SELECT despues del CALL.
+                cur.callproc("sp_rendimiento_trabajador", [t.numeroNomina, "", 0, 0])
+                cur.execute(
+                    "SELECT @_sp_rendimiento_trabajador_1, "
+                    "@_sp_rendimiento_trabajador_2, "
+                    "@_sp_rendimiento_trabajador_3"
+                )
+                nombre, asignadas, cerradas = cur.fetchone()
+
+                if nombre is None:
+                    # INNER JOIN con ORDEN_MANTENIMIENTO: sin ordenes
+                    # asignadas el SP no regresa nada, se completa a mano
+                    # para no perder al trabajador del listado.
+                    nombre = f"{t.nombre} {t.apellidoPat} {t.apellidoMat or ''}".strip()
+                    asignadas, cerradas = 0, 0
+
+                asignadas = asignadas or 0
+                cerradas = cerradas or 0
+                data.append({
+                    "numeroNomina": t.numeroNomina,
+                    "Nombre": nombre,
+                    "OrdenesAsignadas": asignadas,
+                    "OrdenesCerradas": cerradas,
+                    "OrdenesPendientes": asignadas - cerradas,
+                    "PorcentajeCierre": round((cerradas / asignadas) * 100, 1) if asignadas else 0.0,
+                })
+
+        data.sort(key=lambda d: d["OrdenesAsignadas"], reverse=True)
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class RendimientoTrabajadorDetailAPIView(APIView):
+    """Rendimiento de un solo trabajador, llamada directa a
+    sp_rendimiento_trabajador (SP 4) con el patron IN/OUT documentado en
+    sp.sql. Util a futuro para una ficha individual del trabajador.
+    GET /indicadores/v1/rendimiento-trabajador/<nomina>/"""
+
+    def get(self, request, nomina):
+        with connection.cursor() as cur:
+            try:
+                cur.callproc("sp_rendimiento_trabajador", [nomina, "", 0, 0])
+            except OperationalError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            cur.execute(
+                "SELECT @_sp_rendimiento_trabajador_1, "
+                "@_sp_rendimiento_trabajador_2, "
+                "@_sp_rendimiento_trabajador_3"
+            )
+            nombre, asignadas, cerradas = cur.fetchone()
+
+        if nombre is None:
+            return Response(
+                {"detail": "El trabajador no existe o no tiene órdenes asignadas."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        asignadas = asignadas or 0
+        cerradas = cerradas or 0
+        return Response({
+            "numeroNomina": nomina,
+            "nombre": nombre,
+            "ordenes_asignadas": asignadas,
+            "ordenes_cerradas": cerradas,
+            "ordenes_pendientes": asignadas - cerradas,
+            "porcentaje_cierre": round((cerradas / asignadas) * 100, 1) if asignadas else 0.0,
+        }, status=status.HTTP_200_OK)
 
 
 # A partir de aqui sigue el patron de tu maestro cuando agregues modelos reales:

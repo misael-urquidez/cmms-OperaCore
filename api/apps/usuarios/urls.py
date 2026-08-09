@@ -15,6 +15,7 @@ urlpatterns = [
     path("especialidades/<int:numeroRegistro>/", views.EspecialidadDetailAPIView.as_view(), name="especialidades-detail"),
     path("v1/trabajadores/list/", views.TrabajadorListAPIView.as_view(), name="trabajadores-list"),
     path("v1/trabajadores/<str:numeroNomina>/", views.TrabajadorDetailAPIView.as_view(), name="trabajadores-detail"),
+    path("v1/trabajadores/<str:numeroNomina>/rendimiento/", views.RendimientoTrabajadorAPIView.as_view(), name="trabajadores-rendimiento"),
     path("registro/", views.RegistroAPIView.as_view(), name="registro"),
     path("login/", views.LoginAPIView.as_view(), name="login"),
 ]

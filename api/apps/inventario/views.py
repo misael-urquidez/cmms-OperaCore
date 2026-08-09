@@ -1,9 +1,12 @@
 from datetime import datetime
 
+from django.db import connection
+from django.db.utils import OperationalError
 from django.db.models import Sum
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import generics, status
+from apps.mantenimiento.models import Movimiento
 from . import models
 from . import serializers
 
@@ -422,3 +425,66 @@ class EstadoRefaccionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         )
         self.check_object_permissions(self.request, obj)
         return obj
+
+# ------------ MOVIMIENTOS ---------------------------------------------------
+class MovimientoListAPIView(APIView):
+    """Lista los movimientos de inventario (tabla MOVIMIENTO) mas recientes
+    primero, con datos ya legibles de refaccion/orden para la tabla del
+    cliente. GET /inventario/v1/movimientos/list/"""
+
+    def get(self, request):
+        movimientos = (
+            Movimiento.objects
+            .select_related("refaccion", "orden_mantenimiento")
+            .order_by("-fecha", "-hora", "-numeroregistro")[:200]
+        )
+        data = [
+            {
+                "numeroRegistro": m.numeroregistro,
+                "descripcion": m.descripcion,
+                "fecha": m.fecha.isoformat() if m.fecha else None,
+                "hora": m.hora.isoformat() if m.hora else None,
+                "tipo": m.tipomovimiento,
+                "refaccion": m.refaccion.numeroregistro if m.refaccion_id else None,
+                "orden_mantenimiento": m.orden_mantenimiento_id,
+            }
+            for m in movimientos
+        ]
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class RegistrarSalidaRefaccionAPIView(APIView):
+    """Da salida a una refaccion del almacen via sp_registrar_salida_refaccion:
+    descuenta stock y deja el registro en MOVIMIENTO de forma atomica.
+    POST /inventario/v2/movimientos/salida-refaccion/
+    Body: {"refaccion": 1, "cantidad": 3, "orden": "OMP...", "descripcion": "..."}"""
+
+    def post(self, request):
+        refaccion = request.data.get("refaccion")
+        cantidad = request.data.get("cantidad")
+        orden = request.data.get("orden")
+        descripcion = request.data.get("descripcion", "")
+
+        if not refaccion or not cantidad:
+            return Response(
+                {"detail": "Faltan 'refaccion' y/o 'cantidad'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            with connection.cursor() as cur:
+                cur.callproc(
+                    "sp_registrar_salida_refaccion",
+                    [refaccion, cantidad, orden, descripcion],
+                )
+                # El SP termina con un SELECT: stock_resultante, stock_minimo_out,
+                # requiere_reabastecimiento
+                col_names = [c[0] for c in cur.description]
+                row = cur.fetchone()
+                resultado = dict(zip(col_names, row)) if row else {}
+        except OperationalError as e:
+            # Los SIGNAL SQLSTATE '45000' del SP (refaccion no existe, cantidad
+            # invalida, stock insuficiente) llegan aqui.
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(resultado, status=status.HTTP_200_OK)
