@@ -122,6 +122,9 @@
 {% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}">
+{% if base_template == "base_admin.html" %}
+<link rel="stylesheet" href="{% static 'inventario/css/listas.css' %}">
+{% endif %}
 {% endblock %}
 {% block extra_js %}
 <script src="{% static 'inventario/js/modal.js' %}"></script>

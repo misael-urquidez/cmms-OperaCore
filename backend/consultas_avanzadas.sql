@@ -188,3 +188,152 @@ SELECT
     th.nombre AS TipoHerramienta
 FROM HERRAMIENTA h
 JOIN TIPO_HERRAMIENTA th ON h.tipo_herramienta = th.numeroRegistro;
+
+-- =============================================================================
+-- SUBCONSULTAS ADICIONALES (CA-14 A CA-20)
+-- -----------------------------------------------------------------------------
+-- Las consultas CA-11 y CA-12 (subconsultas escalares en SELECT) viven dentro
+-- de sp_reporte_disponibilidad_planta (sp.sql), y la CA-13 (subconsulta
+-- correlacionada con MAX) dentro de v_kpi_indicadores_actuales y
+-- v_kpi_monitoreo_predictivo (vistas_kpi.sql). Aquí se anexan las variantes
+-- que completan los tipos de subconsulta requeridos para la evidencia.
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- 14. MÁQUINAS CON AL MENOS UNA ORDEN DE MANTENIMIENTO (SUBCONSULTA CON IN)
+-- Ubicación: documentacion-consultas-vistas.md, consulta avanzada CA-14
+-- Qué resuelve: Identifica qué equipos tienen historial de mantenimiento.
+-- Apoya a: sp_resumen_maquina (sp.sql)
+-- JOINs / Agregación: MAQUINA + subconsulta IN (SELECT DISTINCT)
+-- -----------------------------------------------------------------------------
+SELECT 
+    m.codigo,
+    m.nombre AS Maquina
+FROM MAQUINA m
+WHERE m.codigo IN (SELECT DISTINCT o.maquina FROM ORDEN_MANTENIMIENTO o)
+ORDER BY m.codigo;
+
+-- -----------------------------------------------------------------------------
+-- 15. MÁQUINAS SIN NINGUNA ORDEN DE MANTENIMIENTO (SUBCONSULTA CON NOT IN)
+-- Ubicación: documentacion-consultas-vistas.md, consulta avanzada CA-15
+-- Qué resuelve: Detecta equipos sin historial de mantenimiento (complemento
+--               de la CA-14), útil para planear mantenimientos preventivos.
+-- Apoya a: sp_resumen_maquina (sp.sql)
+-- JOINs / Agregación: MAQUINA + subconsulta NOT IN (SELECT DISTINCT)
+-- -----------------------------------------------------------------------------
+SELECT 
+    m.codigo,
+    m.nombre AS Maquina
+FROM MAQUINA m
+WHERE m.codigo NOT IN (SELECT DISTINCT o.maquina FROM ORDEN_MANTENIMIENTO o);
+
+-- -----------------------------------------------------------------------------
+-- 16. LÍNEAS CON FALLAS AÚN SIN RESOLVER (SUBCONSULTA CORRELACIONADA CON EXISTS)
+-- Ubicación: documentacion-consultas-vistas.md, consulta avanzada CA-16
+-- Qué resuelve: Detecta las líneas que tienen reportes de falla en estado
+--               Abierto, En Atención o En Espera.
+-- Apoya a: sp_reporte_disponibilidad_planta (sp.sql) y v_kpi_reportes_atencion
+-- JOINs / Agregación: LINEA + EXISTS (REPORTE_FALLA JOIN MAQUINA)
+-- -----------------------------------------------------------------------------
+SELECT 
+    l.codigo,
+    l.nombre AS Linea
+FROM LINEA l
+WHERE EXISTS (
+    SELECT 1
+    FROM REPORTE_FALLA rf
+    INNER JOIN MAQUINA m ON m.codigo = rf.maquina
+    WHERE m.linea = l.codigo
+      AND rf.estado_reporte IN ('ABIER', 'ENATE', 'ENESP')
+);
+
+-- -----------------------------------------------------------------------------
+-- 17. PROMEDIO DE FALLAS POR LÍNEA (SUBCONSULTA EN FROM / TABLA DERIVADA)
+-- Ubicación: documentacion-consultas-vistas.md, consulta avanzada CA-17
+-- Qué resuelve: Con una tabla derivada que agrupa el conteo de fallas por
+--               máquina, promedia ese conteo a nivel de línea.
+-- Apoya a: sp_reporte_disponibilidad_planta (sp.sql)
+-- JOINs / Agregación: LINEA LEFT JOIN MAQUINA LEFT JOIN (SELECT ... GROUP BY)
+-- -----------------------------------------------------------------------------
+SELECT 
+    l.nombre AS Linea,
+    ROUND(AVG(fc.TotalFallas), 1) AS PromedioFallas
+FROM LINEA l
+LEFT JOIN MAQUINA m ON m.linea = l.codigo
+LEFT JOIN (
+    SELECT rf.maquina, COUNT(*) AS TotalFallas
+    FROM REPORTE_FALLA rf
+    GROUP BY rf.maquina
+) fc ON fc.maquina = m.codigo
+GROUP BY l.codigo, l.nombre
+ORDER BY l.nombre;
+
+-- -----------------------------------------------------------------------------
+-- 18. MÁQUINAS CON MTBF SUPERIOR AL PROMEDIO DE SU LÍNEA (SUBCONSULTA
+--     CORRELACIONADA ESCALAR EN WHERE)
+-- Ubicación: documentacion-consultas-vistas.md, consulta avanzada CA-18
+-- Qué resuelve: Compara el MTBF de cada máquina contra el promedio de las
+--               máquinas de su propia línea (la subconsulta depende de m.linea).
+-- Apoya a: sp_calcular_indicador (sp.sql) y v_kpi_indicadores_actuales
+-- JOINs / Agregación: INDICADOR JOIN MAQUINA JOIN LINEA + AVG correlacionado
+-- -----------------------------------------------------------------------------
+SELECT 
+    m.codigo,
+    m.nombre AS Maquina,
+    i.mtbf AS MTBF,
+    l.nombre AS Linea
+FROM INDICADOR i
+INNER JOIN MAQUINA m ON m.codigo = i.maquina
+INNER JOIN LINEA l ON l.codigo = m.linea
+WHERE i.mtbf > (
+    SELECT AVG(i2.mtbf)
+    FROM INDICADOR i2
+    INNER JOIN MAQUINA m2 ON m2.codigo = i2.maquina
+    WHERE m2.linea = m.linea
+)
+ORDER BY l.nombre, i.mtbf DESC;
+
+-- -----------------------------------------------------------------------------
+-- 19. TÉCNICOS CON MÁS ÓRDENES CERRADAS QUE EL PROMEDIO (SUBCONSULTA EN HAVING)
+-- Ubicación: documentacion-consultas-vistas.md, consulta avanzada CA-19
+-- Qué resuelve: Filtra el grupo con HAVING comparando contra una subconsulta
+--               escalar con AVG sobre una tabla derivada de conteos.
+-- Apoya a: sp_rendimiento_trabajador (sp.sql) — mismo ranking que la CA-2
+-- JOINs / Agregación: TRABAJADOR LEFT JOIN ORDEN_MANTENIMIENTO + GROUP BY
+-- -----------------------------------------------------------------------------
+SELECT 
+    t.numeroNomina,
+    CONCAT(t.nombre, ' ', t.apellidoPat) AS Tecnico,
+    COUNT(o.folio) AS OrdenesCerradas
+FROM TRABAJADOR t
+LEFT JOIN ORDEN_MANTENIMIENTO o
+    ON o.trabajador = t.numeroNomina AND o.estado_orden = 'CERRA'
+GROUP BY t.numeroNomina, t.nombre, t.apellidoPat
+HAVING COUNT(o.folio) > (
+    SELECT AVG(cc)
+    FROM (
+        SELECT COUNT(*) AS cc
+        FROM ORDEN_MANTENIMIENTO
+        WHERE estado_orden = 'CERRA'
+        GROUP BY trabajador
+    ) d
+);
+
+-- -----------------------------------------------------------------------------
+-- 20. MÁQUINAS SIN NINGUNA ORDEN CERRADA (SUBCONSULTA CON NOT EXISTS)
+-- Ubicación: documentacion-consultas-vistas.md, consulta avanzada CA-20
+-- Qué resuelve: Lista los equipos cuyo mantenimiento no ha sido completado
+--               (sin órdenes en estado 'Cerrada').
+-- Apoya a: sp_resumen_maquina (sp.sql) y v_kpi_mantenimiento_por_maquina
+-- JOINs / Agregación: MAQUINA + NOT EXISTS (ORDEN_MANTENIMIENTO)
+-- -----------------------------------------------------------------------------
+SELECT 
+    m.codigo,
+    m.nombre AS Maquina
+FROM MAQUINA m
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM ORDEN_MANTENIMIENTO o
+    WHERE o.maquina = m.codigo
+      AND o.estado_orden = 'CERRA'
+);

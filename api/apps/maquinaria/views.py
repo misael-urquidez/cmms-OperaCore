@@ -249,12 +249,12 @@ class ResumenMaquinaAPIView(APIView):
     def get(self, request, codigo):
         try:
             with connection.cursor() as cur:
-                cur.callproc("sp_resumen_maquina", [codigo, "", "", 0, 0, 0, 0, 0, 0])
+                cur.callproc("sp_resumen_maquina_maquinaria", [codigo, "", "", 0, 0, 0, 0, 0, 0])
                 cur.execute(
-                    "SELECT @_sp_resumen_maquina_1, @_sp_resumen_maquina_2, "
-                    "@_sp_resumen_maquina_3, @_sp_resumen_maquina_4, "
-                    "@_sp_resumen_maquina_5, @_sp_resumen_maquina_6, "
-                    "@_sp_resumen_maquina_7, @_sp_resumen_maquina_8"
+                    "SELECT @_sp_resumen_maquina_maquinaria_1, @_sp_resumen_maquina_maquinaria_2, "
+                    "@_sp_resumen_maquina_maquinaria_3, @_sp_resumen_maquina_maquinaria_4, "
+                    "@_sp_resumen_maquina_maquinaria_5, @_sp_resumen_maquina_maquinaria_6, "
+                    "@_sp_resumen_maquina_maquinaria_7, @_sp_resumen_maquina_maquinaria_8"
                 )
                 (
                     nombre, estado, total_fallas, total_ordenes,

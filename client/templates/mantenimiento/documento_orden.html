@@ -145,7 +145,7 @@
     <h4>Movimientos de inventario</h4>
     <ul>
       {% for m in movimientos %}
-      <li>{% if m.tipomovimiento == "INSTA" %}Instalación{% elif m.tipomovimiento == "DESMO" %}Desmontaje{% else %}{{ m.tipomovimiento }}{% endif %} — {{ m.fecha }} {{ m.hora|default:"" }}{% if m.refaccion_nombre %} · {{ m.refaccion_nombre }}{% endif %}{% if m.pieza_nombre %} · reemplaza {{ m.pieza_nombre }}{% endif %}</li>
+      <li>{% if m.tipo == "INSTA" %}Instalación{% elif m.tipo == "DESMO" %}Desmontaje{% else %}{{ m.tipo }}{% endif %} — {{ m.fecha }} {{ m.hora|default:"" }}{% if m.refaccion_nombre %} · {{ m.refaccion_nombre }}{% endif %}{% if m.pieza_nombre %} · reemplaza {{ m.pieza_nombre }}{% endif %}</li>
       {% endfor %}
     </ul>
     {% endif %}

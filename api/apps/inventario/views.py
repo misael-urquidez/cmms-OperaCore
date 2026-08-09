@@ -490,7 +490,11 @@ class MovimientoListAPIView(APIView):
                 "fecha": m.fecha.isoformat() if m.fecha else None,
                 "hora": m.hora.isoformat() if m.hora else None,
                 "tipo": m.tipomovimiento,
-                "refaccion": m.refaccion.numeroregistro if m.refaccion_id else None,
+                "refaccion": m.refaccion_id,
+                "refaccion_nombre": m.refaccion.nombre if m.refaccion_id else None,
+                "pieza": m.pieza_id,
+                "pieza_nombre": m.pieza.nombre if m.pieza_id else None,
+                "pieza_numeroserie": m.pieza.numeroserie if m.pieza_id else None,
                 "orden_mantenimiento": m.orden_mantenimiento_id,
             }
             for m in movimientos
@@ -500,15 +504,20 @@ class MovimientoListAPIView(APIView):
 
 class RegistrarSalidaRefaccionAPIView(APIView):
     """Da salida a una refaccion del almacen via sp_registrar_salida_refaccion:
-    descuenta 1 unidad de stock y deja el registro en MOVIMIENTO de forma
-    atomica. Para descontar varias unidades, llamar varias veces.
+    descuenta stock y deja el registro en MOVIMIENTO (tipo INSTA) de forma
+    atomica. Cada llamada equivale a la salida de UNA unidad.
     POST /inventario/v2/movimientos/salida-refaccion/
-    Body: {"refaccion": 1, "orden": "OMP...", "descripcion": "..."}"""
+    Body: {"refaccion": 1, "orden": "OMP...", "descripcion": "...",
+           "fecha": "2026-08-08", "hora": "10:30:00", "pieza": "SN123"}"""
+
 
     def post(self, request):
         refaccion = request.data.get("refaccion")
         orden = request.data.get("orden")
         descripcion = request.data.get("descripcion", "")
+        fecha = request.data.get("fecha")
+        hora = request.data.get("hora")
+        pieza = request.data.get("pieza")
 
         if not refaccion:
             return Response(
@@ -520,16 +529,19 @@ class RegistrarSalidaRefaccionAPIView(APIView):
             with connection.cursor() as cur:
                 cur.callproc(
                     "sp_registrar_salida_refaccion",
-                    [refaccion, orden, descripcion],
+                    [refaccion, orden, descripcion, fecha, hora, pieza],
                 )
-                # El SP termina con un SELECT: stock_resultante, stock_minimo_out,
-                # requiere_reabastecimiento
+                # El SP termina con un SELECT: stock_resultante,
+                # stock_minimo_out, requiere_reabastecimiento, numero_movimiento
                 col_names = [c[0] for c in cur.description]
                 row = cur.fetchone()
+                while cur.nextset():
+                    pass
                 resultado = dict(zip(col_names, row)) if row else {}
         except OperationalError as e:
-            # Los SIGNAL SQLSTATE '45000' del SP (refaccion no existe, stock
-            # insuficiente) llegan aqui.
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            # Los SIGNAL SQLSTATE '45000' del SP (refaccion no existe,
+            # stock insuficiente, pieza inexistente) llegan aqui.
+            mensaje = e.args[1] if len(e.args) > 1 else str(e)
+            return Response({"detail": mensaje}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(resultado, status=status.HTTP_200_OK)

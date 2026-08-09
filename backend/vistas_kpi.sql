@@ -16,6 +16,9 @@
 --   v_kpi_indicadores_actuales    -> tabla MTTR/MTBF/Disponibilidad
 --   v_kpi_disponibilidad_linea    -> linea de disponibilidad por periodo
 --   v_kpi_monitoreo_predictivo    -> ultima lectura de sensor por maquina
+--   v_periodo_abierto_maquina     -> apoyo a sp_cerrar_periodo_indicador (sp.sql)
+--   v_refaccion_inventario        -> apoyo a sp_registrar_salida_refaccion (sp.sql);
+--                                    base de v_kpi_stock
 -- =====================================================================
 
 USE operacore;
@@ -112,16 +115,46 @@ order by l.nombre;
 
 -- =====================================================================
 -- 8. v_kpi_indicadores_actuales: ultimo indicador (MTTR/MTBF/Dispo) por maquina
+--    Incluye los datos de origen de las fórmulas, calculados en vivo
+--    (misma lógica que los triggers de triggers2.sql):
+--      TotalHorasOperacion -> SUM(REGISTRO_OPS.horasOperacion)
+--      TotalFallas         -> COUNT(REPORTE_FALLA)
+--      TiempoTotalParo     -> SUM(REPORTE_FALLA.tiempoParo) de fallas con
+--                             orden cerrada (alimenta MTTR)
+--      NumReparaciones     -> COUNT de órdenes cerradas con reporte de falla
 -- =====================================================================
 DROP VIEW IF EXISTS v_kpi_indicadores_actuales;
 
 CREATE VIEW v_kpi_indicadores_actuales as
 select m.codigo as Codigo, m.nombre as Maquina, em.nombre as Estado, l.nombre as Linea,
-       i.mttr as MTTR, i.mtbf as MTBF, i.porcentajeDispo as Disponibilidad, i.fechaFin as Periodo
+       i.mttr as MTTR, i.mtbf as MTBF, i.porcentajeDispo as Disponibilidad, i.fechaFin as Periodo,
+       IFNULL(ro.TotalHoras, 0)      as TotalHorasOperacion,
+       IFNULL(rf.TotalFallas, 0)     as TotalFallas,
+       IFNULL(om.TiempoParo, 0)      as TiempoTotalParo,
+       IFNULL(om.NumReparaciones, 0) as NumReparaciones
 from INDICADOR i
 inner join MAQUINA m on m.codigo = i.maquina
 left join EDO_MAQUINA em on em.codigo = m.estado_maquina
 left join LINEA l on l.codigo = m.linea
+left join (
+    select maquina, SUM(horasOperacion) as TotalHoras
+    from REGISTRO_OPS
+    group by maquina
+) ro on ro.maquina = m.codigo
+left join (
+    select maquina, COUNT(*) as TotalFallas
+    from REPORTE_FALLA
+    group by maquina
+) rf on rf.maquina = m.codigo
+left join (
+    select om.maquina,
+           SUM(rf2.tiempoParo) as TiempoParo,
+           COUNT(*)            as NumReparaciones
+    from ORDEN_MANTENIMIENTO om
+    inner join REPORTE_FALLA rf2 on rf2.numeroRegistro = om.reporte_falla
+    where om.fechaCierre is not null
+    group by om.maquina
+) om on om.maquina = m.codigo
 where i.numeroRegistro = (select max(i2.numeroRegistro) from INDICADOR i2 where i2.maquina = i.maquina);
 
 -- =====================================================================
@@ -150,6 +183,34 @@ select m.codigo as Codigo, m.nombre as Maquina, m.umbral_vibracion as Umbral,
 from LECTURA_SENSOR s
 inner join MAQUINA m on m.codigo = s.maquina
 where s.numeroRegistro = (select max(s2.numeroRegistro) from LECTURA_SENSOR s2 where s2.maquina = s.maquina);
+
+-- =====================================================================
+-- 11. v_periodo_abierto_maquina: periodos vigentes (fechaFin NULL)
+--     Vista de apoyo consumida por sp_cerrar_periodo_indicador (sp.sql):
+--     encapsula el concepto de "periodo vigente" que el SP necesita
+--     localizar para cerrar y abrir el siguiente.
+-- =====================================================================
+DROP VIEW IF EXISTS v_periodo_abierto_maquina;
+
+CREATE VIEW v_periodo_abierto_maquina as
+select numeroRegistro, maquina, fechaInicio, mtbf, mttr
+from INDICADOR
+where fechaFin IS NULL;
+
+-- =====================================================================
+-- 12. v_refaccion_inventario: catalogo de refacciones con su stock
+--     Vista de apoyo consumida por sp_registrar_salida_refaccion (sp.sql):
+--     entrega los datos de stock y stockMinimo que el SP usa para
+--     descontar y evaluar el reabastecimiento. v_kpi_stock es un
+--     filtro de esta vista (solo refacciones en/bajo el stock minimo).
+-- =====================================================================
+DROP VIEW IF EXISTS v_refaccion_inventario;
+
+CREATE VIEW v_refaccion_inventario as
+select r.numeroRegistro, r.nombre, r.codigoSku, r.stock, r.stockMinimo,
+       r.costo, r.puntoReorden, c.nombre as clasificacion
+from REFACCION r
+left join CLASIFICACION c on c.codigo = r.clasificacion;
 
 -- =====================================================================
 -- FIN DE VISTAS KPI

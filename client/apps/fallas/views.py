@@ -236,6 +236,9 @@ class DetailReporte(generic.View):
             except (requests.exceptions.RequestException, ValueError):
                 reporte = None
 
+
+        self._enriquecer_fallas(reporte)
+
         if es_ajax:
             self.context = {"reporte": reporte}
             return render(request, self.template_name, self.context)
@@ -251,6 +254,33 @@ class DetailReporte(generic.View):
             "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
         }
         return render(request, self.template_pagina, self.context)
+
+
+    def _enriquecer_fallas(self, reporte):
+        """Garantiza que el detalle liste TODAS las fallas adjuntadas al
+        reporte. Si el API ya trae `fallas_asociadas` con nombre se respeta;
+        si viene vacía o falta, se reconstruye desde `tipo_falla_ids`
+        cotejando contra el catálogo (misma lógica que ActualizarReporte)."""
+        if not isinstance(reporte, dict):
+            return
+        if reporte.get("fallas_asociadas"):
+            return
+
+        fallas_ids = reporte.get("tipo_falla_ids") or []
+        if not fallas_ids:
+            return
+
+        _, tipos_falla, _, _, _, _ = _cargar_catalogos()
+        fallas_asociadas = []
+        for fid in fallas_ids:
+            coincidencia = [t for t in tipos_falla if t.get("numeroRegistro") == fid]
+            if coincidencia:
+                fallas_asociadas.append({
+                    "id": fid,
+                    "nombre": coincidencia[0].get("nombre"),
+                })
+        if fallas_asociadas:
+            reporte["fallas_asociadas"] = fallas_asociadas
 
 
 class ActualizarReporte(generic.View):
