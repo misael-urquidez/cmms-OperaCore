@@ -16,7 +16,7 @@ USE operacore;
 --           periodo es responsabilidad de otro proceso externo al
 --           trigger". Este procedimiento ES ese proceso externo.
 -- Parámetros:
---   maquina   -> código de la máquina (MAQUINA.codigo)
+--   maquinita -> código de la máquina (MAQUINA.codigo)
 --   fecha_fin -> fecha en la que se cierra el periodo actual
 -- Lógica:
 --   1) Valida que la máquina exista.
@@ -31,14 +31,20 @@ USE operacore;
 --   INDICADOR) recalcula automáticamente porcentajeDispo del nuevo
 --   periodo con esos valores heredados — no hace falta repetir esa
 --   lógica aquí.
+--   NOTA: el parámetro se llama "maquinita" (y no "maquina") a propósito:
+--   v_periodo_abierto_maquina expone una columna llamada "maquina", y un
+--   parámetro con el mismo nombre que esa columna queda sombreado por
+--   ella en el WHERE (MySQL resuelve el identificador contra la columna,
+--   no contra el parámetro), lo que volvía la condición un WHERE maquina
+--   = maquina siempre verdadero. Mismo motivo por el que el resto de los
+--   SP de este archivo usan prefijo p_ / v_ en sus parámetros y variables.
 -- =====================================================================
-
 DROP PROCEDURE IF EXISTS sp_cerrar_periodo_indicador;
 
 DELIMITER $$
 
 CREATE PROCEDURE sp_cerrar_periodo_indicador(
-    IN maquina    VARCHAR(10),
+    IN maquinita  VARCHAR(10),
     IN fecha_fin  DATE
 )
 BEGIN
@@ -48,21 +54,19 @@ BEGIN
     DECLARE v_mtbf_actual    FLOAT;
     DECLARE v_mttr_actual    FLOAT;
 
-    -- 1) validar que la maquina exista
     SELECT COUNT(*) INTO v_existe_maquina
     FROM MAQUINA
-    WHERE codigo = maquina;
+    WHERE codigo = maquinita;
 
     IF v_existe_maquina = 0 THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'La maquina especificada no existe';
     END IF;
 
-    -- 2) ubicar el periodo abierto de la maquina (vista de apoyo)
     SELECT numeroRegistro, fechaInicio, mtbf, mttr
     INTO v_id_abierto, v_fecha_inicio, v_mtbf_actual, v_mttr_actual
     FROM v_periodo_abierto_maquina
-    WHERE maquina = maquina
+    WHERE maquina = maquinita
     ORDER BY numeroRegistro DESC
     LIMIT 1;
 
@@ -71,24 +75,20 @@ BEGIN
         SET MESSAGE_TEXT = 'No hay un periodo abierto para esta maquina';
     END IF;
 
-    -- 3) validar la fecha de cierre
     IF fecha_fin < v_fecha_inicio THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'La fecha de fin no puede ser anterior al inicio del periodo';
     END IF;
 
-    -- 4) cerrar el periodo vigente
     UPDATE INDICADOR
     SET fechaFin = fecha_fin
     WHERE numeroRegistro = v_id_abierto;
 
-    -- 5) abrir el periodo siguiente, heredando el ultimo mtbf,mttr
     INSERT INTO INDICADOR (maquina, fechaInicio, mtbf, mttr)
-    VALUES (maquina, DATE_ADD(fecha_fin, INTERVAL 1 DAY), v_mtbf_actual, v_mttr_actual);
+    VALUES (maquinita, DATE_ADD(fecha_fin, INTERVAL 1 DAY), v_mtbf_actual, v_mttr_actual);
 END $$
 
 DELIMITER ;
-
 -- Llamada (igual que el ejemplo):
 -- call sp_cerrar_periodo_indicador('MAQ001', '2027-02-28');
 -- select * from INDICADOR;
