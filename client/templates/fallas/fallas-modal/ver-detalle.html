@@ -36,9 +36,9 @@
         </div>
 
         <div class="fallas-modal__field">
-          <span class="fallas-modal__label">Tipo de falla</span>
+          <span class="fallas-modal__label">Tipos de falla</span>
           <span class="fallas-modal__value">
-            {% for f in reporte.fallas_asociadas %}{{ f.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
+            {% for f in reporte.fallas_asociadas %}<span class="badge">{{ f.nombre }}</span>{% empty %}-{% endfor %}
           </span>
         </div>
 

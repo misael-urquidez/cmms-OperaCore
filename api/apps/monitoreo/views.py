@@ -13,7 +13,7 @@ from apps.fallas.models import (
 from apps.usuarios.models import Trabajador
 
 from . import services
-from .models import Indicador, LecturaSensor, RegistroOps
+from .models import IndicadorActual, LecturaSensor, RegistroOps
 from .serializers import (
     CrearMaquinaSerializer, LecturaSensorSerializer, ModoMonitoreoSerializer, ReparacionManualSerializer,
     RegistroOpsSerializer, ReporteFallaManualSerializer,
@@ -58,22 +58,17 @@ class MaquinaListAPIView(APIView):
 
 class IndicadoresMaquinaAPIView(APIView):
     def get(self, request, codigo):
-        from django.db.models import Count, Sum
+        indicador = IndicadorActual.objects.filter(Codigo=codigo).first()
 
-        indicador = Indicador.objects.filter(maquina_id=codigo).order_by("-fechaInicio", "-numeroRegistro").first()
-
-        fallas_qs = ReporteFalla.objects.filter(maquina_id=codigo)
-        total_fallas = fallas_qs.count()
-        total_tiempo_paro = fallas_qs.aggregate(total=Sum("tiempoParo"))["total"] or 0
-
-        response = {
-            "mtbf": indicador.mtbf if indicador else None,
-            "mttr": indicador.mttr if indicador else None,
-            "disponibilidad": indicador.porcentajeDispo if indicador else None,
-            "numero_fallas": total_fallas,
-            "tiempo_inactividad": total_tiempo_paro,
-        }
-        return Response(response)
+        return Response({
+            "mtbf": indicador.MTBF if indicador else None,
+            "mttr": indicador.MTTR if indicador else None,
+            "disponibilidad": indicador.Disponibilidad if indicador else None,
+            "total_horas_operacion": indicador.TotalHorasOperacion if indicador else 0,
+            "numero_fallas": indicador.TotalFallas if indicador else 0,
+            "tiempo_inactividad": indicador.TiempoTotalParo if indicador else 0,
+            "numero_reparaciones": indicador.NumReparaciones if indicador else 0,
+        })
 
 
 class HistorialLecturasAPIView(APIView):

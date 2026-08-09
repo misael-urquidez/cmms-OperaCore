@@ -115,16 +115,46 @@ order by l.nombre;
 
 -- =====================================================================
 -- 8. v_kpi_indicadores_actuales: ultimo indicador (MTTR/MTBF/Dispo) por maquina
+--    Incluye los datos de origen de las fórmulas, calculados en vivo
+--    (misma lógica que los triggers de triggers2.sql):
+--      TotalHorasOperacion -> SUM(REGISTRO_OPS.horasOperacion)
+--      TotalFallas         -> COUNT(REPORTE_FALLA)
+--      TiempoTotalParo     -> SUM(REPORTE_FALLA.tiempoParo) de fallas con
+--                             orden cerrada (alimenta MTTR)
+--      NumReparaciones     -> COUNT de órdenes cerradas con reporte de falla
 -- =====================================================================
 DROP VIEW IF EXISTS v_kpi_indicadores_actuales;
 
 CREATE VIEW v_kpi_indicadores_actuales as
 select m.codigo as Codigo, m.nombre as Maquina, em.nombre as Estado, l.nombre as Linea,
-       i.mttr as MTTR, i.mtbf as MTBF, i.porcentajeDispo as Disponibilidad, i.fechaFin as Periodo
+       i.mttr as MTTR, i.mtbf as MTBF, i.porcentajeDispo as Disponibilidad, i.fechaFin as Periodo,
+       IFNULL(ro.TotalHoras, 0)      as TotalHorasOperacion,
+       IFNULL(rf.TotalFallas, 0)     as TotalFallas,
+       IFNULL(om.TiempoParo, 0)      as TiempoTotalParo,
+       IFNULL(om.NumReparaciones, 0) as NumReparaciones
 from INDICADOR i
 inner join MAQUINA m on m.codigo = i.maquina
 left join EDO_MAQUINA em on em.codigo = m.estado_maquina
 left join LINEA l on l.codigo = m.linea
+left join (
+    select maquina, SUM(horasOperacion) as TotalHoras
+    from REGISTRO_OPS
+    group by maquina
+) ro on ro.maquina = m.codigo
+left join (
+    select maquina, COUNT(*) as TotalFallas
+    from REPORTE_FALLA
+    group by maquina
+) rf on rf.maquina = m.codigo
+left join (
+    select om.maquina,
+           SUM(rf2.tiempoParo) as TiempoParo,
+           COUNT(*)            as NumReparaciones
+    from ORDEN_MANTENIMIENTO om
+    inner join REPORTE_FALLA rf2 on rf2.numeroRegistro = om.reporte_falla
+    where om.fechaCierre is not null
+    group by om.maquina
+) om on om.maquina = m.codigo
 where i.numeroRegistro = (select max(i2.numeroRegistro) from INDICADOR i2 where i2.maquina = i.maquina);
 
 -- =====================================================================

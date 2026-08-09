@@ -96,6 +96,20 @@
         </div>
     </div>
 </div>
+            <div class="sidebar__group {% if seccion == 'inventario' %}is-open{% endif %}">
+                <button type="button" class="sidebar__link sidebar__group-toggle" aria-expanded="{% if seccion == 'inventario' %}true{% else %}false{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></svg>
+                    <span>Inventario</span>
+                    <svg class="sidebar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="sidebar__submenu">
+                    <div class="sidebar__submenu-inner">
+                        <a href="{% url 'inventario:lista_piezas' %}" class="{% if seccion == 'inventario' and subseccion == 'piezas' %}is-active{% endif %}">Piezas</a>
+                        <a href="{% url 'inventario:lista_refacciones' %}" class="{% if seccion == 'inventario' and subseccion == 'refacciones' %}is-active{% endif %}">Refacciones</a>
+                        <a href="{% url 'inventario:lista_movimientos' %}" class="{% if seccion == 'inventario' and subseccion == 'movimientos' %}is-active{% endif %}">Movimientos</a>
+                    </div>
+                </div>
+            </div>
             <a class="sidebar__link {% if seccion == 'gestion' %}is-active{% endif %}" href="{% url 'gestion:index' %}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 <span>Gestión</span>

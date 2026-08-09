@@ -731,8 +731,10 @@ GESTION_REGISTRY = {
         "pk_field": ["tarea", "orden_mantenimiento"],
         "pk_label": "Tarea / Orden",
         "campos": [
-            {"name": "tarea", "label": "Tarea", "tipo": "select", "requerido": True, "columna": True,
+            {"name": "tarea", "label": "Tarea", "tipo": "select", "requerido": True, "columna": False,
              "fk": "tarea", "fk_value": "numeroregistro", "fk_label": "instruccion"},
+            {"name": "tarea_instruccion", "label": "Instrucción", "tipo": "text", "requerido": False, "columna": True,
+             "solo_lista": True},
             {"name": "orden_mantenimiento", "label": "Orden (folio)", "tipo": "text", "requerido": True, "columna": True},
             {"name": "fechainicio", "label": "Fecha de inicio", "tipo": "date", "requerido": True, "columna": True},
             {"name": "fechacierre", "label": "Fecha de cierre", "tipo": "date", "requerido": False, "columna": False},

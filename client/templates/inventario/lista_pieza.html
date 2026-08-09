@@ -170,3 +170,9 @@ document.addEventListener('keydown', function(e) {
 </script>
 <script src="{% static 'js/buscador.js' %}"></script>
 {% endblock %}
+
+{% block extra_css %}
+{% if base_template == "base_admin.html" %}
+<link rel="stylesheet" href="{% static 'inventario/css/listas.css' %}">
+{% endif %}
+{% endblock %}

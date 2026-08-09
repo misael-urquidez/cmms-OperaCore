@@ -32,10 +32,10 @@ def es_pk(nombre_campo, pk_field):
 
 @register.filter
 def si_no(valor):
-    """Convierte 1/True a 'Sí' y 0/False a 'No'."""
+    """Convierte 1/True a 'Sí' y 0/False a 'No'. None/None se trata como 'No'."""
     if valor in (1, "1", True, "true", "True"):
         return "Sí"
-    elif valor in (0, "0", False, "false", "False"):
+    elif valor in (0, "0", False, "false", "False", None, "None"):
         return "No"
     return valor
 
