@@ -10,6 +10,10 @@ urlpatterns = [
     # Catálogos agregados
     path("v1/catalogos/", views.CatalogosInventarioAPIView.as_view(), name="catalogos"),
 
+    # ------------ MOVIMIENTOS ------------
+    path("v1/movimientos/list/", views.MovimientoListAPIView.as_view(), name="movimientos-list"),
+    path("v2/movimientos/salida-refaccion/", views.RegistrarSalidaRefaccionAPIView.as_view(), name="movimientos-salida-refaccion"),
+
     # ------------ REFACCIONES ------------
     path("v1/refacciones/list/", views.RefaccionListAPIView.as_view(), name="refacciones-list"),
     path("v1/refacciones/<int:pk>/", views.RefaccionDetailAPIView.as_view(), name="refacciones-detail"),

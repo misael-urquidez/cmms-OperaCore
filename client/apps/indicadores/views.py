@@ -97,6 +97,34 @@ class ResumenProxy(View):
         return JsonResponse(respuesta.json(), safe=False)
 
 
+class RendimientoPage(generic.View):
+    """Submodulo 'Rendimiento': ordenes asignadas vs cerradas por
+    trabajador (SP 4: sp_rendimiento_trabajador)."""
+
+    template_name = "indicadores/rendimiento.html"
+
+    def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+        return render(request, self.template_name, {
+            "seccion": "indicadores", "subseccion": "rendimiento",
+        })
+
+
+class RendimientoTrabajadoresProxy(View):
+    """Reenvia GET /indicadores/v1/rendimiento-trabajadores/ al api/."""
+
+    def get(self, request):
+        try:
+            respuesta = SESSION.get(f"{API_URL}/v1/rendimiento-trabajadores/", timeout=10)
+            respuesta.raise_for_status()
+        except requests.RequestException:
+            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+        return JsonResponse(respuesta.json(), safe=False)
+
+
 class ReporteKPIExportProxy(View):
     """Reenvia GET /indicadores/v1/reporte/export/<formato>/ al api/.
     El navegador descarga el archivo directamente gracias a Content-Disposition."""
