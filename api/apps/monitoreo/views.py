@@ -68,17 +68,17 @@ class IndicadoresMaquinaAPIView(APIView):
 
     def get(self, request, codigo):
         with connection.cursor() as cur:
-            # args: 1 IN + 9 OUT; MySQLdb expone los OUT como @_sp_resumen_maquina_1.._9
+            # args: 1 IN + 10 OUT; MySQLdb expone los OUT como @_sp_resumen_maquina_1.._10
             cur.callproc(
                 "sp_resumen_maquina",
-                [codigo] + [None] * 9,
+                [codigo] + [None] * 10,
             )
             cur.execute(
                 "SELECT @_sp_resumen_maquina_1, @_sp_resumen_maquina_2, "
                 "@_sp_resumen_maquina_3, @_sp_resumen_maquina_4, "
                 "@_sp_resumen_maquina_5, @_sp_resumen_maquina_6, "
                 "@_sp_resumen_maquina_7, @_sp_resumen_maquina_8, "
-                "@_sp_resumen_maquina_9"
+                "@_sp_resumen_maquina_9, @_sp_resumen_maquina_10"
             )
             fila = cur.fetchone()
 
@@ -94,16 +94,16 @@ class IndicadoresMaquinaAPIView(APIView):
                 "numero_reparaciones": 0,
             })
 
-        (_nombre, _estado, p_mttr, p_mtbf, p_disponibilidad,
-         p_total_horas, p_numero_fallas, p_tiempo_inactividad,
+        (_nombre, _estado, p_total_fallas, _p_total_ordenes, p_horas_operacion,
+         p_mtbf, p_mttr, p_disponibilidad, p_tiempo_inactividad,
          p_numero_reparaciones) = fila
 
         return Response({
             "mtbf": p_mtbf,
             "mttr": p_mttr,
             "disponibilidad": p_disponibilidad,
-            "total_horas_operacion": p_total_horas if p_total_horas is not None else 0,
-            "numero_fallas": p_numero_fallas if p_numero_fallas is not None else 0,
+            "total_horas_operacion": p_horas_operacion if p_horas_operacion is not None else 0,
+            "numero_fallas": p_total_fallas if p_total_fallas is not None else 0,
             "tiempo_inactividad": p_tiempo_inactividad if p_tiempo_inactividad is not None else 0,
             "numero_reparaciones": p_numero_reparaciones if p_numero_reparaciones is not None else 0,
         })

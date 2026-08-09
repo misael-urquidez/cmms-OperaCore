@@ -438,37 +438,38 @@ DELIMITER ;
 -- =====================================================================
 -- Procedimiento 6: sp_resumen_maquina
 -- =====================================================================
--- Objetivo: devolver la ficha de indicadores de una maquina mediante
---           parametros de SALIDA (OUT). Es la pieza que el modulo de
---           Monitoreo usa para el drawer de maquina: el endpoint
---           GET /api/monitoreo/maquinas/<codigo>/indicadores/ (vista
---           IndicadoresMaquinaAPIView, api/apps/monitoreo/views.py)
---           llama a este SP y mapea los OUT al JSON que pinta el panel
---           lateral (client/templates/monitoreo/index.html).
---           Sustituye la lectura directa por ORM de IndicadorActual:
---           ahora toda la ficha sale de un unico SP con parametros OUT.
+-- Objetivo: devolver la ficha resumen de una maquina (nombre, estado,
+--           total de fallas, total de ordenes de mantenimiento, horas de
+--           operacion acumuladas e indicadores vigentes: mtbf, mttr,
+--           % disponibilidad, tiempo de inactividad y numero de
+--           reparaciones). Lo consumen DOS endpoints:
+--             - GET /maquinaria/v1/maquina/<codigo>/resumen/
+--               (ResumenMaquinaAPIView, api/apps/maquinaria/views.py)
+--             - GET /api/monitoreo/maquinas/<codigo>/indicadores/
+--               (IndicadoresMaquinaAPIView, api/apps/monitoreo/views.py)
 -- Parámetros:
---   maquina            -> MAQUINA.codigo (IN)
---   nombre             -> OUT: nombre de la maquina
---   estado             -> OUT: EDO_MAQUINA.nombre (estado de la maquina)
---   mtbf               -> OUT: MTBF (horas) del ultimo periodo
---   mttr               -> OUT: MTTR (horas) del ultimo periodo
---   disponibilidad     -> OUT: % de disponibilidad del ultimo periodo
---   total_horas        -> OUT: SUM(REGISTRO_OPS.horasOperacion)
---   numero_fallas      -> OUT: COUNT(REPORTE_FALLA)
---   tiempo_inactividad -> OUT: SUM(REPORTE_FALLA.tiempoParo) de fallas
+--   p_maquina            -> MAQUINA.codigo (IN)
+--   p_nombre             -> OUT: nombre de la maquina
+--   p_estado             -> OUT: MAQUINA.estado_maquina (codigo, ej. OPERA)
+--   p_total_fallas       -> OUT: total de reportes de falla de la maquina
+--   p_total_ordenes      -> OUT: total de ordenes de mantenimiento
+--   p_horas_operacion    -> OUT: suma de horas de operacion (REGISTRO_OPS)
+--   p_mtbf               -> OUT: MTBF del ultimo periodo
+--   p_mttr               -> OUT: MTTR del ultimo periodo
+--   p_disponibilidad     -> OUT: % de disponibilidad del ultimo periodo
+--   p_tiempo_inactividad -> OUT: SUM(REPORTE_FALLA.tiempoParo) de fallas
 --                                  con orden cerrada
---   numero_reparaciones-> OUT: COUNT de ordenes cerradas con reporte
+--   p_numero_reparaciones-> OUT: COUNT de ordenes cerradas con reporte
 --                                  de falla
 -- Lógica:
---   1) Lee la ficha desde la vista de apoyo v_kpi_indicadores_actuales
---      (vistas_kpi.sql), que entrega el ultimo periodo de INDICADOR por
---      maquina (subconsulta correlacionada MAX, consulta avanzada CA-13)
---      mas las tablas derivadas de horas de operacion, fallas, tiempo
---      de paro y reparaciones calculadas en vivo.
---   2) Mapea cada columna de la vista a un parametro OUT con SELECT INTO.
---      Si la maquina no tiene indicadores todavia, la vista no devuelve
---      fila y los OUT quedan en NULL (el endpoint los convierte en 0).
+--   1) Wrapper delgado sobre la vista de apoyo v_kpi_indicadores_actuales
+--      (backend/vistas_kpi.sql), que entrega la ficha completa calculada
+--      en vivo (misma logica de los triggers de triggers2.sql) mas el
+--      total de ordenes. El SP solo mapea columnas a parametros OUT con
+--      SELECT INTO.
+--   2) La vista es MAQUINA-céntrica (LEFT JOINs): si la maquina no tiene
+--      indicadores todavia, igual devuelve fila y los OUT de KPI quedan
+--      en NULL (los endpoints los convierten en 0 / "--").
 --   Patron: SP que consume una vista de apoyo (igual que el SP1 con
 --   v_periodo_abierto_maquina y el SP3 con v_refaccion_inventario).
 -- =====================================================================
@@ -478,46 +479,170 @@ DROP PROCEDURE IF EXISTS sp_resumen_maquina;
 DELIMITER $$
 
 CREATE PROCEDURE sp_resumen_maquina(
-    IN  maquina             VARCHAR(10),
-    OUT nombre              VARCHAR(100),
-    OUT estado              VARCHAR(50),
-    OUT mtbf                FLOAT,
-    OUT mttr                FLOAT,
-    OUT disponibilidad      INT,
-    OUT total_horas         INT,
-    OUT numero_fallas       INT,
-    OUT tiempo_inactividad  INT,
-    OUT numero_reparaciones INT
+    IN  p_maquina            VARCHAR(10),
+    OUT p_nombre             VARCHAR(100),
+    OUT p_estado             VARCHAR(5),
+    OUT p_total_fallas       INT,
+    OUT p_total_ordenes      INT,
+    OUT p_horas_operacion    INT,
+    OUT p_mtbf               FLOAT,
+    OUT p_mttr               FLOAT,
+    OUT p_disponibilidad     INT,
+    OUT p_tiempo_inactividad INT,
+    OUT p_numero_reparaciones INT
 )
 BEGIN
     SELECT
         Maquina,
-        Estado,
-        MTTR,
-        MTBF,
-        Disponibilidad,
-        TotalHorasOperacion,
+        EstadoCodigo,
         TotalFallas,
+        TotalOrdenes,
+        TotalHorasOperacion,
+        MTBF,
+        MTTR,
+        Disponibilidad,
         TiempoTotalParo,
         NumReparaciones
     INTO
-        nombre,
-        estado,
-        mttr,
-        mtbf,
-        disponibilidad,
-        total_horas,
-        numero_fallas,
-        tiempo_inactividad,
-        numero_reparaciones
+        p_nombre,
+        p_estado,
+        p_total_fallas,
+        p_total_ordenes,
+        p_horas_operacion,
+        p_mtbf,
+        p_mttr,
+        p_disponibilidad,
+        p_tiempo_inactividad,
+        p_numero_reparaciones
     FROM v_kpi_indicadores_actuales
-    WHERE Codigo = maquina;
+    WHERE Codigo = p_maquina;
 END $$
 
 DELIMITER ;
 
--- Llamada (igual que el ejemplo):
--- call sp_resumen_maquina('MAQ001', @nombre, @estado, @mtbf, @mttr, @dispo,
---                         @horas, @fallas, @inactividad, @reparaciones);
--- select @nombre, @estado, @mtbf, @mttr, @dispo,
---        @horas, @fallas, @inactividad, @reparaciones;
+-- Llamada:
+-- call sp_resumen_maquina('MAQ001', @nombre, @estado, @fallas, @ordenes, @horas,
+--                         @mtbf, @mttr, @dispo, @inactividad, @reparaciones);
+-- select @nombre, @estado, @fallas, @ordenes, @horas,
+--        @mtbf, @mttr, @dispo, @inactividad, @reparaciones;
+
+/* =====================================================================
+   FRAGMENTOS PREVIOS DE sp_resumen_maquina (solo referencia, no se usan)
+   ---------------------------------------------------------------------
+   Version A - ficha del drawer de Monitoreo (1 IN + 9 OUT), leia la vista:
+   ---------------------------------------------------------------------
+   CREATE PROCEDURE sp_resumen_maquina(
+       IN  maquina             VARCHAR(10),
+       OUT nombre              VARCHAR(100),
+       OUT estado              VARCHAR(50),
+       OUT mtbf                FLOAT,
+       OUT mttr                FLOAT,
+       OUT disponibilidad      INT,
+       OUT total_horas         INT,
+       OUT numero_fallas       INT,
+       OUT tiempo_inactividad  INT,
+       OUT numero_reparaciones INT
+   )
+   BEGIN
+       SELECT Maquina, Estado, MTTR, MTBF, Disponibilidad,
+              TotalHorasOperacion, TotalFallas, TiempoTotalParo, NumReparaciones
+       INTO nombre, estado, mttr, mtbf, disponibilidad,
+            total_horas, numero_fallas, tiempo_inactividad, numero_reparaciones
+       FROM v_kpi_indicadores_actuales
+       WHERE Codigo = maquina;
+   END $$
+   ---------------------------------------------------------------------
+   Version B - resumen de Maquinaria (1 IN + 8 OUT), consultas inline:
+   ---------------------------------------------------------------------
+   CREATE PROCEDURE sp_resumen_maquina(
+       IN  p_maquina           VARCHAR(10),
+       OUT p_nombre            VARCHAR(100),
+       OUT p_estado            VARCHAR(5),
+       OUT p_total_fallas      INT,
+       OUT p_total_ordenes     INT,
+       OUT p_horas_operacion   INT,
+       OUT p_mtbf              FLOAT,
+       OUT p_mttr              FLOAT,
+       OUT p_disponibilidad    INT
+   )
+   BEGIN
+       SELECT m.nombre, m.estado_maquina,
+              COUNT(DISTINCT rf.numeroRegistro),
+              COUNT(DISTINCT om.folio),
+              ( SELECT IFNULL(SUM(ro.horasOperacion), 0)
+                FROM REGISTRO_OPS ro WHERE ro.maquina = m.codigo )
+       INTO p_nombre, p_estado, p_total_fallas, p_total_ordenes, p_horas_operacion
+       FROM MAQUINA m
+       LEFT JOIN REPORTE_FALLA rf ON rf.maquina = m.codigo
+       LEFT JOIN ORDEN_MANTENIMIENTO om ON om.maquina = m.codigo
+       WHERE m.codigo = p_maquina
+       GROUP BY m.codigo, m.nombre, m.estado_maquina;
+
+       -- Indicadores vigentes: prioriza el periodo abierto (fechaFin IS NULL);
+       -- si no hay uno abierto, cae al ultimo periodo cerrado como respaldo.
+       SELECT i.mtbf, i.mttr, i.porcentajeDispo
+       INTO p_mtbf, p_mttr, p_disponibilidad
+       FROM INDICADOR i
+       WHERE i.maquina = p_maquina
+       ORDER BY (i.fechaFin IS NULL) DESC, i.numeroRegistro DESC
+       LIMIT 1;
+   END $$
+   ===================================================================== */
+
+-- =====================================================================
+-- Procedimiento 7: sp_historial_maquina
+-- =====================================================================
+-- Objetivo: devolver, en un solo result set, todas las ordenes de
+--           mantenimiento y todos los reportes de falla de una maquina,
+--           con el trabajador que atendio cada uno. Va como result set
+--           (no OUT) porque es una lista de N filas, no un escalar.
+-- Parámetros:
+--   p_maquina -> MAQUINA.codigo
+-- Lógica:
+--   1) UNION ALL entre ORDEN_MANTENIMIENTO y REPORTE_FALLA, marcando el
+--      tipo de cada fila ('ORDEN' / 'FALLA').
+--   2) LEFT JOIN con TRABAJADOR para traer el nombre completo de quien
+--      la atendio (LEFT porque trabajador puede ser NULL en ordenes).
+--   3) Ordena todo por fecha descendente (mas reciente primero).
+-- =====================================================================
+DROP PROCEDURE IF EXISTS sp_historial_maquina;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_historial_maquina(
+    IN p_maquina VARCHAR(10)
+)
+BEGIN
+    SELECT
+        'ORDEN' AS tipo,
+        om.folio AS identificador,
+        om.fechaCreacion AS fecha,
+        om.descripcion AS detalle,
+        om.estado_orden AS estado,
+        om.trabajador AS trabajador_nomina,
+        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', COALESCE(t.apellidoMat, '')) AS trabajador_nombre
+    FROM ORDEN_MANTENIMIENTO om
+    LEFT JOIN TRABAJADOR t ON t.numeroNomina = om.trabajador
+    WHERE om.maquina = p_maquina
+
+    UNION ALL
+
+    SELECT
+        'FALLA' AS tipo,
+        CAST(rf.numeroRegistro AS CHAR) AS identificador,
+        rf.fechaCreacion AS fecha,
+        rf.asunto AS detalle,
+        rf.estado_reporte AS estado,
+        rf.trabajador AS trabajador_nomina,
+        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', COALESCE(t.apellidoMat, '')) AS trabajador_nombre
+    FROM REPORTE_FALLA rf
+    LEFT JOIN TRABAJADOR t ON t.numeroNomina = rf.trabajador
+    WHERE rf.maquina = p_maquina
+
+    ORDER BY fecha DESC;
+END $$
+
+DELIMITER ;
+
+-- Llamada:
+-- call sp_historial_maquina('MAQ001');

@@ -215,9 +215,29 @@ class DetalleMaquina(generic.View):
             except requests.exceptions.RequestException:
                 ubicacion = None
 
+        resumen = None
+        if data:
+            try:
+                res_resumen = SESSION.get(f"{API_URL}/v1/maquina/{codigo}/resumen/", timeout=5)
+                if res_resumen.status_code == 200:
+                    resumen = res_resumen.json()
+            except requests.exceptions.RequestException:
+                resumen = None
+
+        historial = []
+        if data:
+            try:
+                res_hist = SESSION.get(f"{API_URL}/v1/maquina/{codigo}/historial/", timeout=5)
+                if res_hist.status_code == 200:
+                    historial = res_hist.json().get("historial", [])
+            except requests.exceptions.RequestException:
+                historial = []
+
         context = {
             "maquina": data,
             "ubicacion": ubicacion,
+            "resumen": resumen,
+            "historial": historial,
             "imagen_url_resuelta": _resolver_media_url(data.get("imagen_url")) if data else None,
             "modelo_3d_url_resuelta": _resolver_media_url(data.get("modelo_3d")) if data else None,
         }

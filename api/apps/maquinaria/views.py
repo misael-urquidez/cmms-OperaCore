@@ -1,4 +1,6 @@
 from django.core.exceptions import ValidationError
+from django.db import connection
+from django.db.utils import OperationalError
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -225,3 +227,80 @@ class ReactivarMaquinaAPIView(APIView):
         except ValidationError as e:
             return Response({"detail": str(e)}, status=400)
         return Response({"codigo": maquina.codigo, "estado_maquina": maquina.estado_maquina_id})
+
+
+def _filas_a_dicts(cur):
+    columnas = [c[0] for c in cur.description]
+    data = [dict(zip(columnas, fila)) for fila in cur.fetchall()]
+    for row in data:
+        for k, v in row.items():
+            if hasattr(v, "isoformat"):  # date/datetime -> string
+                row[k] = v.isoformat()
+    return data
+
+
+class ResumenMaquinaAPIView(APIView):
+    """Ficha resumen de una maquina (nombre, estado, total de fallas,
+    total de ordenes de mantenimiento, horas de operacion acumuladas,
+    e indicadores vigentes: mtbf, mttr, % disponibilidad) via
+    sp_resumen_maquina.
+    GET /maquinaria/v1/maquina/<str:codigo>/resumen/"""
+
+    def get(self, request, codigo):
+        try:
+            with connection.cursor() as cur:
+                cur.callproc("sp_resumen_maquina", [codigo, "", "", 0, 0, 0, 0, 0, 0, 0, 0])
+                cur.execute(
+                    "SELECT @_sp_resumen_maquina_1, @_sp_resumen_maquina_2, "
+                    "@_sp_resumen_maquina_3, @_sp_resumen_maquina_4, "
+                    "@_sp_resumen_maquina_5, @_sp_resumen_maquina_6, "
+                    "@_sp_resumen_maquina_7, @_sp_resumen_maquina_8, "
+                    "@_sp_resumen_maquina_9, @_sp_resumen_maquina_10"
+                )
+                (
+                    nombre, estado, total_fallas, total_ordenes,
+                    horas_operacion, mtbf, mttr, disponibilidad,
+                    tiempo_inactividad, numero_reparaciones,
+                ) = cur.fetchone()
+        except OperationalError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if nombre is None:
+            return Response(
+                {"detail": "La maquina especificada no existe."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(
+            {
+                "maquina": codigo,
+                "nombre": nombre,
+                "estado": estado,
+                "total_fallas": total_fallas,
+                "total_ordenes": total_ordenes,
+                "horas_operacion": horas_operacion,
+                "mtbf": mtbf,
+                "mttr": mttr,
+                "disponibilidad": disponibilidad,
+                "tiempo_inactividad": tiempo_inactividad,
+                "numero_reparaciones": numero_reparaciones,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class HistorialMaquinaAPIView(APIView):
+    """Historial combinado (ordenes de mantenimiento + reportes de falla)
+    de una maquina, con el trabajador que atendio cada una, via
+    sp_historial_maquina.
+    GET /maquinaria/v1/maquina/<str:codigo>/historial/"""
+
+    def get(self, request, codigo):
+        try:
+            with connection.cursor() as cur:
+                cur.callproc("sp_historial_maquina", [codigo])
+                data = _filas_a_dicts(cur)
+        except OperationalError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"maquina": codigo, "historial": data}, status=status.HTTP_200_OK)

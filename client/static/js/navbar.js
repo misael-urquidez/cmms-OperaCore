@@ -579,3 +579,16 @@ function pintarAvatar(fotoUrl, nombreParaInicial) {
   cargarNotificaciones();
   setInterval(cargarNotificaciones, 30000);
 })();
+
+/* ---- volver a la pagina anterior, con fallback si no hay historial ---- */
+
+function volverAtras(event, fallbackUrl) {
+    event.preventDefault();
+    if (document.referrer && document.referrer.indexOf(window.location.host) !== -1) {
+        history.back();
+    } else {
+        window.location.href = fallbackUrl;
+    }
+}
+
+window.volverAtras = volverAtras;

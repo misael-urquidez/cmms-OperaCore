@@ -309,6 +309,51 @@ class PiezaWearAPIView(APIView):
         })
 
 
+class DepreciacionPiezaAPIView(APIView):
+    """Calcula la depreciacion anual de una pieza via
+    sp_calcular_depreciacion_pieza. El SP recibe la tasa de depreciacion
+    (parametro INOUT) y regresa tasa * PIEZA.costoInicial redondeado a 2
+    decimales.
+    POST /inventario/v1/piezas/<str:pk>/depreciacion/
+    Body: {"tasa": 0.08}"""
+
+    def post(self, request, pk):
+        tasa = request.data.get("tasa")
+        if tasa is None:
+            return Response(
+                {"detail": "Falta 'tasa' (ej. 0.08 para 8% anual)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            tasa = float(tasa)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "'tasa' debe ser un numero."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            with connection.cursor() as cur:
+                # p_pieza es IN (posicion 0), p_factor es INOUT (posicion 1):
+                # se manda la tasa de entrada y se lee el resultado de la
+                # variable de sesion que el driver crea para esa posicion.
+                cur.callproc("sp_calcular_depreciacion_pieza", [pk, tasa])
+                cur.execute("SELECT @_sp_calcular_depreciacion_pieza_1")
+                (depreciacion,) = cur.fetchone()
+        except OperationalError as e:
+            # SIGNAL SQLSTATE '45000' del SP: la pieza no existe.
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "pieza": pk,
+                "tasa": tasa,
+                "depreciacion_anual": depreciacion,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 # ------------ REFACCIONES --------------------------------------------------
 class RefaccionListAPIView(generics.ListAPIView):
     queryset = models.Refaccion.objects.select_related("proveedor", "tipo_refaccion", "clasificacion").order_by("nombre")

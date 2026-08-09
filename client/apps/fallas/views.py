@@ -210,9 +210,18 @@ class ListaReportes(generic.View):
 
 class DetailReporte(generic.View):
     template_name = "fallas/fallas-modal/ver-detalle.html"
+    template_pagina = "fallas/detalle_reporte_pagina.html"
     context = {}
 
     def get(self, request, pk):
+        es_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+        if not es_ajax:
+            usuario = request.session.get("usuario")
+            if not usuario:
+                messages.warning(request, "Inicia sesión para continuar.")
+                return redirect("usuarios:index")
+
         cache_key = f"fallas_reporte_{pk}"
         reporte = cache.get(cache_key)
 
@@ -220,15 +229,28 @@ class DetailReporte(generic.View):
             try:
                 resp = SESSION.get(f"{API_URL}/v1/reportes/{pk}/", timeout=5)
                 if resp.status_code != 200:
-                    return render(request, self.template_name, {"reporte": None})
-                reporte = resp.json()
-                cache.set(cache_key, reporte, 30)
+                    reporte = None
+                else:
+                    reporte = resp.json()
+                    cache.set(cache_key, reporte, 30)
             except (requests.exceptions.RequestException, ValueError):
-                return render(request, self.template_name, {"reporte": None})
+                reporte = None
 
-        self._enriquecer_fallas(reporte)
-        self.context = {"reporte": reporte}
-        return render(request, self.template_name, self.context)
+        if es_ajax:
+            self.context = {"reporte": reporte}
+            return render(request, self.template_name, self.context)
+
+        # visita directa por URL: pagina completa con layout y CSS
+        usuario = request.session.get("usuario")
+        self.context = {
+            "reporte": reporte,
+            "modo_pagina": True,
+            "seccion": "fallas",
+            "subseccion": "lista",
+            "usuario": usuario,
+            "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
+        }
+        return render(request, self.template_pagina, self.context)
 
     def _enriquecer_fallas(self, reporte):
         """Garantiza que el detalle liste TODAS las fallas adjuntadas al

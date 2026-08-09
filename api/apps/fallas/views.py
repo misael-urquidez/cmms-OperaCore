@@ -100,12 +100,19 @@ class EstadoReporteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 class ReporteFallaListAPIView(generics.ListAPIView):
 
-    queryset = (
-        models.ReporteFalla.objects
-        .select_related("maquina", "trabajador", "tipo_severidad")
-        .order_by("-fechaCreacion", "-horaCreacion")
-    )
     serializer_class = serializers.ReporteFallaListSerializer
+
+    def get_queryset(self):
+        qs = (
+            models.ReporteFalla.objects
+            .select_related("maquina", "trabajador", "tipo_severidad")
+            .order_by("-fechaCreacion", "-horaCreacion")
+        )
+        if self.request.query_params.get("trabajador"):
+            qs = qs.filter(trabajador_id=self.request.query_params["trabajador"])
+        if self.request.query_params.get("maquina"):
+            qs = qs.filter(maquina_id=self.request.query_params["maquina"])
+        return qs
 
 #cambio
 
