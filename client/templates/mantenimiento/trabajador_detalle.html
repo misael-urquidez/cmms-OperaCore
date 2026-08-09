@@ -1,0 +1,227 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}{{ trabajador.nombre }} {{ trabajador.apellidoPat }} · Trabajador · OperaCore{% endblock %}
+{% block breadcrumb %}Mantenimiento / Trabajadores{% endblock %}
+{% block page_title %}Perfil del trabajador{% endblock %}
+{% block extra_css %}
+<style>
+.perfil-cover { height: 140px; border-radius: 14px; background: linear-gradient(120deg, #38bdf8, #6366f1, #ec4899); }
+.perfil-head { display: flex; align-items: flex-end; gap: 20px; padding: 0 24px; margin-top: -48px; margin-bottom: 20px; flex-wrap: wrap; }
+.perfil-foto { width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 4px solid var(--color-bg); background: #0f172a; }
+.perfil-foto--placeholder { display:flex; align-items:center; justify-content:center; font-size: 34px; font-weight:700; color: var(--color-muted); }
+.perfil-info { flex: 1; min-width: 220px; padding-bottom: 6px; }
+.perfil-nombre { font-size: 22px; font-weight: 700; margin: 0; color: var(--color-text); }
+.perfil-sub { color: var(--color-muted); font-size: 13px; margin: 4px 0 0; }
+.perfil-badges { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.trab-badge { font-size: 11px; padding: 3px 10px; border-radius: 999px; background: rgba(56,189,248,0.12); color: var(--color-primary); border: 1px solid rgba(56,189,248,0.25); }
+.trab-badge--off { background: rgba(148,163,184,0.12); color: var(--color-muted); border-color: rgba(148,163,184,0.25); }
+.perfil-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.perfil-stat { background: var(--color-surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px 16px; }
+.perfil-stat b { display: block; font-size: 24px; color: var(--color-text); }
+.perfil-stat span { font-size: 12px; color: var(--color-muted); }
+.perfil-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .perfil-grid { grid-template-columns: 1fr; } }
+.perfil-panel { background: var(--color-surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 20px; }
+.perfil-panel h2 { font-size: 16px; margin: 0 0 14px; color: var(--color-text); }
+.timeline-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.timeline-item:last-child { border-bottom: none; }
+.timeline-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.timeline-dot--orden { background: #38bdf8; }
+.timeline-dot--falla { background: #f87171; }
+.timeline-body { flex: 1; }
+.timeline-title { font-size: 14px; font-weight: 600; color: var(--color-text); margin: 0; }
+.timeline-title a { color: inherit; text-decoration: none; }
+.timeline-title a:hover { text-decoration: underline; }
+.timeline-meta { font-size: 12px; color: var(--color-muted); margin: 2px 0 4px; }
+.timeline-detalle { font-size: 13px; color: var(--color-muted); }
+.timeline-tag { display: inline-block; font-size: 10px; padding: 1px 8px; border-radius: 999px; margin-left: 6px; }
+.timeline-tag--orden { background: rgba(56,189,248,0.15); color: #38bdf8; }
+.timeline-tag--falla { background: rgba(248,113,113,0.15); color: #f87171; }
+.maquina-chip { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
+.maquina-chip:last-child { border-bottom: none; }
+.maquina-chip a { color: var(--color-primary); text-decoration: none; font-size: 12px; }
+.pendiente-item { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
+.pendiente-item:last-child { border-bottom: none; }
+.pendiente-item a { color: var(--color-text); font-weight: 600; text-decoration: none; }
+.pendiente-item a:hover { color: var(--color-primary); }
+.pendiente-estado { font-size: 11px; color: var(--color-muted); }
+.perfil-empty { color: var(--color-muted); font-size: 13px; padding: 10px 0; }
+.perfil-stat { cursor: pointer; transition: background .15s, border-color .15s; }
+.perfil-stat:hover { border-color: rgba(56,189,248,0.4); }
+.perfil-stat.is-active { border-color: #38bdf8; background: rgba(56,189,248,0.08); }
+.perfil-substat-panel { display: none; background: var(--color-surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px 18px; margin: -8px 0 24px; animation: substat-open .18s ease; }
+.perfil-substat-panel.is-open { display: block; }
+@keyframes substat-open { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.substat-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
+.substat-row:last-child { border-bottom: none; }
+.substat-row a { color: var(--color-text); font-weight: 600; text-decoration: none; }
+.substat-row a:hover { color: var(--color-primary); }
+.substat-meta { color: var(--color-muted); font-size: 12px; }
+</style>
+{% endblock %}
+{% block content %}
+<a href="{% url 'mantenimiento:trabajadores-lista' %}" style="color: var(--color-muted); font-size: 13px; text-decoration: none;" onclick="volverAtras(event, '{% url 'mantenimiento:trabajadores-lista' %}')">&larr; Volver</a>
+
+<div class="perfil-cover"></div>
+<div class="perfil-head">
+    <img
+        src="{% if trabajador.foto %}{{ trabajador.foto }}{% else %}{% static 'img/avatar-default.svg' %}{% endif %}"
+        alt="{{ trabajador.nombre }}"
+        class="perfil-foto"
+        onerror="this.onerror=null;this.src='{% static 'img/avatar-default.svg' %}';">
+    <div class="perfil-info">
+        <p class="perfil-nombre">{{ trabajador.nombre }} {{ trabajador.apellidoPat }} {{ trabajador.apellidoMat|default:"" }}</p>
+        <p class="perfil-sub">Nómina {{ trabajador.numeroNomina }} · {{ trabajador.correo }} · {{ trabajador.telefono }}</p>
+        <div class="perfil-badges">
+            {% if trabajador.rol_nombre %}<span class="trab-badge">{{ trabajador.rol_nombre }}</span>{% endif %}
+            {% if trabajador.especialidad_nombre %}<span class="trab-badge">{{ trabajador.especialidad_nombre }}</span>{% endif %}
+            <span class="trab-badge {% if not trabajador.actividad %}trab-badge--off{% endif %}">{{ trabajador.actividad|yesno:"Activo,Inactivo" }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="perfil-stats">
+    <div class="perfil-stat" data-target="substat-asignadas" onclick="toggleSubstat(this)"><b>{{ total_ordenes }}</b><span>Órdenes asignadas</span></div>
+    <div class="perfil-stat" data-target="substat-cerradas" onclick="toggleSubstat(this)"><b>{{ total_cerradas }}</b><span>Órdenes cerradas</span></div>
+    <div class="perfil-stat" data-target="substat-pendientes" onclick="toggleSubstat(this)"><b>{{ ordenes_pendientes|length }}</b><span>Órdenes pendientes</span></div>
+    <div class="perfil-stat" data-target="substat-fallas" onclick="toggleSubstat(this)"><b>{{ total_reportes }}</b><span>Fallas reportadas</span></div>
+    <div class="perfil-stat" data-target="substat-maquinas" onclick="toggleSubstat(this)"><b>{{ maquinas_atendidas|length }}</b><span>Máquinas atendidas</span></div>
+</div>
+
+<div id="substat-asignadas" class="perfil-substat-panel">
+    <h2 style="font-size:15px;margin:0 0 10px;">Órdenes asignadas</h2>
+    {% if ordenes %}
+        {% for o in ordenes %}
+        <div class="substat-row">
+            <a href="{% url 'mantenimiento:documento_orden' o.folio %}">{{ o.folio }}</a>
+            <span class="substat-meta">{{ o.maquina_nombre|default:"—" }} · {{ o.estado_orden_nombre }}</span>
+        </div>
+        {% endfor %}
+    {% else %}<p class="perfil-empty">Sin órdenes asignadas.</p>{% endif %}
+</div>
+
+<div id="substat-cerradas" class="perfil-substat-panel">
+    <h2 style="font-size:15px;margin:0 0 10px;">Órdenes cerradas</h2>
+    {% if ordenes_cerradas %}
+        {% for o in ordenes_cerradas %}
+        <div class="substat-row">
+            <a href="{% url 'mantenimiento:documento_orden' o.folio %}">{{ o.folio }}</a>
+            <span class="substat-meta">{{ o.maquina_nombre|default:"—" }} · {{ o.estado_orden_nombre }}</span>
+        </div>
+        {% endfor %}
+    {% else %}<p class="perfil-empty">Sin órdenes cerradas.</p>{% endif %}
+</div>
+
+<div id="substat-pendientes" class="perfil-substat-panel">
+    <h2 style="font-size:15px;margin:0 0 10px;">Órdenes pendientes</h2>
+    {% if ordenes_pendientes %}
+        {% for o in ordenes_pendientes %}
+        <div class="substat-row">
+            <a href="{% url 'mantenimiento:documento_orden' o.folio %}">{{ o.folio }}</a>
+            <span class="substat-meta">{{ o.maquina_nombre|default:"—" }} · {{ o.estado_orden_nombre }}</span>
+        </div>
+        {% endfor %}
+    {% else %}<p class="perfil-empty">Sin órdenes pendientes.</p>{% endif %}
+</div>
+
+<div id="substat-fallas" class="perfil-substat-panel">
+    <h2 style="font-size:15px;margin:0 0 10px;">Fallas reportadas</h2>
+    {% if reportes %}
+        {% for r in reportes %}
+        <div class="substat-row">
+            <a href="{% url 'fallas:detalle_reporte' r.numeroRegistro %}">{{ r.asunto }}</a>
+            <span class="substat-meta">{{ r.maquina_nombre|default:"—" }} · {{ r.tipo_severidad_nombre|default:"" }}</span>
+        </div>
+        {% endfor %}
+    {% else %}<p class="perfil-empty">Sin fallas reportadas.</p>{% endif %}
+</div>
+
+<div id="substat-maquinas" class="perfil-substat-panel">
+    <h2 style="font-size:15px;margin:0 0 10px;">Máquinas atendidas</h2>
+    {% if maquinas_atendidas %}
+        {% for m in maquinas_atendidas %}
+        <div class="substat-row">
+            <span>{{ m.nombre|default:m.codigo }}</span>
+            <a href="{% url 'maquinaria:detail' m.codigo %}">Ver ficha</a>
+        </div>
+        {% endfor %}
+    {% else %}<p class="perfil-empty">Sin máquinas registradas todavía.</p>{% endif %}
+</div>
+
+<div class="perfil-grid">
+    <div class="perfil-panel">
+        <h2>Actividad</h2>
+        {% if actividad %}
+            {% for a in actividad %}
+            <div class="timeline-item">
+                <span class="timeline-dot timeline-dot--{{ a.tipo }}"></span>
+                <div class="timeline-body">
+                    <p class="timeline-title">
+                        {% if a.tipo == 'orden' %}
+                        <a href="{% url 'mantenimiento:documento_orden' a.folio %}">{{ a.titulo }}</a>
+                        <span class="timeline-tag timeline-tag--orden">Orden</span>
+                        {% else %}
+                        <a href="{% url 'fallas:detalle_reporte' a.numeroRegistro %}">{{ a.titulo }}</a>
+                        <span class="timeline-tag timeline-tag--falla">Falla</span>
+                        {% endif %}
+                    </p>
+                    <p class="timeline-meta">{{ a.fecha }} · {{ a.maquina_nombre|default:"Máquina no especificada" }} · {{ a.estado|default:"" }}</p>
+                    {% if a.detalle %}<p class="timeline-detalle">{{ a.detalle|truncatechars:140 }}</p>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <p class="perfil-empty">Este trabajador todavía no tiene actividad registrada.</p>
+        {% endif %}
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="perfil-panel">
+            <h2>Órdenes pendientes</h2>
+            {% if ordenes_pendientes %}
+                {% for o in ordenes_pendientes %}
+                <div class="pendiente-item">
+                    <a href="{% url 'mantenimiento:documento_orden' o.folio %}">{{ o.folio }}</a>
+                    <p class="pendiente-estado">{{ o.maquina_nombre|default:"—" }} · {{ o.estado_orden_nombre }}</p>
+                </div>
+                {% endfor %}
+            {% else %}
+            <p class="perfil-empty">Sin órdenes pendientes.</p>
+            {% endif %}
+        </div>
+
+        <div class="perfil-panel">
+            <h2>Máquinas en las que ha trabajado</h2>
+            {% if maquinas_atendidas %}
+                {% for m in maquinas_atendidas %}
+                <div class="maquina-chip">
+                    <span>{{ m.nombre|default:m.codigo }}</span>
+                    <a href="{% url 'maquinaria:detail' m.codigo %}">Ver ficha</a>
+                </div>
+                {% endfor %}
+            {% else %}
+            <p class="perfil-empty">Sin máquinas registradas todavía.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleSubstat(card) {
+    const targetId = card.dataset.target;
+    const panel = document.getElementById(targetId);
+    const wasOpen = panel.classList.contains('is-open');
+
+    document.querySelectorAll('.perfil-substat-panel.is-open').forEach(p => p.classList.remove('is-open'));
+    document.querySelectorAll('.perfil-stat.is-active').forEach(c => c.classList.remove('is-active'));
+
+    if (!wasOpen) {
+        panel.classList.add('is-open');
+        card.classList.add('is-active');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+</script>
+{% endblock %}

@@ -73,4 +73,6 @@ urlpatterns = [
     path("v1/maquina/<str:codigo>/validar/", views.ValidarMaquinaAPIView.as_view(), name="validar_maquina"),
     path("v1/maquina/<str:codigo>/deshabilitar/", views.DeshabilitarMaquinaAPIView.as_view(), name="deshabilitar_maquina"),
     path("v1/maquina/<str:codigo>/reactivar/", views.ReactivarMaquinaAPIView.as_view(), name="reactivar_maquina"),
+    path("v1/maquina/<str:codigo>/resumen/", views.ResumenMaquinaAPIView.as_view(), name="resumen_maquina"),
+    path("v1/maquina/<str:codigo>/historial/", views.HistorialMaquinaAPIView.as_view(), name="historial_maquina"),
 ]

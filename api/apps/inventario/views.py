@@ -309,6 +309,51 @@ class PiezaWearAPIView(APIView):
         })
 
 
+class DepreciacionPiezaAPIView(APIView):
+    """Calcula la depreciacion anual de una pieza via
+    sp_calcular_depreciacion_pieza. El SP recibe la tasa de depreciacion
+    (parametro INOUT) y regresa tasa * PIEZA.costoInicial redondeado a 2
+    decimales.
+    POST /inventario/v1/piezas/<str:pk>/depreciacion/
+    Body: {"tasa": 0.08}"""
+
+    def post(self, request, pk):
+        tasa = request.data.get("tasa")
+        if tasa is None:
+            return Response(
+                {"detail": "Falta 'tasa' (ej. 0.08 para 8% anual)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            tasa = float(tasa)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "'tasa' debe ser un numero."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            with connection.cursor() as cur:
+                # p_pieza es IN (posicion 0), p_factor es INOUT (posicion 1):
+                # se manda la tasa de entrada y se lee el resultado de la
+                # variable de sesion que el driver crea para esa posicion.
+                cur.callproc("sp_calcular_depreciacion_pieza", [pk, tasa])
+                cur.execute("SELECT @_sp_calcular_depreciacion_pieza_1")
+                (depreciacion,) = cur.fetchone()
+        except OperationalError as e:
+            # SIGNAL SQLSTATE '45000' del SP: la pieza no existe.
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "pieza": pk,
+                "tasa": tasa,
+                "depreciacion_anual": depreciacion,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 # ------------ REFACCIONES --------------------------------------------------
 class RefaccionListAPIView(generics.ListAPIView):
     queryset = models.Refaccion.objects.select_related("proveedor", "tipo_refaccion", "clasificacion").order_by("nombre")
@@ -455,19 +500,19 @@ class MovimientoListAPIView(APIView):
 
 class RegistrarSalidaRefaccionAPIView(APIView):
     """Da salida a una refaccion del almacen via sp_registrar_salida_refaccion:
-    descuenta stock y deja el registro en MOVIMIENTO de forma atomica.
+    descuenta 1 unidad de stock y deja el registro en MOVIMIENTO de forma
+    atomica. Para descontar varias unidades, llamar varias veces.
     POST /inventario/v2/movimientos/salida-refaccion/
-    Body: {"refaccion": 1, "cantidad": 3, "orden": "OMP...", "descripcion": "..."}"""
+    Body: {"refaccion": 1, "orden": "OMP...", "descripcion": "..."}"""
 
     def post(self, request):
         refaccion = request.data.get("refaccion")
-        cantidad = request.data.get("cantidad")
         orden = request.data.get("orden")
         descripcion = request.data.get("descripcion", "")
 
-        if not refaccion or not cantidad:
+        if not refaccion:
             return Response(
-                {"detail": "Faltan 'refaccion' y/o 'cantidad'."},
+                {"detail": "Falta 'refaccion'."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -475,7 +520,7 @@ class RegistrarSalidaRefaccionAPIView(APIView):
             with connection.cursor() as cur:
                 cur.callproc(
                     "sp_registrar_salida_refaccion",
-                    [refaccion, cantidad, orden, descripcion],
+                    [refaccion, orden, descripcion],
                 )
                 # El SP termina con un SELECT: stock_resultante, stock_minimo_out,
                 # requiere_reabastecimiento
@@ -483,8 +528,8 @@ class RegistrarSalidaRefaccionAPIView(APIView):
                 row = cur.fetchone()
                 resultado = dict(zip(col_names, row)) if row else {}
         except OperationalError as e:
-            # Los SIGNAL SQLSTATE '45000' del SP (refaccion no existe, cantidad
-            # invalida, stock insuficiente) llegan aqui.
+            # Los SIGNAL SQLSTATE '45000' del SP (refaccion no existe, stock
+            # insuficiente) llegan aqui.
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(resultado, status=status.HTTP_200_OK)

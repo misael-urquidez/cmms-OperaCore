@@ -409,23 +409,27 @@ DELIMITER ;
 -- =====================================================================
 -- Procedimiento 6: sp_resumen_maquina
 -- =====================================================================
--- Objetivo: devolver la ficha de una maquina mediante parametros de
---           SALIDA (OUT). Mismo patron que sp_ventasXVend: un SELECT
---           con JOIN + COUNT ... INTO <variables OUT> ... GROUP BY.
+-- Objetivo: devolver la ficha resumen de una máquina (nombre, estado, total de fallas,
+--           total de órdenes de mantenimiento, horas de operación acumuladas,
+--           e indicadores vigentes: mtbf, mttr, % disponibilidad).
 -- Parámetros:
 --   p_maquina          -> MAQUINA.codigo (IN)
---   p_nombre           -> OUT: nombre de la maquina
+--   p_nombre           -> OUT: nombre de la máquina
 --   p_estado           -> OUT: MAQUINA.estado_maquina
---   p_total_fallas     -> OUT: total de reportes de falla de la maquina
---   p_total_ordenes    -> OUT: total de ordenes de mantenimiento
---   p_horas_operacion  -> OUT: suma de horas operacion (REGISTRO_OPS)
+--   p_total_fallas     -> OUT: total de reportes de falla de la máquina
+--   p_total_ordenes    -> OUT: total de órdenes de mantenimiento
+--   p_horas_operacion  -> OUT: suma de horas operación (REGISTRO_OPS)
+--   p_mtbf             -> OUT: MTBF vigente
+--   p_mttr             -> OUT: MTTR vigente
+--   p_disponibilidad   -> OUT: % disponibilidad vigente
 -- Lógica:
---   1) Cruza MAQUINA con REPORTE_FALLA, ORDEN_MANTENIMIENTO y
---      REGISTRO_OPS (LEFT JOIN para no perder la maquina si no tiene
---      registros en alguna tabla).
---   2) Cuenta con COUNT(DISTINCT ...) para que el cruce triple no
---      infle los totales.
---   3) Agrupa por maquina y devuelve los cinco valores por OUT.
+--   1) Cruza MAQUINA con REPORTE_FALLA, ORDEN_MANTENIMIENTO y REGISTRO_OPS
+--      (LEFT JOIN para no perder la máquina si no tiene registros).
+--   2) Cuenta con COUNT(DISTINCT ...) para que el cruce triple no infle los totales.
+--   3) Agrupa por máquina y devuelve los valores básicos por OUT.
+--   4) Para los indicadores (MTBF, MTTR, disponibilidad), prioriza el periodo
+--      abierto (fechaFin IS NULL); si no hay uno abierto, usa el último periodo
+--      cerrado como respaldo.
 -- =====================================================================
 
 DROP PROCEDURE IF EXISTS sp_resumen_maquina;
@@ -438,7 +442,10 @@ CREATE PROCEDURE sp_resumen_maquina(
     OUT p_estado            VARCHAR(5),
     OUT p_total_fallas      INT,
     OUT p_total_ordenes     INT,
-    OUT p_horas_operacion   INT
+    OUT p_horas_operacion   INT,
+    OUT p_mtbf              FLOAT,
+    OUT p_mttr              FLOAT,
+    OUT p_disponibilidad    INT
 )
 BEGIN
     SELECT
@@ -446,19 +453,88 @@ BEGIN
         m.estado_maquina,
         COUNT(DISTINCT rf.numeroRegistro),
         COUNT(DISTINCT om.folio),
-        IFNULL(SUM(ro.horasOperacion), 0)
+        (
+            SELECT IFNULL(SUM(ro.horasOperacion), 0)
+            FROM REGISTRO_OPS ro
+            WHERE ro.maquina = m.codigo
+        )
     INTO p_nombre, p_estado, p_total_fallas, p_total_ordenes, p_horas_operacion
     FROM MAQUINA m
     LEFT JOIN REPORTE_FALLA rf ON rf.maquina = m.codigo
     LEFT JOIN ORDEN_MANTENIMIENTO om ON om.maquina = m.codigo
-    LEFT JOIN REGISTRO_OPS ro ON ro.maquina = m.codigo
     WHERE m.codigo = p_maquina
     GROUP BY m.codigo, m.nombre, m.estado_maquina;
+
+    -- Indicadores vigentes: prioriza el periodo abierto (fechaFin IS NULL);
+    -- si no hay uno abierto, cae al ultimo periodo cerrado como respaldo.
+    SELECT i.mtbf, i.mttr, i.porcentajeDispo
+    INTO p_mtbf, p_mttr, p_disponibilidad
+    FROM INDICADOR i
+    WHERE i.maquina = p_maquina
+    ORDER BY (i.fechaFin IS NULL) DESC, i.numeroRegistro DESC
+    LIMIT 1;
 END $$
 
 DELIMITER ;
 
--- Llamada (igual que el ejemplo):
--- call sp_resumen_maquina('MAQ001', @nombre, @estado, @fallas, @ordenes, @horas);
--- select @nombre as Nombre, @estado as Estado, @fallas as Fallas,
---        @ordenes as Ordenes, @horas as Horas_Operacion;
+-- Llamada:
+-- call sp_resumen_maquina('MAQ001', @nombre, @estado, @fallas, @ordenes, @horas, @mtbf, @mttr, @dispo);
+-- select @nombre, @estado, @fallas, @ordenes, @horas, @mtbf, @mttr, @dispo;
+
+-- =====================================================================
+-- Procedimiento 7: sp_historial_maquina
+-- =====================================================================
+-- Objetivo: devolver, en un solo result set, todas las ordenes de
+--           mantenimiento y todos los reportes de falla de una maquina,
+--           con el trabajador que atendio cada uno. Va como result set
+--           (no OUT) porque es una lista de N filas, no un escalar.
+-- Parámetros:
+--   p_maquina -> MAQUINA.codigo
+-- Lógica:
+--   1) UNION ALL entre ORDEN_MANTENIMIENTO y REPORTE_FALLA, marcando el
+--      tipo de cada fila ('ORDEN' / 'FALLA').
+--   2) LEFT JOIN con TRABAJADOR para traer el nombre completo de quien
+--      la atendio (LEFT porque trabajador puede ser NULL en ordenes).
+--   3) Ordena todo por fecha descendente (mas reciente primero).
+-- =====================================================================
+DROP PROCEDURE IF EXISTS sp_historial_maquina;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_historial_maquina(
+    IN p_maquina VARCHAR(10)
+)
+BEGIN
+    SELECT
+        'ORDEN' AS tipo,
+        om.folio AS identificador,
+        om.fechaCreacion AS fecha,
+        om.descripcion AS detalle,
+        om.estado_orden AS estado,
+        om.trabajador AS trabajador_nomina,
+        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', COALESCE(t.apellidoMat, '')) AS trabajador_nombre
+    FROM ORDEN_MANTENIMIENTO om
+    LEFT JOIN TRABAJADOR t ON t.numeroNomina = om.trabajador
+    WHERE om.maquina = p_maquina
+
+    UNION ALL
+
+    SELECT
+        'FALLA' AS tipo,
+        CAST(rf.numeroRegistro AS CHAR) AS identificador,
+        rf.fechaCreacion AS fecha,
+        rf.asunto AS detalle,
+        rf.estado_reporte AS estado,
+        rf.trabajador AS trabajador_nomina,
+        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', COALESCE(t.apellidoMat, '')) AS trabajador_nombre
+    FROM REPORTE_FALLA rf
+    LEFT JOIN TRABAJADOR t ON t.numeroNomina = rf.trabajador
+    WHERE rf.maquina = p_maquina
+
+    ORDER BY fecha DESC;
+END $$
+
+DELIMITER ;
+
+-- Llamada:
+-- call sp_historial_maquina('MAQ001');

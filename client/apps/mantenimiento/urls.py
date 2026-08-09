@@ -20,4 +20,6 @@ urlpatterns = [
     path("exportar/xlsx/<str:folio>/", views.ExportarOrdenXLSX.as_view(), name="exportar_xlsx"),
     path("exportar/pdf/<str:folio>/", views.ExportarOrdenPDF.as_view(), name="exportar_pdf"),
     path("calendario/", views.CalendarioView.as_view(), name="calendario"),
+    path("trabajadores/", views.TrabajadoresListView.as_view(), name="trabajadores-lista"),
+    path("trabajadores/<str:numeroNomina>/", views.TrabajadorDetalleView.as_view(), name="trabajadores-detalle"),
 ]
