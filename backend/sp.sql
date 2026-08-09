@@ -95,6 +95,22 @@ DELIMITER ;
 -- select * from INDICADOR;
 
 -- =====================================================================
+-- Líneas de prueba eliminadas:
+-- select numeroRegistro, fechaInicio, mtbf, mttr
+--     from INDICADOR
+--     where maquina = "MAQ001" and fechaFin IS NULL
+--     order BY numeroRegistro desc
+--     LIMIT 1;
+--
+-- SHOW TABLES;
+-- select * from MAQUINA WHERE CODIGO = "MAQ001"
+-- select * from INDICADOR
+-- call  sp_cerrar_periodo_indicador("MAQ001","2027-02-28")
+--
+-- INSERT into INDICADOR( maquina,fechaInicio,mtbf,mttr)
+--     values( "MAQ001","2027-01-31" , 0, 0);
+
+ =====================================================================
 -- Procedimiento 2: sp_reporte_disponibilidad_planta
 -- =====================================================================
 -- Objetivo: generar el reporte de disponibilidad/MTBF/MTTR/fallas por
@@ -214,6 +230,7 @@ DELIMITER ;
 -- Llamada (igual que el ejemplo):
 -- call sp_reporte_disponibilidad_planta('2026-01-01', '2026-06-30');
 
+-- call sp  -- Línea huérfana eliminada
 -- =====================================================================
 -- Procedimiento 3: sp_registrar_salida_refaccion
 -- =====================================================================
@@ -281,6 +298,12 @@ DELIMITER ;
 -- Llamada (igual que el ejemplo):
 -- call sp_registrar_salida_refaccion(1, 'OMP260807080459', 'Descripcion de prueba');
 -- select * from REFACCION;
+-- Líneas de prueba eliminadas:
+-- select * from REFACCION
+-- call  sp_registrar_salida_refaccion(1, "OMP260807080459", "Descripcoion de prueba")
+-- HORAS 
+
+SELECT * FROM  ORDEN_MANTENIMIENTO
 
 -- =====================================================================
 -- Procedimiento 4: sp_rendimiento_trabajador

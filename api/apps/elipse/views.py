@@ -2173,7 +2173,7 @@ class ElipseEstadoAPIView(APIView):
             headers={'Authorization': 'Bearer ' + api_key},
         )
         try:
-            with urllib.request.urlopen(req, timeout=4) as res:
+            with urllib.request.urlopen(req, timeout=8) as res:
                 ok = res.status == 200
         except Exception:
             ok = False

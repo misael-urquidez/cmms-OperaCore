@@ -92,3 +92,32 @@ body.tecni-body:is([data-theme="light"], [data-theme="plain"]) .messages__item {
     transition: background 0.15s ease, color 0.15s ease;
 }
 .theme-toggle button.is-active { background: var(--color-primary); color: #08131f; font-weight: 700; }
+
+/* swatches del selector "Color del logo" (mismo look que el picker de
+   acento del admin en themes.css, copiado aquí porque el técnico no
+   carga themes.css) */
+.accent-swatches { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; justify-content: flex-end; }
+.accent-swatches button {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background: var(--sw);
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.accent-swatches button:hover { transform: scale(1.12); }
+.accent-swatches button.is-active { border-color: var(--color-text); }
+
+.color-input {
+    width: 36px;
+    height: 25px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 0.35rem;
+    background: none;
+    cursor: pointer;
+}
+.color-input::-webkit-color-swatch-wrapper { padding: 2px; }
+.color-input::-webkit-color-swatch { border: none; border-radius: 0.22rem; }

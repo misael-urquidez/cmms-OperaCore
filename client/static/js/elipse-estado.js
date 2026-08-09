@@ -22,7 +22,7 @@
 
     checando = true;
     var controller = new AbortController();
-    var timeoutId = setTimeout(function () { controller.abort(); }, 5000);
+    var timeoutId = setTimeout(function () { controller.abort(); }, 10000);
 
     fetch(ENDPOINT, { signal: controller.signal, credentials: 'same-origin' })
       .then(function (resp) { return resp.json(); })
