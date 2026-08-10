@@ -10,6 +10,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
+from django.shortcuts import get_object_or_404
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib import colors
 from rest_framework import generics, status
@@ -20,6 +21,7 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from apps.usuarios.models import Trabajador
 from apps.maquinaria.services import cambiar_estado_maquina
 from . import models, serializers
+
 
 
 class PingAPIView(APIView):
@@ -99,7 +101,11 @@ class EstadoReporteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class ReporteFallaListAPIView(generics.ListAPIView):
-
+    queryset = (
+        models.ReporteFalla.objects
+        .select_related("maquina", "trabajador", "tipo_severidad", "estado_reporte")
+        .order_by("-fechaCreacion", "-horaCreacion")
+    )
     serializer_class = serializers.ReporteFallaListSerializer
 
     def get_queryset(self):
@@ -148,7 +154,6 @@ class ReporteFallaUpdateAPIView(generics.UpdateAPIView):
 
     queryset = models.ReporteFalla.objects.all()
     serializer_class = serializers.ReporteFallaUpdateSerializer
-
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
         reporte = models.ReporteFalla.objects.get(pk=kwargs["pk"])
@@ -246,6 +251,8 @@ class CatalogosReporteAPIView(APIView):
     HTTP separadas y secuenciales cada vez que carga la pagina."""
 
     def get(self, request):
+        maquinas_operativas = models.Maquina.objects.filter(estado_maquina="OPERA")
+
         data = {
             "severidades": serializers.TipoSeveridadSerializer(
                 models.TipoSeveridad.objects.all(), many=True
@@ -253,14 +260,12 @@ class CatalogosReporteAPIView(APIView):
             "tipos_falla": serializers.TipoFallaSerializer(
                 models.TipoFalla.objects.all(), many=True
             ).data,
-            "maquinas": serializers.MaquinaSerializer(
-                models.Maquina.objects.all(), many=True
-            ).data,
+            "maquinas": serializers.MaquinaSerializer(maquinas_operativas, many=True).data,
             "estados": serializers.EstadoReporteSerializer(
                 models.EstadoReporte.objects.all(), many=True
             ).data,
             "trabajadores": serializers.TrabajadorLightSerializer(
-                Trabajador.objects.filter(actividad=True).order_by("nombre"),
+                models.Trabajador.objects.filter(actividad=True).order_by("nombre"),
                 many=True,
             ).data,
         }
@@ -418,3 +423,44 @@ class ExportarReportePDFAPIView(APIView):
         response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="reporte_falla_{pk}.pdf"'
         return response
+
+
+
+class ActualizarReporteFallaView(APIView):
+
+    def post(self, request, pk):
+        reporte = get_object_or_404(models.ReporteFalla, pk=pk)
+        estado_anterior = reporte.estado_reporte
+
+        # 1. Validación: Si el reporte estaba En Espera ('ENESP'), no permitir cambiar estado
+        nuevo_estado = request.data.get("estado_reporte")
+        if estado_anterior == "ENESP" and nuevo_estado != "ENESP":
+            return Response(
+                {
+                    "error": "Un reporte en estado 'En Espera' no se puede editar."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Usamos tu serializer existente para validar y actualizar el reporte
+        serializer = serializers.ReporteFallaUpdateSerializer(
+            reporte, data=request.data, partial=True
+        )
+        if serializer.is_valid():
+            reporte_actualizado = serializer.save()
+            maquina = reporte_actualizado.models.Maquina 
+
+            # 2. Transición de estado de la Máquina:
+            # Si cambia a Cancelado ('CANCE'), la máquina pasa a En Espera ('ENESP')
+            if estado_anterior != "CANCE" and nuevo_estado == "CANCE":
+                maquina.estado = "ENESP"  # Estado En Espera de la máquina
+                maquina.save()
+
+            # Si cambia de Cancelado ('CANCE') a Abierto ('ABIER'), la máquina vuelve a FALLO
+            elif estado_anterior == "CANCE" and nuevo_estado == "ABIER":
+                maquina.estado = "FALLO"  # Estado Fallo de la máquina
+                maquina.save()
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

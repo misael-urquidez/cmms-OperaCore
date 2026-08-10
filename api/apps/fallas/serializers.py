@@ -70,23 +70,21 @@ class TrabajadorLightSerializer(serializers.ModelSerializer):
         fields = ["numeroNomina", "nombre", "apellidoPat"]
 
 
+# api/apps/fallas/serializers.py
 class ReporteFallaListSerializer(serializers.ModelSerializer):
-
-
-    maquina_nombre = serializers.CharField(source="maquina.nombre", read_only=True, default=None)
+    maquina_nombre = serializers.ReadOnlyField(source='maquina.nombre')
     trabajador_nombre = serializers.SerializerMethodField()
-    tipo_severidad_nombre = serializers.CharField(
-        source="tipo_severidad.nombre", read_only=True, default=None
-    )
+    tipo_severidad_nombre = serializers.ReadOnlyField(source='tipo_severidad.nombre')
+    estado_reporte_nombre = serializers.ReadOnlyField(source='estado_reporte.nombre')
 
     class Meta:
         model = models.ReporteFalla
         fields = [
-            "numeroRegistro", "asunto", "fechaCreacion", "horaCreacion",
-            "tiempoParo", "causaRaiz", "descripcion",
-            "maquina", "maquina_nombre",
-            "trabajador", "trabajador_nombre",
-            "tipo_severidad", "tipo_severidad_nombre",
+            'numeroRegistro', 'asunto', 'fechaCreacion', 'horaCreacion',
+            'tiempoParo', 'causaRaiz', 'descripcion', 'maquina',
+            'maquina_nombre', 'trabajador', 'trabajador_nombre',
+            'tipo_severidad', 'tipo_severidad_nombre',
+            'estado_reporte', 'estado_reporte_nombre'  # <--- Agregar aquí
         ]
 
     def get_trabajador_nombre(self, obj):
@@ -138,6 +136,13 @@ class ReporteFallaCreateSerializer(serializers.ModelSerializer):
     tipo_falla_ids = serializers.ListField(
         child=serializers.IntegerField(), required=False, write_only=True
     )
+    # Permite omitir trabajador y estado_reporte en el POST del formulario
+    trabajador = serializers.PrimaryKeyRelatedField(
+        queryset=Trabajador.objects.all(), required=False, allow_null=True
+    )
+    estado_reporte = serializers.PrimaryKeyRelatedField(
+        queryset=models.EstadoReporte.objects.all(), required=False, allow_null=True
+    )
 
     class Meta:
         model = models.ReporteFalla
@@ -146,6 +151,15 @@ class ReporteFallaCreateSerializer(serializers.ModelSerializer):
             "maquina", "trabajador", "tipo_severidad", "imagen",
             "estado_reporte", "tipo_falla_ids",
         ]
+
+    def validate_maquina(self, value):
+        """Valida que la máquina seleccionada esté únicamente en estado OPERA."""
+        estado_actual = getattr(value, 'estado_maquina_id', getattr(value, 'estado_maquina', None))
+        if str(estado_actual).upper() != "OPERA":
+            raise serializers.ValidationError(
+                f"La máquina '{value.nombre}' se encuentra en estado '{estado_actual}'. Solo se pueden reportar fallas en máquinas operativas (OPERA)."
+            )
+        return value
 
     def create(self, validated_data):
         imagen_file = validated_data.pop("imagen", None)
@@ -157,10 +171,25 @@ class ReporteFallaCreateSerializer(serializers.ModelSerializer):
         if not validated_data.get("fechaResolucion"):
             validated_data["fechaResolucion"] = date.today()
 
+        # Asigna el estado ABIERTO automáticamente si no fue enviado
+        if not validated_data.get("estado_reporte"):
+            try:
+                validated_data["estado_reporte"] = models.EstadoReporte.objects.get(codigo="ABIER")
+            except models.EstadoReporte.DoesNotExist:
+                pass
+
+        # Asigna el trabajador autenticado automáticamente si no fue enviado
         if not validated_data.get("trabajador"):
-            trabajador = self.context["request"].session.get("usuario")
-            if trabajador:
-                validated_data["trabajador"] = trabajador["numeroNomina"]
+            request = self.context.get("request")
+            if request:
+                usuario_sesion = request.session.get("usuario")
+                if usuario_sesion and isinstance(usuario_sesion, dict) and "numeroNomina" in usuario_sesion:
+                    try:
+                        validated_data["trabajador"] = Trabajador.objects.get(numeroNomina=usuario_sesion["numeroNomina"])
+                    except Trabajador.DoesNotExist:
+                        pass
+                elif hasattr(request, "user") and hasattr(request.user, "numeroNomina"):
+                    validated_data["trabajador"] = request.user
 
         reporte = super().create(validated_data)
 
@@ -192,6 +221,7 @@ class ReporteFallaUpdateSerializer(serializers.ModelSerializer):
             "asunto", "descripcion", "causaRaiz", "tiempoParo", "fechaResolucion",
             "maquina", "trabajador", "tipo_severidad", "imagen", "estado_reporte",
         ]
+        read_only_fields = ["maquina", "trabajador"]
 
 
 # ------------ TIPO_REPORTE (llave compuesta: tipo_falla, reporte_falla) --
