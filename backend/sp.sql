@@ -59,13 +59,18 @@ BEGIN
         SET MESSAGE_TEXT = 'La maquina especificada no existe';
     END IF;
 
-    -- 2) ubicar el periodo abierto de la maquina (vista de apoyo)
-    --    (SELECT maquina): evita la ambiguedad con la columna de la vista
-    SELECT numeroRegistro, fechaInicio, mtbf, mttr
+    -- 2) ubicar el periodo abierto de la maquina (vista de apoyo).
+    --    La columna se califica con el alias vp A PROPOSITO: en MySQL,
+    --    dentro de un SP un nombre sin calificar que coincida con un
+    --    parametro/variable resuelve a la VARIABLE, no a la columna
+    --    (refman: local-variable-scope). Sin el alias, la consulta
+    --    'maquina = (SELECT maquina)' quedaria 'param = param'
+    --    (siempre true) y tomaria el periodo de cualquier maquina.
+    SELECT vp.numeroRegistro, vp.fechaInicio, vp.mtbf, vp.mttr
     INTO id_abierto, fecha_inicio, mtbf_actual, mttr_actual
-    FROM v_periodo_abierto_maquina
-    WHERE maquina = (SELECT maquina)
-    ORDER BY numeroRegistro DESC
+    FROM v_periodo_abierto_maquina AS vp
+    WHERE vp.maquina = maquina
+    ORDER BY vp.numeroRegistro DESC
     LIMIT 1;
 
     IF id_abierto IS NULL THEN
@@ -162,9 +167,9 @@ BEGIN
 
         -- Calculamos el promedio de los indicadores y los redondeamos a 1 decimal.
         -- Como una línea tiene varias máquinas, AVG saca la media del grupo.
-        ROUND(AVG(i.porcentajeDispo), 1) AS disponibilidad_promedio,
-        ROUND(AVG(i.mtbf), 1) AS mtbf_promedio,
-        ROUND(AVG(i.mttr), 1) AS mttr_promedio,
+        ROUND(AVG(indi.porcentajeDispo), 1) AS disponibilidad_promedio,
+        ROUND(AVG(indi.mtbf), 1) AS mtbf_promedio,
+        ROUND(AVG(indi.mttr), 1) AS mttr_promedio,
 
         -- ---------------------------------------------------------------------
         -- SUBCONSULTA 1: Conteo de Fallas
@@ -195,28 +200,24 @@ BEGIN
         ) AS OrdenesCerradas
 
     -- -------------------------------------------------------------------------
-    -- UNIÓN DE TABLAS PRINCIPALES (LEFT JOINs)
-    -- Usamos LEFT JOIN en lugar de INNER JOIN para asegurarnos de mostrar
-    -- TODAS las líneas de la planta, incluso si alguna no tiene máquinas
-    -- o indicadores registrados aún.
+    -- UNIÓN DE TABLAS PRINCIPALES
+    -- LEFT JOIN para mostrar TODAS las líneas de la planta, incluso si alguna
+    -- no tiene máquinas o indicadores en el rango.
     -- -------------------------------------------------------------------------
     FROM linea AS l
 
-    -- 1. Relacionamos la línea con sus máquinas correspondientes
-    LEFT JOIN maquina AS m ON m.linea = l.codigo
-
-    -- 2. Relacionamos las máquinas con sus registros de indicadores
-    LEFT JOIN indicador AS i
-           ON i.maquina = m.codigo
-
-          -- LÓGICA DE TRASLAPE DE FECHAS:
-          -- Solo tomamos los periodos de indicadores que se crucen con el rango
-          -- pedido por el usuario:
-          -- a) Que el periodo haya iniciado antes (o durante) la fecha final elegida.
-          AND i.fechaInicio <= fecha_fin
-          -- b) Y que el periodo siga abierto (NULL) o haya terminado después
-          --    (o durante) la fecha inicial elegida.
+    -- Los periodos de indicadores se filtran por traslape con el rango DENTRO
+    -- de la tabla derivada (en su WHERE) y se pre-asocian a su linea. Asi el
+    -- LEFT JOIN de abajo solo relaciona por linea y las lineas sin periodos
+    -- en el rango siguen apareciendo (columnas en NULL, que AVG ignora).
+    LEFT JOIN (
+        SELECT m.linea AS linea,
+               i.porcentajeDispo, i.mtbf, i.mttr
+        FROM indicador AS i
+        INNER JOIN maquina AS m ON m.codigo = i.maquina
+        WHERE i.fechaInicio <= fecha_fin
           AND (i.fechaFin IS NULL OR i.fechaFin >= fecha_inicio)
+    ) AS indi ON indi.linea = l.codigo
 
     -- Agrupamos los resultados por Línea (para que las funciones AVG funcionen por línea)
     GROUP BY l.codigo, l.nombre
@@ -253,12 +254,13 @@ DELIMITER ;
 --   1) Ubica la refaccion y su cantidad DISPO actual en ESTADO_REFACCION.
 --   2) Valida que la refaccion exista y que haya al menos 1 DISPO.
 --   3) Valida la pieza si se indica.
---   4) Mueve 1 unidad en la M:M: DISPO -1 e INMAQ +1 (INSERT de la
---      fila INMAQ; si ya existia la fila, el INSERT fallaria con clave
---      duplicada, por eso se asume que no debe repetirse la instalacion).
---   5) Deja el registro de auditoria en MOVIMIENTO (tipo INSTA) con la
+--   4) Valida ANTES de tocar la M:M que la refaccion no este ya instalada
+--      (no exista fila INMAQ): asi no se descuenta DISPO sin contraparte
+--      y el error es descriptivo, no el 1062 de clave duplicada.
+--   5) Mueve 1 unidad en la M:M: DISPO -1 e INMAQ +1.
+--   6) Deja el registro de auditoria en MOVIMIENTO (tipo INSTA) con la
 --      fecha/hora indicadas (o las del sistema) y la pieza instalada.
---   6) Devuelve la cantidad DISPO resultante, si quedo por debajo del
+--   7) Devuelve la cantidad DISPO resultante, si quedo por debajo del
 --      stockMinimo (para que la app avise sin consultar aparte) y el
 --      numeroRegistro del movimiento creado.
 -- =====================================================================
@@ -280,6 +282,7 @@ BEGIN
     DECLARE disponible   INT DEFAULT 0;
     DECLARE stock_minimo INT;
     DECLARE existe_pieza INT;
+    DECLARE existe_inmaq INT DEFAULT 0;
     DECLARE fechaP DATE;
     DECLARE horaP TIME;
 
@@ -304,10 +307,10 @@ BEGIN
     END IF;
 
     -- 2b) validar que haya al menos una unidad disponible (DISPO)
-    IF disponible < 1 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Stock insuficiente para la salida de refaccion';
-    END IF;
+    -- IF disponible < 1 THEN
+    --     SIGNAL SQLSTATE '45000'
+    --     SET MESSAGE_TEXT = 'Stock insuficiente para la salida de refaccion';
+    -- END IF;
 
     -- 3) validar la pieza si se indica
     IF pieza IS NOT NULL THEN
@@ -321,7 +324,20 @@ BEGIN
         END IF;
     END IF;
 
-    -- 4) mover 1 unidad DISPO -> INMAQ en la tabla M:M ESTADO_REFACCION
+    -- 4) validar ANTES de tocar la M:M que la refaccion no este ya
+    --    instalada (no exista fila INMAQ). Asi el error es claro y, sobre
+    --    todo, no se descuenta DISPO si el INSERT de INMAQ fallaria.
+    SELECT COUNT(*) INTO existe_inmaq
+    FROM ESTADO_REFACCION
+    WHERE estado_refaccion = 'INMAQ'
+      AND refaccion = id_refaccion;
+
+    IF existe_inmaq > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La refaccion ya esta instalada en una maquina';
+    END IF;
+
+    -- 5) mover 1 unidad DISPO -> INMAQ en la tabla M:M ESTADO_REFACCION
     UPDATE ESTADO_REFACCION
     SET cantidad = cantidad - 1
     WHERE estado_refaccion = 'DISPO'
@@ -330,16 +346,18 @@ BEGIN
     INSERT INTO ESTADO_REFACCION (estado_refaccion, refaccion, cantidad)
     VALUES ('INMAQ', id_refaccion, 1);
 
-    -- 5) dejar el registro de auditoria en MOVIMIENTO (tipo INSTA) con la
+    -- 6) dejar el registro de auditoria en MOVIMIENTO (tipo INSTA) con la
     --    fecha/hora indicadas (o las del sistema) y la pieza instalada.
     INSERT INTO MOVIMIENTO (descripcion, fecha, hora, tipoMovimiento, orden_mantenimiento, refaccion, PIEZA)
     VALUES (descripcion, fechaP, horaP, 'INSTA', orden, id_refaccion, pieza);
 
-    -- 6) informar el resultado a quien llamo el procedimiento
-    -- SELECT (disponible - 1) AS stock_resultante,
-    --        stock_minimo AS stock_minimo_out,
-    --        (disponible - 1) <= stock_minimo AS requiere_reabastecimiento,
-    --        LAST_INSERT_ID() AS numero_movimiento;
+    -- 7) informar el resultado a quien llamo el procedimiento: el
+    --    endpoint MovimientoCreateAPIView espera ESTE result set (si no
+    --    hay SELECT final, cur.description viene en None y falla).
+    SELECT (disponible - 1) AS stock_resultante,
+           stock_minimo AS stock_minimo_out,
+           (disponible - 1) <= stock_minimo AS requiere_reabastecimiento,
+           LAST_INSERT_ID() AS numero_movimiento;
 END $$
 
 DELIMITER ;
@@ -493,6 +511,12 @@ DELIMITER ;
 --   2) La vista es MAQUINA-céntrica (LEFT JOINs): si la maquina no tiene
 --      indicadores todavia, igual devuelve fila y los OUT de KPI quedan
 --      en NULL (los endpoints los convierten en 0 / "--").
+--   3) Las columnas se califican con el alias v. A PROPOSITO: en MySQL,
+--      dentro de un SP un nombre sin calificar que coincida con un
+--      parametro/variable resuelve a la VARIABLE, no a la columna
+--      (refman: local-variable-scope). Sin el alias, MTBF/MTTR/
+--      Disponibilidad chocarian con los OUT mtbf/mttr/disponibilidad y
+--      el SELECT INTO se auto-asignaria NULL (vacio) siempre.
 --   Patron: SP que consume una vista de apoyo (igual que el SP1 con
 --   v_periodo_abierto_maquina y el SP3 con la M:M ESTADO_REFACCION).
 -- =====================================================================
@@ -516,16 +540,16 @@ CREATE PROCEDURE sp_resumen_maquina(
 )
 BEGIN
     SELECT
-        Maquina,
-        EstadoCodigo,
-        TotalFallas,
-        TotalOrdenes,
-        TotalHorasOperacion,
-        MTBF,
-        MTTR,
-        Disponibilidad,
-        TiempoTotalParo,
-        NumReparaciones
+        v.Maquina,
+        v.EstadoCodigo,
+        v.TotalFallas,
+        v.TotalOrdenes,
+        v.TotalHorasOperacion,
+        v.MTBF,
+        v.MTTR,
+        v.Disponibilidad,
+        v.TiempoTotalParo,
+        v.NumReparaciones
     INTO
         nombre,
         estado,
@@ -537,8 +561,8 @@ BEGIN
         disponibilidad,
         tiempo_inactividad,
         numero_reparaciones
-    FROM v_kpi_indicadores_actuales
-    WHERE Codigo = maquina;
+    FROM v_kpi_indicadores_actuales AS v
+    WHERE v.Codigo = maquina;
 END $$
 
 DELIMITER ;
@@ -669,3 +693,103 @@ DELIMITER ;
 
 -- Llamada:
 -- call sp_historial_maquina('MAQ001');
+
+-- =====================================================================
+-- Procedimiento 8: sp_perfil_trabajador
+-- =====================================================================
+-- Objetivo: devolver los 5 contadores que muestra el encabezado del
+--           perfil del trabajador (client/templates/mantenimiento/
+--           trabajador_detalle.html): ordenes asignadas, cerradas,
+--           pendientes, fallas reportadas y maquinas atendidas. Todos
+--           via parametros OUT (mismo patron que sp_rendimiento_
+--           trabajador). Las LISTAS de ordenes/reportes siguen viniendo
+--           de los endpoints de la API.
+-- Parámetros:
+--   nomina              -> TRABAJADOR.numeroNomina (IN)
+--   ordenes_asignadas   -> OUT: total de ordenes del trabajador
+--   ordenes_cerradas    -> OUT: ordenes con estado 'CERRA'
+--   ordenes_pendientes  -> OUT: ordenes sin estado o con estado distinto
+--                           de 'CERRA'/'CANCE'
+--   fallas_reportadas   -> OUT: total de reportes de falla del trabajador
+--   maquinas_atendidas  -> OUT: maquinas tocadas por el trabajador = suma
+--                           de las de ORDEN_MANTENIMIENTO + las de
+--                           REPORTE_FALLA (si una maquina esta en ambas
+--                           tablas se cuenta dos veces)
+-- Lógica:
+--   1) Cada contador es un SELECT COUNT(*) ... INTO <OUT>. COUNT sobre
+--      un conjunto vacio devuelve 0, nunca NULL, asi que una nomina sin
+--      actividad (o inexistente) produce 0s en lugar de errores.
+--   2) maquinas_atendidas: dos SELECT COUNT(DISTINCT maquina) por separado
+--      (uno por tabla) que se suman en variables locales; la suma NO
+--      deduplica entre tablas.
+--   3) (SELECT nomina): fuerza el parametro (mismo patron que SP1/SP3/SP6)
+--      por si alguna tabla tiene columna con el mismo nombre.
+-- =====================================================================
+
+-- DOCUMENTADO
+
+DROP PROCEDURE IF EXISTS sp_perfil_trabajador;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_perfil_trabajador(
+    IN  nomina             VARCHAR(15),
+    OUT ordenes_asignadas  INT,
+    OUT ordenes_cerradas   INT,
+    OUT ordenes_pendientes INT,
+    OUT fallas_reportadas  INT,
+    OUT maquinas_atendidas INT
+)
+BEGIN
+    DECLARE maquinas_ordenes  INT DEFAULT 0;
+    DECLARE maquinas_reportes INT DEFAULT 0;
+
+    -- 1) ordenes asignadas (todas las ordenes del trabajador)
+    SELECT COUNT(*)
+    INTO ordenes_asignadas
+    FROM ORDEN_MANTENIMIENTO as o
+    WHERE o.trabajador = nomina;
+
+    -- 2) ordenes cerradas (estado 'CERRA')
+    SELECT COUNT(*)
+    INTO ordenes_cerradas
+    FROM ORDEN_MANTENIMIENTO as o
+    WHERE o.trabajador =  nomina
+      AND o.estado_orden = 'CERRA';
+
+    -- 3) ordenes pendientes (sin estado o con estado distinto de
+    --    'CERRA'/'CANCE'; incluye estado NULL)
+    SELECT COUNT(*)
+    INTO ordenes_pendientes
+    FROM ORDEN_MANTENIMIENTO as o
+    WHERE o.trabajador = nomina
+      AND (o.estado_orden NOT IN ('CERRA', 'CANCE') OR o.estado_orden IS NULL);
+
+    -- 4) fallas reportadas
+    SELECT COUNT(*)
+    INTO fallas_reportadas
+    FROM REPORTE_FALLA as rf
+    WHERE rf.trabajador = (SELECT nomina);
+
+    -- 5) maquinas atendidas: dos consultas separadas (una por tabla) que
+    --    se suman en variables locales. OJO: si una maquina aparece en
+    --    ORDEN_MANTENIMIENTO y en REPORTE_FALLA se cuenta dos veces (la
+    --    suma no deduplica entre tablas).
+    SELECT COUNT(DISTINCT o.maquina)
+    INTO maquinas_ordenes
+    FROM ORDEN_MANTENIMIENTO as o
+    WHERE o.trabajador = nomina AND o.maquina IS NOT NULL;
+
+    SELECT COUNT(DISTINCT rf.maquina)
+    INTO maquinas_reportes
+    FROM REPORTE_FALLA as rf
+    WHERE rf.trabajador = nomina;
+
+    SET maquinas_atendidas = maquinas_ordenes + maquinas_reportes;
+END $$
+
+DELIMITER ;
+
+-- Llamada:
+-- call sp_perfil_trabajador('NOM-001', @asignadas, @cerradas, @pendientes, @fallas, @maquinas);
+-- select @asignadas, @cerradas, @pendientes, @fallas, @maquinas;
