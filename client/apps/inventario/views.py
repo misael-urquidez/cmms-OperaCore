@@ -70,7 +70,7 @@ def _columnas_config(nombres):
 def _base_template(request):
     """Devuelve el template base a usar (admin o tecnico)."""
     usuario = request.session.get("usuario")
-    return "base_tecni.html" if usuario and usuario.get("rol") == "TECNICO" else "base_admin.html"
+    return "base_tecni.html" if usuario and usuario.get("rol") == "TECNI" else "base_admin.html"
 
 
 class Index(generic.View):
@@ -93,6 +93,7 @@ class Index(generic.View):
         return render(request, self.template_name, {
             "modulo": "Inventario", "api_status": response,
             "seccion": "inventario", "subseccion": "panel",
+            "base_template": _base_template(request),
         })
 
 

@@ -1,4 +1,3 @@
-
 -- =====================================================================
 -- OperaCore CMMS — PROCEDIMIENTOS ALMACENADOS (módulo de Indicadores/KPI)
 -- Requiere: beta4.sql + triggers2.sql ya ejecutados
@@ -17,7 +16,7 @@ USE operacore;
 --           periodo es responsabilidad de otro proceso externo al
 --           trigger". Este procedimiento ES ese proceso externo.
 -- Parámetros:
---   maquina   -> código de la máquina (MAQUINA.codigo)
+--   maquinita -> código de la máquina (MAQUINA.codigo)
 --   fecha_fin -> fecha en la que se cierra el periodo actual
 -- Lógica:
 --   1) Valida que la máquina exista.
@@ -32,14 +31,20 @@ USE operacore;
 --   INDICADOR) recalcula automáticamente porcentajeDispo del nuevo
 --   periodo con esos valores heredados — no hace falta repetir esa
 --   lógica aquí.
+--   NOTA: el parámetro se llama "maquinita" (y no "maquina") a propósito:
+--   v_periodo_abierto_maquina expone una columna llamada "maquina", y un
+--   parámetro con el mismo nombre que esa columna queda sombreado por
+--   ella en el WHERE (MySQL resuelve el identificador contra la columna,
+--   no contra el parámetro), lo que volvía la condición un WHERE maquina
+--   = maquina siempre verdadero. Mismo motivo por el que el resto de los
+--   SP de este archivo usan prefijo p_ / v_ en sus parámetros y variables.
 -- =====================================================================
-
 DROP PROCEDURE IF EXISTS sp_cerrar_periodo_indicador;
 
 DELIMITER $$
 
 CREATE PROCEDURE sp_cerrar_periodo_indicador(
-    IN maquina    VARCHAR(10),
+    IN maquinita  VARCHAR(10),
     IN fecha_fin  DATE
 )
 BEGIN
@@ -52,7 +57,7 @@ BEGIN
     -- 1) validar que la maquina exista
     SELECT COUNT(*) INTO existe_maquina
     FROM MAQUINA
-    WHERE codigo = maquina;
+    WHERE codigo = maquinita;
 
     IF existe_maquina = 0 THEN
         SIGNAL SQLSTATE '45000'
@@ -84,18 +89,15 @@ BEGIN
         SET MESSAGE_TEXT = 'La fecha de fin no puede ser anterior al inicio del periodo';
     END IF;
 
-    -- 4) cerrar el periodo vigente
     UPDATE INDICADOR
     SET fechaFin = fecha_fin
     WHERE numeroRegistro = id_abierto;
 
-    -- 5) abrir el periodo siguiente, heredando el ultimo mtbf,mttr
     INSERT INTO INDICADOR (maquina, fechaInicio, mtbf, mttr)
     VALUES (maquina, DATE_ADD(fecha_fin, INTERVAL 1 DAY), mtbf_actual, mttr_actual);
 END $$
 
 DELIMITER ;
-
 -- Llamada (igual que el ejemplo):
 -- call sp_cerrar_periodo_indicador('MAQ001', '2027-02-28');
 -- select * from INDICADOR;
@@ -162,8 +164,8 @@ BEGIN
     -- PASO 2: CONSULTA PRINCIPAL DE INDICADORES POR LÍNEA
     -- =========================================================================
     SELECT
-        l.codigo AS linea,
-        l.nombre AS nombrelinea,
+        l.CODIGO AS linea,
+        l.NOMBRE AS nombrelinea,
 
         -- Calculamos el promedio de los indicadores y los redondeamos a 1 decimal.
         -- Como una línea tiene varias máquinas, AVG saca la media del grupo.
@@ -173,15 +175,15 @@ BEGIN
 
         -- ---------------------------------------------------------------------
         -- SUBCONSULTA 1: Conteo de Fallas
-        -- Cuenta cuántas fallas ocurrieron en las máquinas de ESTA línea (l.codigo)
+        -- Cuenta cuántas fallas ocurrieron en las máquinas de ESTA línea (l.CODIGO)
         -- dentro del rango de fechas solicitado.
         -- ---------------------------------------------------------------------
         (
             SELECT COUNT(*)
-            FROM reporte_falla AS rf
+            FROM REPORTE_FALLA AS rf
             -- Unimos con máquina para saber a qué línea pertenece cada falla
-            INNER JOIN maquina AS m2 ON m2.codigo = rf.maquina
-            WHERE m2.linea = l.codigo
+            INNER JOIN MAQUINA AS m2 ON m2.CODIGO = rf.maquina
+            WHERE m2.LINEA = l.CODIGO
               AND rf.fechaCreacion BETWEEN fecha_inicio AND fecha_fin
         ) AS TotalFallas,
 
@@ -192,10 +194,10 @@ BEGIN
         -- ---------------------------------------------------------------------
         (
             SELECT COUNT(*)
-            FROM orden_mantenimiento AS om
+            FROM ORDEN_MANTENIMIENTO AS om
             -- Unimos con máquina para saber a qué línea pertenece la orden
-            INNER JOIN maquina AS m3 ON m3.codigo = om.maquina
-            WHERE m3.linea = l.codigo
+            INNER JOIN MAQUINA AS m3 ON m3.CODIGO = om.maquina
+            WHERE m3.LINEA = l.CODIGO
               AND om.fechacierre BETWEEN fecha_inicio AND fecha_fin
         ) AS OrdenesCerradas
 
@@ -204,7 +206,7 @@ BEGIN
     -- LEFT JOIN para mostrar TODAS las líneas de la planta, incluso si alguna
     -- no tiene máquinas o indicadores en el rango.
     -- -------------------------------------------------------------------------
-    FROM linea AS l
+    FROM LINEA AS l
 
     -- Los periodos de indicadores se filtran por traslape con el rango DENTRO
     -- de la tabla derivada (en su WHERE) y se pre-asocian a su linea. Asi el
@@ -220,10 +222,10 @@ BEGIN
     ) AS indi ON indi.linea = l.codigo
 
     -- Agrupamos los resultados por Línea (para que las funciones AVG funcionen por línea)
-    GROUP BY l.codigo, l.nombre
+    GROUP BY l.CODIGO, l.NOMBRE
 
     -- Ordenamos la lista alfabéticamente por el nombre de la línea
-    ORDER BY l.nombre;
+    ORDER BY l.NOMBRE;
 
 END $$
 
@@ -477,7 +479,8 @@ DELIMITER ;
 -- select @factor as DepreciacionAnual;
 
 -- =====================================================================
--- Procedimiento 6: sp_resumen_maquina
+-- Procedimiento 6a: sp_resumen_maquina_maquinaria (antes sp_resumen_maquina,
+--                    version de Misael)
 -- =====================================================================
 -- Objetivo: devolver la ficha resumen de una maquina (nombre, estado,
 --           total de fallas, total de ordenes de mantenimiento, horas de
@@ -521,7 +524,7 @@ DELIMITER ;
 --   v_periodo_abierto_maquina y el SP3 con la M:M ESTADO_REFACCION).
 -- =====================================================================
 
-DROP PROCEDURE IF EXISTS sp_resumen_maquina;
+DROP PROCEDURE IF EXISTS sp_resumen_maquina_maquinaria;
 
 DELIMITER $$
 
