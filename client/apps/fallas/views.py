@@ -179,9 +179,6 @@ class ReporteFalla(generic.View):
         context["datos"] = self.payload
         return render(request, self.template_name, context)
     
-#---------------------------------------------------------------------------
-#------------TIPO FALLA ----------------------------------------------------
-#---------------------------------------------------------------------------
 class ListTipoFalla(generic.View):
     template_name = "fallas/list_tipo_falla.html"
     context = {}
@@ -221,7 +218,7 @@ class ListaReportes(generic.View):
         # Filtrar la lista de máquinas para incluir solo las que tienen al menos un reporte
         maquinas_con_reportes = [
             m for m in maquinas 
-            if str(m.get("codigo") or m.get("id")) in codigos_maquinas_con_falla
+            if str(m.get("codigo")) in codigos_maquinas_con_falla
         ]
 
         # Mapeo de estados sin ENATE ni CERRA
@@ -453,34 +450,40 @@ class ActualizarReporte(generic.View):
         reporte_previo = self._cargar_reporte(request, pk)
         estado_anterior = reporte_previo.get("estado_reporte") if reporte_previo else None
 
-        # Determinar el nuevo estado que le corresponde a la máquina
         nuevo_estado_maquina = None
         if nuevo_estado == "CANCE" and estado_anterior != "CANCE":
             nuevo_estado_maquina = "ESPER"
         elif nuevo_estado == "ABIER" and estado_anterior != "ABIER":
             nuevo_estado_maquina = "FALLO"
 
-        # Si hay un cambio de estado para la máquina, enviamos la actualización
         if nuevo_estado_maquina and codigo_maquina:
             try:
-                # URL exacta según urls.py de maquinaria: /v1/maquina/update/<codigo>/
                 url_maquina = f"{settings.API_BASE_URL}/maquinaria/v1/maquina/update/{codigo_maquina}/"
-                
-                # Payload con las claves correctas 'estado_maquina' y 'forzar'
-                payload_maquina = {
-                    "estado_maquina": nuevo_estado_maquina,
-                    "forzar": True  # Para saltar la validación si la transición es directa (ej. FALLO -> ESPER)
-                }
-                
-                res_maq = SESSION.patch(url_maquina, json=payload_maquina, timeout=5)
-                
-                # Respaldo por si el serializer espera 'estado' en lugar de 'estado_maquina'
-                if res_maq.status_code >= 400:
-                    payload_maquina_alt = {
-                        "estado": nuevo_estado_maquina,
-                        "forzar": True
-                    }
-                    res_maq = SESSION.patch(url_maquina, json=payload_maquina_alt, timeout=5)
+
+                if nuevo_estado_maquina == "ESPER":
+                    # 1. Obtener estado actual de la máquina desde la API
+                    url_detail = f"{settings.API_BASE_URL}/maquinaria/v1/maquina/{codigo_maquina}/"
+                    res_det = SESSION.get(url_detail, timeout=5)
+                    estado_actual_maq = None
+                    
+                    if res_det.status_code == 200:
+                        det_data = res_det.json()
+                        raw_edo = det_data.get("estado_maquina") or det_data.get("estado")
+                        if isinstance(raw_edo, dict):
+                            estado_actual_maq = raw_edo.get("codigo") or raw_edo.get("id")
+                        else:
+                            estado_actual_maq = raw_edo
+
+                    # 2. Transición intermedia si la máquina está en FALLO
+                    if estado_actual_maq == "FALLO":
+                        SESSION.patch(url_maquina, json={"estado_maquina": "MANTE"}, timeout=5)
+
+                    # 3. Transición final a ESPER
+                    SESSION.patch(url_maquina, json={"estado_maquina": "ESPER"}, timeout=5)
+
+                else:
+                    # Para cambio a ABIER -> FALLO
+                    SESSION.patch(url_maquina, json={"estado_maquina": "FALLO"}, timeout=5)
 
             except requests.exceptions.RequestException as e:
                 logger.error(f"Error al actualizar estado de máquina {codigo_maquina}: {e}")
