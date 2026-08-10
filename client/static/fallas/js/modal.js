@@ -8,7 +8,7 @@ $(function () {
         $.get("/fallas/detalle/reporte/" + pk + "/")
             .done(function (html) {
                 $modal.html(html);
-                $modal.addClass("is-open");
+                $modal.css("display", "flex").addClass("is-open");
             })
             .fail(function () {
                 $modal.html(
@@ -23,27 +23,42 @@ $(function () {
                     '</div>' +
                     '</div></div>'
                 );
-                $modal.addClass("is-open");
+                $modal.css("display", "flex").addClass("is-open");
             });
     }
 
     /* ---- abrir modal de exportación ---- */
     function abrir_modal_exportar(pk) {
-        $("#export-pk").text(pk);
-        $("#export-csv-link").attr("href", "/fallas/reporte/" + pk + "/export/csv/");
-        $("#export-xlsx-link").attr("href", "/fallas/reporte/" + pk + "/export/xlsx/");
-        $("#export-pdf-link").attr("href", "/fallas/reporte/" + pk + "/export/pdf/");
-        $("#exportar-falla").addClass("is-open");
+    // Asignar el ID al texto del modal
+    const exportPk = document.getElementById("export-pk");
+    if (exportPk) exportPk.textContent = pk;
+
+    // Construir las URLs remplazando el placeholder (0) con el ID real
+    if (window.URL_EXPORTAR_CSV) {
+        document.getElementById("export-csv-link").href = window.URL_EXPORTAR_CSV.replace('/0/', `/${pk}/`);
+    }
+    if (window.URL_EXPORTAR_XLSX) {
+        document.getElementById("export-xlsx-link").href = window.URL_EXPORTAR_XLSX.replace('/0/', `/${pk}/`);
+    }
+    if (window.URL_EXPORTAR_PDF) {
+        document.getElementById("export-pdf-link").href = window.URL_EXPORTAR_PDF.replace('/0/', `/${pk}/`);
+    }
+
+    // Mostrar el modal agregando la clase activa (según la convención que uses en tu CSS)
+    const modalExport = document.getElementById("exportar-falla");
+    if (modalExport) {
+        modalExport.classList.add("is-open"); // O la clase que use tu CSS (ej: 'show', 'active')
+    }
     }
 
     /* ---- cerrar modales ---- */
     function cerrar_modales() {
-        $(".fallas-modal").removeClass("is-open");
+        $(".fallas-modal").removeClass("is-open").css("display", "none");
         $("#detalle-falla").empty();
         document.dispatchEvent(new CustomEvent("fallas:modal-cerrado"));
     }
 
-    // Delegación de eventos para cerrar modales (tanto el de detalle como exportar)
+    // Delegación de eventos para cerrar modales
     $(document).on("click", "[data-dismiss='modal'], [data-dismiss='modal-export']", cerrar_modales);
     $(document).on("click", ".fallas-modal__backdrop", cerrar_modales);
     $(document).on("keydown", function (e) {

@@ -82,11 +82,12 @@
 
   </div>
 
-  <!-- SECCIÓN PRINCIPAL: RECUADROS DE REPORTES -->
+  <!-- SECCIÓN PRINCIPAL DE REPORTES -->
   <section class="panel-main">
     <div class="panel-header-flex">
       <h2>Reportes de falla</h2>
-     
+
+      <!-- PESTAÑAS (TABS) DE ESTADOS -->
       <div class="tab-filters">
         <button type="button" class="tab-btn active" data-tab-status="">Todos {{ kpi_totales }}</button>
         <button type="button" class="tab-btn" data-tab-status="En espera">En espera</button>
@@ -96,45 +97,56 @@
       </div>
     </div>
 
-    <div class="filter-bar">
-      <div class="search-box">
+    <!-- BARRA DE BÚSQUEDA Y NUEVO REPORTE AL LADO -->
+    <div class="filter-bar-top" style="display: flex; gap: 0.8rem; align-items: center; margin-bottom: 1rem;">
+      <div class="search-box" style="flex: 1;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input type="text" id="inputBuscar" placeholder="Buscar por asunto, máquina o técnico...">
       </div>
 
-      <div class="dropdown-filters">
-        <select id="filterMaquina" class="select-dark">
-          <option value="">Máquina: Todas</option>
-          {% for m in maquinas %}
-            <option value="{{ m.nombre }}">{{ m.nombre }}</option>
-          {% endfor %}
-        </select>
+      <a class="btn-primary-sm" href="{% url 'fallas:reporte' %}" style="white-space: nowrap; height: 38px; display: inline-flex; align-items: center;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-right: 0.4rem;">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Nuevo reporte
+      </a>
+    </div>
 
-        <select id="filterSeveridad" class="select-dark">
-          <option value="">Severidad: Todas</option>
-          {% for s in severidades %}
-            <option value="{{ s.nombre }}">{{ s.nombre }}</option>
-          {% endfor %}
-        </select>
+    <!-- FILTROS DEBAJO: MÁQUINA, SEVERIDAD Y RANGO DE FECHAS -->
+    <div class="dropdown-filters" style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem;">
+    <select id="filterMaquina" class="select-dark" style="flex: 1; min-width: 180px;">
+      <option value="">Todas las máquinas</option>
+      {% for m in maquinas %}
+        <option value="{{ m.codigo }}">
+          {{ m.nombre }}
+        </option>
+      {% endfor %}
+    </select>
 
-        <div class="date-range">
-          <label>Desde</label>
-          <input type="date" id="filterDesde" class="input-date-dark">
-          <label>Hasta</label>
-          <input type="date" id="filterHasta" class="input-date-dark">
-        </div>
+      <select id="filterSeveridad" class="select-dark" style="flex: 1; min-width: 180px;">
+        <option value="">Todas las severidades</option>
+        {% for s in severidades %}
+          <option value="{{ s.nombre|default:s.codigo }}">{{ s.nombre|default:s.codigo }}</option>
+        {% endfor %}
+      </select>
+
+      <div class="date-range" style="display: flex; align-items: center; gap: 0.4rem;">
+        <label style="font-size: 0.75rem; color: var(--color-muted);">Desde</label>
+        <input type="date" id="filterDesde" class="input-date-dark">
+        <label style="font-size: 0.75rem; color: var(--color-muted);">Hasta</label>
+        <input type="date" id="filterHasta" class="input-date-dark">
       </div>
     </div>
 
-    <!-- CARDS DE REPORTES -->
+    <!-- LISTA DE CARDS DE REPORTES -->
     <div class="report-cards-list" id="listaReportesCards">
       {% for r in reportes %}
-        <div class="report-card-item"
-             data-asunto="{{ r.asunto|lower }}"
-             data-maquina="{{ r.maquina_codigo|default:'' }} {{ r.maquina_nombre|default:r.maquina }}"
-             data-severidad="{{ r.severidad_evaluada }}"
-             data-estado="{{ r.estado_evaluado }}"
-             data-fecha="{{ r.fechaCreacion }}">
+      <div class="report-card-item"
+          data-asunto="{{ r.asunto|default:'' }}"
+          data-maquina="{{ r.maquina|default:'' }} {{ r.maquina_codigo|default:'' }} {{ r.maquina_nombre|default:'' }}"
+          data-severidad="{{ r.severidad_evaluada|default:'' }}"
+          data-estado="{{ r.estado_evaluado|default:'' }}"
+          data-fecha="{{ r.fechaCreacion|default:'' }}">
          
           <div class="col-id">
             <span class="label-sub">Reporte</span>
@@ -179,7 +191,7 @@
           <div class="col-actions">
             <button type="button" class="btn-ver-mas" onclick="abrir_modal_detalle({{ r.numeroRegistro }})">Ver más</button>
             <a class="btn-actualizar" href="{% url 'fallas:actualizar_reporte' pk=r.numeroRegistro %}">Editar</a>
-            <button type="button" class="btn-exportar" onclick="abrir_modal_exportar({{ r.numeroRegistro }})">Exportar</button>
+            <button type="button" class="btn-ver-mas" onclick="abrir_modal_exportar({{ r.numeroRegistro }})">Exportar</button>
           </div>
         </div>
       {% empty %}
@@ -187,11 +199,14 @@
       {% endfor %}
     </div>
 
+    <!-- CONTENEDOR DE PAGINACIÓN -->
+    <div id="paginadorReportes" class="paginador-container"></div>
+
   </section>
 
 </div>
 
-<!-- CONTENEDORES MODALES -->
+<!-- MODALES -->
 <div class="fallas-modal" id="detalle-falla" role="dialog"></div>
 
 <div class="fallas-modal" id="exportar-falla" role="dialog">
@@ -206,10 +221,10 @@
         <p style="margin-bottom:1.5rem;color:var(--color-muted);">
           Reporte #<strong id="export-pk"></strong> &mdash; Selecciona el formato
         </p>
-        <div class="export-options">
-          <a class="export-btn export-btn--csv" id="export-csv-link" href="#">CSV</a>
-          <a class="export-btn export-btn--xlsx" id="export-xlsx-link" href="#">Excel</a>
-          <a class="export-btn export-btn--pdf" id="export-pdf-link" href="#">PDF</a>
+        <div class="export-options" style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
+          <a class="export-btn export-btn--csv" id="export-csv-link" href="#" style="background:#10b981; color:#fff; padding:0.75rem 1.5rem; border-radius:0.5rem; text-decoration:none; font-weight:600;">CSV</a>
+          <a class="export-btn export-btn--xlsx" id="export-xlsx-link" href="#" style="background:#22c55e; color:#fff; padding:0.75rem 1.5rem; border-radius:0.5rem; text-decoration:none; font-weight:600;">Excel</a>
+          <a class="export-btn export-btn--pdf" id="export-pdf-link" href="#" style="background:#ef4444; color:#fff; padding:0.75rem 1.5rem; border-radius:0.5rem; text-decoration:none; font-weight:600;">PDF</a>
         </div>
       </div>
     </div>
@@ -219,12 +234,61 @@
 <link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">
 <link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}">
 
+<style>
+  /* Estilos para el Navegador/Paginador de 10 en 10 */
+  .paginador-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+  }
+  .pagination-wrapper {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    background: var(--color-bg);
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--line);
+  }
+  .pag-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--color-text);
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+    border-radius: 0.35rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .pag-btn:hover:not([disabled]) {
+    background: var(--color-surface);
+    border-color: var(--line);
+  }
+  .pag-btn.active {
+    background: var(--color-primary);
+    color: var(--color-bg);
+    font-weight: 700;
+  }
+  .pag-btn[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+</style>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- DECLARACIÓN DE RUTAS DE EXPORTACIÓN EN RANGOS DE DJANGO -->
+<script>
+  window.URL_EXPORTAR_CSV  = "{% url 'fallas:exportar_csv' pk=0 %}";
+  window.URL_EXPORTAR_XLSX = "{% url 'fallas:exportar_xlsx' pk=0 %}";
+  window.URL_EXPORTAR_PDF  = "{% url 'fallas:exportar_pdf' pk=0 %}";
+</script>
+
 <script src="{% static 'fallas/js/modal.js' %}"></script>
 <script src="{% static 'fallas/js/filtros.js' %}"></script>
 
-<!-- Script para la Gráfica de Chart.js -->
+<!-- Chart.js -->
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const ctx = document.getElementById('chartTiempoAtencion');
@@ -263,5 +327,23 @@
       }
     });
   });
+</script>
+
+<!-- Script para levantar orden de trabajo si aplica -->
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get("levantar_orden") !== "1") return;
+  var reporte = params.get("reporte");
+  var asunto = params.get("asunto") || "";
+  var maquina = params.get("maquina") || "";
+  window.history.replaceState({}, "", window.location.pathname);
+  if (!reporte) return;
+  var quiere = confirm("Reporte #" + reporte + " registrado.\n¿Deseas levantar la orden de mantenimiento correctiva ahora?");
+  if (quiere) {
+    window.location.href = "{% url 'mantenimiento:index' %}?maquina=" + encodeURIComponent(maquina) +
+      "&tipo=CORRE&reporte=" + encodeURIComponent(reporte) + "&asunto=" + encodeURIComponent(asunto);
+  }
+})();
 </script>
 {% endblock %}

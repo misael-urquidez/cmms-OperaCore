@@ -11,9 +11,9 @@ from .models import HistorialEstadoMaquina, Maquina
 # ESPER -> OPERA (admin valida) / FALLO (se detecta que en realidad sigue fallando)
 # DESHA -> OPERA (admin reactiva)
 TRANSICIONES_VALIDAS = {
-    "OPERA": {"FALLO", "DESHA"},
+    "OPERA": {"FALLO", "DESHA", "ESPER"},
     "FALLO": {"MANTE", "DESHA"},
-    "MANTE": {"ESPER", "DESHA"},
+    "MANTE": {"ESPER", "DESHA", "FALLO"},
     "ESPER": {"OPERA", "FALLO", "DESHA"},
     "DESHA": {"OPERA"},
 }

@@ -1,9 +1,11 @@
 $(function () {
 
     /* ==========================================
-       LÓGICA DE FILTRADO DINÁMICO
+       1. LÓGICA DE FILTRADO Y PAGINACIÓN
        ========================================== */
     var estadoSeleccionado = "";
+    var paginaActual = 1;
+    var elementosPorPagina = 10;
 
     function normalizarTexto(texto) {
         return (texto || "")
@@ -16,13 +18,17 @@ $(function () {
 
     function aplicarFiltros() {
         var textoBusqueda = normalizarTexto($("#inputBuscar").val());
-        var maquinaSeleccionada = normalizarTexto($("#filterMaquina").val());
-        var severidadSeleccionada = normalizarTexto($("#filterSeveridad").val());
+        var maquinaVal = normalizarTexto($("#filterMaquina").val());
+        var severidadVal = normalizarTexto($("#filterSeveridad").val());
         var fechaDesde = $("#filterDesde").val();
         var fechaHasta = $("#filterHasta").val();
 
+        var $tarjetasCoincidentes = $();
+
         $(".report-card-item").each(function () {
             var $item = $(this);
+            
+            // Usamos .attr() directo de la tarjeta para evitar problemas de cache de jQuery
             var cardAsunto = normalizarTexto($item.attr("data-asunto"));
             var cardMaquina = normalizarTexto($item.attr("data-maquina"));
             var cardSeveridad = normalizarTexto($item.attr("data-severidad"));
@@ -32,13 +38,22 @@ $(function () {
             // 1. Filtro por Estado (Tabs)
             var cumpleEstado = !estadoSeleccionado || (cardEstado === normalizarTexto(estadoSeleccionado));
 
-            // 2. Filtro por Máquina (Compara presencia del texto del select en data-maquina)
-            var cumpleMaquina = !maquinaSeleccionada || (cardMaquina.indexOf(maquinaSeleccionada) !== -1);
+            // 2. Filtro por Máquina (Búsqueda tokenizada por palabras)
+            var cumpleMaquina = true;
+            if (maquinaVal !== "") {
+                var tokensMaquina = maquinaVal.split(/\s+/);
+                cumpleMaquina = tokensMaquina.some(function (token) {
+                    return token.length > 0 && cardMaquina.indexOf(token) !== -1;
+                });
+            }
 
             // 3. Filtro por Severidad
-            var cumpleSeveridad = !severidadSeleccionada || (cardSeveridad === severidadSeleccionada);
+            var cumpleSeveridad = true;
+            if (severidadVal !== "") {
+                cumpleSeveridad = cardSeveridad.indexOf(severidadVal) !== -1 || severidadVal.indexOf(cardSeveridad) !== -1;
+            }
 
-            // 4. Búsqueda por texto general (asunto o máquina)
+            // 4. Búsqueda por texto general
             var cumpleTexto = !textoBusqueda || 
                                (cardAsunto.indexOf(textoBusqueda) !== -1) || 
                                (cardMaquina.indexOf(textoBusqueda) !== -1);
@@ -51,28 +66,94 @@ $(function () {
                 if (fechaHasta && fechaCardStr > fechaHasta) cumpleFecha = false;
             }
 
-            // Aplicar visibilidad
             if (cumpleEstado && cumpleMaquina && cumpleSeveridad && cumpleTexto && cumpleFecha) {
-                $item.css("display", "grid");
+                $tarjetasCoincidentes = $tarjetasCoincidentes.add($item);
             } else {
                 $item.hide();
             }
         });
+
+        // Paginación dinámica
+        renderizarPaginacion($tarjetasCoincidentes);
     }
 
-    // Eventos
+    function renderizarPaginacion($itemsVisibles) {
+        var totalItems = $itemsVisibles.length;
+        var totalPaginas = Math.ceil(totalItems / elementosPorPagina) || 1;
+
+        if (paginaActual > totalPaginas) paginaActual = 1;
+
+        // Ocultar todas las tarjetas filtradas primero
+        $(".report-card-item").hide();
+
+        // Mostrar únicamente las 10 tarjetas de la página activa
+        var inicio = (paginaActual - 1) * elementosPorPagina;
+        var fin = inicio + elementosPorPagina;
+        $itemsVisibles.slice(inicio, fin).css("display", "grid");
+
+        // Construir barra del paginador
+        var $paginador = $("#paginadorReportes");
+        if (!$paginador.length) {
+            $("#listaReportesCards").after('<div id="paginadorReportes" class="paginador-container"></div>');
+            $paginador = $("#paginadorReportes");
+        }
+        $paginador.empty();
+
+        if (totalPaginas <= 1) return;
+
+        var htmlControles = '<div class="pagination-wrapper">';
+        htmlControles += '<button type="button" class="pag-btn" id="pagPrev" ' + (paginaActual === 1 ? 'disabled' : '') + '>&laquo; Anterior</button>';
+
+        for (var i = 1; i <= totalPaginas; i++) {
+            var activeClass = (i === paginaActual) ? ' active' : '';
+            htmlControles += '<button type="button" class="pag-btn num-btn' + activeClass + '" data-page="' + i + '">' + i + '</button>';
+        }
+
+        htmlControles += '<button type="button" class="pag-btn" id="pagNext" ' + (paginaActual === totalPaginas ? 'disabled' : '') + '>Siguiente &raquo;</button>';
+        htmlControles += '</div>';
+
+        $paginador.html(htmlControles);
+    }
+
+    // Eventos Paginador
+    $(document).on("click", ".num-btn", function () {
+        paginaActual = parseInt($(this).data("page"));
+        aplicarFiltros();
+    });
+
+    $(document).on("click", "#pagPrev", function () {
+        if (paginaActual > 1) {
+            paginaActual--;
+            aplicarFiltros();
+        }
+    });
+
+    $(document).on("click", "#pagNext", function () {
+        paginaActual++;
+        aplicarFiltros();
+    });
+
+    // Eventos Filtros
     $(".tab-btn").on("click", function () {
         $(".tab-btn").removeClass("active");
         $(this).addClass("active");
         estadoSeleccionado = $(this).attr("data-tab-status") || "";
+        paginaActual = 1;
         aplicarFiltros();
     });
 
-    $("#inputBuscar").on("input keyup search", aplicarFiltros);
-    $("#filterMaquina, #filterSeveridad, #filterDesde, #filterHasta").on("change", aplicarFiltros);
+    $("#inputBuscar").on("input keyup search", function () {
+        paginaActual = 1;
+        aplicarFiltros();
+    });
+
+    $("#filterMaquina, #filterSeveridad, #filterDesde, #filterHasta").on("change", function () {
+        paginaActual = 1;
+        aplicarFiltros();
+    });
 
     /* ==========================================
-       MODALES (DETALLE Y EXPORTACIÓN)
+       2. MODALES (DETALLE Y EXPORTACIÓN)
        ========================================== */
     function abrir_modal_detalle(pk) {
         var $modal = $("#detalle-falla");
@@ -102,9 +183,15 @@ $(function () {
 
     function abrir_modal_exportar(pk) {
         $("#export-pk").text(pk);
-        $("#export-csv-link").attr("href", "/fallas/reporte/" + pk + "/export/csv/");
-        $("#export-xlsx-link").attr("href", "/fallas/reporte/" + pk + "/export/xlsx/");
-        $("#export-pdf-link").attr("href", "/fallas/reporte/" + pk + "/export/pdf/");
+
+        var urlCsv  = (window.URL_EXPORTAR_CSV  || "/fallas/exportar/csv/0/").replace("0", pk);
+        var urlXlsx = (window.URL_EXPORTAR_XLSX || "/fallas/exportar/xlsx/0/").replace("0", pk);
+        var urlPdf  = (window.URL_EXPORTAR_PDF  || "/fallas/exportar/pdf/0/").replace("0", pk);
+
+        $("#export-csv-link").attr("href", urlCsv);
+        $("#export-xlsx-link").attr("href", urlXlsx);
+        $("#export-pdf-link").attr("href", urlPdf);
+
         $("#exportar-falla").addClass("is-open");
     }
 
@@ -123,4 +210,6 @@ $(function () {
     window.abrir_modal_detalle = abrir_modal_detalle;
     window.abrir_modal_exportar = abrir_modal_exportar;
 
+    // Ejecutar filtro al cargar la página
+    aplicarFiltros();
 });

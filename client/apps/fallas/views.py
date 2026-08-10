@@ -2,6 +2,7 @@ import datetime
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.http import JsonResponse
+from django.http import HttpResponse
 from django.views import generic
 from django.contrib import messages
 import requests
@@ -207,6 +208,22 @@ class ListaReportes(generic.View):
         from .views import _cargar_catalogos
         severidades, tipos_falla, maquinas, estados, trabajadores, _ = _cargar_catalogos()
 
+        # Extraer los códigos de máquina presentes en los reportes
+        codigos_maquinas_con_falla = set()
+        for r in reportes:
+            # Revisa la clave exacta que devuelve la API para la máquina
+            cod = r.get("maquina") or r.get("maquina_codigo")
+            if isinstance(cod, dict):
+                cod = cod.get("codigo")
+            if cod:
+                codigos_maquinas_con_falla.add(str(cod))
+
+        # Filtrar la lista de máquinas para incluir solo las que tienen al menos un reporte
+        maquinas_con_reportes = [
+            m for m in maquinas 
+            if str(m.get("codigo") or m.get("id")) in codigos_maquinas_con_falla
+        ]
+
         # Mapeo de estados sin ENATE ni CERRA
         MAPA_ESTADOS = {
             "ABIER": "Abierto",
@@ -219,7 +236,6 @@ class ListaReportes(generic.View):
             "ALTA": "Alta",
             "MEDIA": "Media",
             "BAJA": "Baja",
-            "CRIT": "Crítica",
             "CRITI": "Crítica"
         }
 
@@ -307,7 +323,7 @@ class ListaReportes(generic.View):
         context = {
             "reportes": reportes,
             "severidades": severidades,
-            "maquinas": maquinas,
+            "maquinas": maquinas_con_reportes,
             "estados": estados,
             "seccion": "fallas",
             "subseccion": "lista",
@@ -346,7 +362,6 @@ class DetailReporte(generic.View):
 
         self.context = {"reporte": reporte}
         return render(request, self.template_name, self.context)
-
 
 class ActualizarReporte(generic.View):
     template_name = "fallas/actualizar_reporte.html"
@@ -399,16 +414,20 @@ class ActualizarReporte(generic.View):
             messages.warning(request, "Inicia sesión para continuar.")
             return redirect("usuarios:index")
 
+        # Obtener datos del formulario
+        nuevo_estado = request.POST.get("estado_reporte")
+        codigo_maquina = request.POST.get("maquina")
+
         payload = {
             "asunto": request.POST.get("asunto"),
             "descripcion": request.POST.get("descripcion"),
             "causaRaiz": request.POST.get("causaRaiz"),
             "tiempoParo": request.POST.get("tiempoParo"),
             "fechaResolucion": request.POST.get("fechaSolucion") or None,
-            "maquina": request.POST.get("maquina"),
+            "maquina": codigo_maquina,
             "trabajador": request.POST.get("trabajador"),
             "tipo_severidad": request.POST.get("tipo_severidad"),
-            "estado_reporte": request.POST.get("estado_reporte"),
+            "estado_reporte": nuevo_estado,
         }
 
         tipo_falla_ids = []
@@ -428,42 +447,65 @@ class ActualizarReporte(generic.View):
         archivo = request.FILES.get("imagen")
         files = {"imagen": archivo} if archivo else None
 
+        # -----------------------------------------------------------------
+        # LÓGICA DE CAMBIO DE ESTADO DE LA MÁQUINA
+        # -----------------------------------------------------------------
+        reporte_previo = self._cargar_reporte(request, pk)
+        estado_anterior = reporte_previo.get("estado_reporte") if reporte_previo else None
+
+        # Determinar el nuevo estado que le corresponde a la máquina
+        nuevo_estado_maquina = None
+        if nuevo_estado == "CANCE" and estado_anterior != "CANCE":
+            nuevo_estado_maquina = "ESPER"
+        elif nuevo_estado == "ABIER" and estado_anterior != "ABIER":
+            nuevo_estado_maquina = "FALLO"
+
+        # Si hay un cambio de estado para la máquina, enviamos la actualización
+        if nuevo_estado_maquina and codigo_maquina:
+            try:
+                # URL exacta según urls.py de maquinaria: /v1/maquina/update/<codigo>/
+                url_maquina = f"{settings.API_BASE_URL}/maquinaria/v1/maquina/update/{codigo_maquina}/"
+                
+                # Payload con las claves correctas 'estado_maquina' y 'forzar'
+                payload_maquina = {
+                    "estado_maquina": nuevo_estado_maquina,
+                    "forzar": True  # Para saltar la validación si la transición es directa (ej. FALLO -> ESPER)
+                }
+                
+                res_maq = SESSION.patch(url_maquina, json=payload_maquina, timeout=5)
+                
+                # Respaldo por si el serializer espera 'estado' en lugar de 'estado_maquina'
+                if res_maq.status_code >= 400:
+                    payload_maquina_alt = {
+                        "estado": nuevo_estado_maquina,
+                        "forzar": True
+                    }
+                    res_maq = SESSION.patch(url_maquina, json=payload_maquina_alt, timeout=5)
+
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Error al actualizar estado de máquina {codigo_maquina}: {e}")
+
+        # -----------------------------------------------------------------
+        # ACTUALIZAR EL REPORTE
+        # -----------------------------------------------------------------
         try:
             api_url = f"{API_URL}/v2/reportes/update/{pk}/"
             response = SESSION.patch(url=api_url, data=payload, files=files, timeout=10)
         except requests.exceptions.RequestException:
             messages.warning(request, "No se pudo conectar con la API para actualizar el reporte.")
             return self._render_error(request, pk, payload)
+
         if response.status_code == 200:
+            # Borrar cachés relevantes
             cache.delete(f"fallas_reporte_{pk}")
             cache.delete("fallas_reportes_list")
+            cache.delete("fallas_catalogos")
+            cache.delete("catalogos")
             messages.success(request, "El reporte ha sido actualizado correctamente.")
             return redirect("fallas:lista")
         else:
             messages.warning(request, "Error al actualizar el reporte.")
             return self._render_error(request, pk, payload)
-
-    def _render_error(self, request, pk, payload):
-        reporte = self._cargar_reporte(request, pk)
-        if reporte is None:
-            return redirect("fallas:lista")
-
-        reporte = dict(reporte)
-        for campo in ("asunto", "descripcion", "causaRaiz", "tiempoParo",
-                      "fechaResolucion", "maquina", "trabajador",
-                      "tipo_severidad", "estado_reporte"):
-            if campo in payload:
-                reporte[campo] = payload[campo]
-
-        fallas_ids = payload.get("tipo_falla_ids", [])
-        reporte["fallas_asociadas"] = []
-        severidades, tipos_falla, maquinas, estados, trabajadores, _ = _cargar_catalogos()
-        for fid in fallas_ids:
-            coincidencia = [t for t in tipos_falla if t.get("numeroRegistro") == fid]
-            if coincidencia:
-                reporte["fallas_asociadas"].append({"id": fid, "nombre": coincidencia[0].get("nombre")})
-
-        return render(request, self.template_name, self._contexto(request, reporte))
 
 
 class InvalidarCacheReportes(generic.View):
