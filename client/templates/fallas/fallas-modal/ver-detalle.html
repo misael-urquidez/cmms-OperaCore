@@ -2,9 +2,15 @@
   <div class="fallas-modal__content">
     <div class="fallas-modal__header">
       <h2 class="fallas-modal__title">Reporte de falla #{{ reporte.numeroRegistro }}</h2>
+      {% if modo_pagina %}
+      <a class="fallas-modal__close" href="{% url 'fallas:lista' %}" aria-label="Cerrar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </a>
+      {% else %}
       <button class="fallas-modal__close" type="button" data-dismiss="modal" aria-label="Cerrar">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
+      {% endif %}
     </div>
 
     <div class="fallas-modal__body">
@@ -36,9 +42,9 @@
         </div>
 
         <div class="fallas-modal__field">
-          <span class="fallas-modal__label">Tipo de falla</span>
+          <span class="fallas-modal__label">Tipos de falla</span>
           <span class="fallas-modal__value">
-            {% for f in reporte.fallas_asociadas %}{{ f.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
+            {% for f in reporte.fallas_asociadas %}<span class="badge">{{ f.nombre }}</span>{% empty %}-{% endfor %}
           </span>
         </div>
 
@@ -83,7 +89,11 @@
     </div>
 
     <div class="fallas-modal__footer">
+      {% if modo_pagina %}
+      <a class="fallas-modal__btn fallas-modal__btn--close" href="{% url 'fallas:lista' %}" style="text-decoration:none;">Cerrar</a>
+      {% else %}
       <button type="button" class="fallas-modal__btn fallas-modal__btn--close" data-dismiss="modal">Cerrar</button>
+      {% endif %}
     </div>
   </div>
 </div>

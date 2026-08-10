@@ -64,13 +64,13 @@ document.querySelector('details').removeAttribute('open');
             });
 
             dropZone.addEventListener('dragover', ()=>{
-                dropZone.style.borderColor = '#2563eb';
-                dropZone.style.background = '#eef2ff';
+                dropZone.style.borderColor = 'var(--color-primary)';
+                dropZone.style.background = 'rgba(56, 189, 248, 0.05)';
             });
 
             dropZone.addEventListener('dragleave', () => {
-                dropZone.style.borderColor = '#94a3b8';
-                dropZone.style.background = '#fafcff';
+                dropZone.style.borderColor = '';
+                dropZone.style.background = '';
                 });
 
             dropZone.addEventListener('drop', (evento) => {

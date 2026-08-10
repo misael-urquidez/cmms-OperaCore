@@ -54,6 +54,8 @@ def _resolver_choices(config):
     Si el campo tiene 'opciones' inline, las usa directamente."""
     campos = []
     for campo in config["campos"]:
+        if campo.get("solo_lista"):
+            continue
         campo = dict(campo)
         if campo.get("tipo") == "select" and campo.get("fk"):
             crudos = _fetch_fk_choices(campo["fk"])
@@ -110,6 +112,8 @@ def _resolver_choices_con_valores(config, valores=None):
     valores = valores or {}
     campos = []
     for campo in config["campos"]:
+        if campo.get("solo_lista"):
+            continue
         campo = dict(campo)
         campo["valor"] = "" if campo.get("tipo") == "password" else valores.get(campo["name"], "")
         if campo.get("es_booleano"):
@@ -137,6 +141,8 @@ def _build_payload(config, post_data, es_edicion=False, archivos=None):
     errores = []
     file_names = {c["name"] for c in config["campos"] if c.get("tipo") in ("file", "file3d")}
     for campo in config["campos"]:
+        if campo.get("solo_lista"):
+            continue
         if campo.get("tipo") in ("file", "file3d"):
             continue
         valor = post_data.get(campo["name"], "").strip()
@@ -210,8 +216,8 @@ class GestionListView(generic.View):
         todas_las_con_archivos = [c for c in config["campos"]
                                   if c.get("tipo") != "password"]
 
-        requeridos = [c for c in todas_las if c.get("requerido")]
-        opcionales = [c for c in todas_las if not c.get("requerido")]
+        requeridos = [c for c in todas_las if c.get("columna") and c.get("requerido")]
+        opcionales = [c for c in todas_las if c.get("columna") and not c.get("requerido")]
 
         restantes = MAX_COLUMNAS - len(requeridos[:MAX_COLUMNAS])
         visibles = requeridos[:MAX_COLUMNAS] + opcionales[:restantes]

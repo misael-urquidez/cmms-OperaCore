@@ -308,6 +308,8 @@ refrescar();
   var drawerDispoFill = document.getElementById("drawerDispoFill");
   var drawerNumeroFallas = document.getElementById("drawerNumeroFallas");
   var drawerTiempoInactividad = document.getElementById("drawerTiempoInactividad");
+  var drawerTotalHoras = document.getElementById("drawerTotalHoras");
+  var drawerNumeroReparaciones = document.getElementById("drawerNumeroReparaciones");
   var drawerVibracion = document.getElementById("drawerVibracion");
   var drawerUmbral = document.getElementById("drawerUmbral");
   var drawerTemperatura = document.getElementById("drawerTemperatura");
@@ -643,6 +645,8 @@ drawerReparacionForm.addEventListener("submit", function (ev) {
     drawerDispoFill.style.width = (dispo != null ? dispo : 0) + "%";
     drawerNumeroFallas.textContent = data.numero_fallas != null ? String(data.numero_fallas) : "—";
     drawerTiempoInactividad.textContent = data.tiempo_inactividad != null ? Number(data.tiempo_inactividad).toFixed(1) : "—";
+    drawerTotalHoras.textContent = data.total_horas_operacion != null ? String(data.total_horas_operacion) : "—";
+    drawerNumeroReparaciones.textContent = data.numero_reparaciones != null ? String(data.numero_reparaciones) : "—";
   }
 
   function pintarTendencia(data) {

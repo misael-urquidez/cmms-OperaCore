@@ -171,11 +171,11 @@
             <div class="mov-pieza__grid">
               <div class="mov-pieza__campo">
                 <label for="pieza_numeroserie">Número de serie *</label>
-                <input type="text" id="pieza_numeroserie" name="pieza_numeroserie" maxlength="100" value="{% if datos.pieza_numeroserie %}{{ datos.pieza_numeroserie.0 }}{% endif %}">
+                <input type="text" id="pieza_numeroserie" name="pieza_numeroserie" maxlength="30" value="{% if datos.pieza_numeroserie %}{{ datos.pieza_numeroserie.0 }}{% endif %}">
               </div>
               <div class="mov-pieza__campo">
                 <label for="pieza_codigoetiqueta">Código de etiqueta / QR</label>
-                <input type="text" id="pieza_codigoetiqueta" name="pieza_codigoetiqueta" maxlength="100" value="{% if datos.pieza_codigoetiqueta %}{{ datos.pieza_codigoetiqueta.0 }}{% endif %}">
+                <input type="text" id="pieza_codigoetiqueta" name="pieza_codigoetiqueta" maxlength="30" value="{% if datos.pieza_codigoetiqueta %}{{ datos.pieza_codigoetiqueta.0 }}{% endif %}">
               </div>
               <div class="mov-pieza__campo">
                 <label for="pieza_nombre">Nombre de la pieza *</label>

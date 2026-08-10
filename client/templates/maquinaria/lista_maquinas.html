@@ -193,7 +193,7 @@
             <p style="margin-top: 8px; color: #ffd6e8; font-size: 16px;">Panel de Detalle Técnico</p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'maquinaria:index' %}" class="header-nav-btn-secondary">&larr; Menú Principal</a>
+            <a href="{% url 'maquinaria:index' %}" class="header-nav-btn-secondary" onclick="volverAtras(event, '{% url 'maquinaria:index' %}')">&larr; Volver</a>
             <a href="{% url 'maquinaria:list' %}" class="header-nav-btn">Ver Catálogo</a>
         </div>
     </header>

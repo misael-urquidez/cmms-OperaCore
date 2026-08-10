@@ -42,15 +42,15 @@
   </thead>
   <tbody>
     {% for r in registros %}
-    <tr data-tipo="{{ r.tipomovimiento }}">
-      <td>{{ r.numeroregistro }}</td>
+    <tr data-tipo="{{ r.tipo }}">
+      <td>{{ r.numeroRegistro }}</td>
       <td>{{ r.fecha }}</td>
       <td>{{ r.hora }}</td>
-      <td>{{ r.tipomovimiento }}</td>
+      <td>{{ r.tipo }}</td>
       <td>{{ r.descripcion|default:"—" }}</td>
       <td>{{ r.orden_mantenimiento|default:"—" }}</td>
-      <td>{{ r.refaccion|default:"—" }}</td>
-      <td>{{ r.pieza|default:"—" }}</td>
+      <td>{{ r.refaccion_nombre|default:r.refaccion|default:"—" }}</td>
+      <td>{{ r.pieza_nombre|default:r.pieza_numeroserie|default:"—" }}</td>
     </tr>
     {% empty %}
       <tr><td colspan="8">Sin movimientos registrados.</td></tr>

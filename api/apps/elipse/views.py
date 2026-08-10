@@ -2170,10 +2170,17 @@ class ElipseEstadoAPIView(APIView):
 
         req = urllib.request.Request(
             'https://api.groq.com/openai/v1/models',
-            headers={'Authorization': 'Bearer ' + api_key},
+            headers={
+                'Authorization': 'Bearer ' + api_key,
+                # Mismo User-Agent que _llamar_groq: sin este header,
+                # urllib manda "Python-urllib/x.y" por default y Groq
+                # (detras de Cloudflare) lo bloquea como bot con 403,
+                # aunque la API si este disponible (falso "no disponible").
+                'User-Agent': 'Mozilla/5.0 (compatible; OperaCore-Elipse/2.0)',
+            },
         )
         try:
-            with urllib.request.urlopen(req, timeout=4) as res:
+            with urllib.request.urlopen(req, timeout=8) as res:
                 ok = res.status == 200
         except Exception:
             ok = False

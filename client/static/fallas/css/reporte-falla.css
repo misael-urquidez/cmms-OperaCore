@@ -95,123 +95,83 @@
     width: 100%;
 }
 
-.drag-drop{
+.drag-drop {
     width: 100%;
 }
 
-    .drag-drop .drop-zone {
-     width: 100%;
-      border: 2px dashed #0d5ecf;
-      background: #f8fafc;
-      border-radius: 20px;
-      padding: 2rem 1rem;
-      text-align: center;
-      transition: background 0.2s, border-color 0.2s;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.3rem;
-    }
+.drag-drop .drop-zone {
+    width: 100%;
+    border: 2px dashed var(--color-primary, #38bdf8);
+    background: var(--color-bg, #0f1115);
+    border-radius: 12px;
+    padding: 2rem 1rem;
+    text-align: center;
+    transition: background 0.2s, border-color 0.2s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    box-sizing: border-box;
+}
 
-    .drag-drop .drop-zone:hover {
-      background: #f1f5f9;
-      border-color: #64748b;
-    }
+.drag-drop .drop-zone:hover {
+    background: rgba(56, 189, 248, 0.05);
+    border-color: var(--color-text, #e3e8f0);
+}
 
-    .drag-drop .drop-zone .icon {
-      font-size: 2rem;
-      line-height: 1;
-    }
+.drag-drop .drop-zone .icon {
+    font-size: 2rem;
+    line-height: 1;
+}
 
-    .drag-drop .drop-zone p {
-      font-size: 0.95rem;
-      color: #1e293b;
-      font-weight: 450;
-    }
+.drag-drop .drop-zone p {
+    font-size: 0.95rem;
+    color: var(--color-text, #e3e8f0);
+    font-weight: 450;
+    margin: 0;
+}
 
-    .drag-drop .drop-zone span {
-      font-size: 0.8rem;
-      color: #64748b;
-    }
+.drag-drop .drop-zone span {
+    font-size: 0.8rem;
+    color: var(--color-muted, #94a3b8);
+}
 
-    .drag-drop input[type="file"] {
-      position: absolute;
-      width: 0;
-      height: 0;
-      opacity: 0;
-      pointer-events: none;
-    }
+.drag-drop input[type="file"] {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
 
-    /* 4. CON ÍCONO Y TEXTO (botón híbrido) */
-    .icon-btn .file-label-icon {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.7rem;
-      background: #eef2ff;
-      color: #4338ca;
-      padding: 0.65rem 1.8rem 0.65rem 1.4rem;
-      border-radius: 40px;
-      font-weight: 500;
-      font-size: 0.95rem;
-      border: 1px solid #c7d2fe;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-      width: fit-content;
-    }
+.preview-box {
+    margin-top: 0.5rem;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--color-bg, #0f1115);
+    border: 1px solid var(--line, #2a313e);
+    min-height: 120px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
 
-    .icon-btn .file-label-icon:hover {
-      background: #e0e7ff;
-      border-color: #818cf8;
-    }
+.preview-box img {
+    max-width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    display: block;
+}
 
-    .icon-btn input[type="file"] {
-      position: absolute;
-      width: 0;
-      height: 0;
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .icon-btn .file-status {
-      font-size: 0.85rem;
-      color: #334155;
-      background: #f1f5f9;
-      padding: 0.2rem 0.9rem;
-      border-radius: 40px;
-      display: inline-block;
-      max-width: 160px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .preview-box {
-      margin-top: 0.5rem;
-      border-radius: 16px;
-      overflow: hidden;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      min-height: 120px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
-    }
-
-    .preview-box img {
-      max-width: 100%;
-      max-height: 220px;
-      object-fit: contain;
-      display: block;
-    }
-
-    .preview-box .placeholder {
-      color: #94a3b8;
-      font-size: 0.9rem;
-      padding: 1rem;
-      text-align: center;
-    }
+.preview-box .placeholder {
+    color: var(--color-muted, #94a3b8);
+    font-size: 0.9rem;
+    padding: 1rem;
+    text-align: center;
+}
 
 .guias {
     background: rgba(56, 189, 248, 0.06);

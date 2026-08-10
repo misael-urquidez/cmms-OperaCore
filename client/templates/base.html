@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% include 'favicon.html' %}
     <title>{% block title %}OperaCore CMMS{% endblock %}</title>
-    <link rel="icon" href="{% static 'img/pre_logo.png' %}">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
     <link rel="stylesheet" href="{% static 'css/themes.css' %}">
@@ -15,7 +14,7 @@
 <body>
     <header class="navbar">
         <a class="navbar__brand" href="{% url 'home' %}">
-            <img src="{% static 'img/pre_logo.png' %}" alt="OperaCore" height="32">
+            {% include 'partials/brand_logo.html' with size=32 uid="navbarBrand" %}
             OperaCore
         </a>
         <nav class="navbar__links">

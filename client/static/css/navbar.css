@@ -687,6 +687,15 @@
     color: var(--color-primary);
 }
 
+button.quick-add-menu__item {
+    width: 100%;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
 @media (max-width: 480px) {
     .quick-add-menu {
         width: 230px;

@@ -153,7 +153,191 @@
   background: linear-gradient(90deg, var(--color-primary), #34d399);
 }
 
+.kpi__loading {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 120px;
+}
+.kpi__spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid var(--admin-border, rgba(255, 255, 255, 0.12));
+  border-top-color: var(--color-primary);
+  animation: kpi-spin 0.8s linear infinite;
+}
+@keyframes kpi-spin { to { transform: rotate(360deg); } }
+.kpi__error {
+  margin: 0;
+  padding: 1rem;
+  color: var(--color-danger, #fb7185);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.kpi__table-empty {
+  margin: 0;
+  padding: 1rem;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Submodulo KPI's: una tarjeta por vista, en grid, cada una con su propia tabla */
+.kpi__filtro--grow { flex: 1; min-width: 220px; }
+.kpi__filtro--grow input { width: 100%; min-width: 0; }
+
+.kpi__vista-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.kpi__vista-card .kpi__panel-head { align-items: flex-start; }
+.kpi__vista-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.kpi__pill {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(56, 189, 248, 0.14);
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+.kpi__btn--ghost { padding: 0.35rem 0.65rem; font-size: 0.72rem; white-space: nowrap; }
+.kpi__btn--expandir:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); }
+.kpi__btn--ghost.is-active { border-color: var(--color-primary); color: var(--color-primary); background: rgba(56, 189, 248, 0.1); }
+.kpi__vista-canvas-wrap { position: relative; height: 280px; padding: 0.5rem 0.25rem 0; }
+.kpi__table-scroll { overflow-x: auto; max-height: 340px; overflow-y: auto; }
+.kpi__vista-card .kpi__table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  z-index: 1;
+}
+
+/* Tarjeta "Expandir": ocupa todo el ancho del grid y la tabla deja de
+   recortarse en alto, para vistas con muchas columnas o muchas filas.
+   El separador es una linea aparte (::after) en el espacio de margen,
+   no el borde normal de la tarjeta, para que SI se note. */
+.kpi__vista-card--expanded {
+  grid-column: 1 / -1;
+  order: -1;
+  position: relative;
+  margin-bottom: 2.5rem;
+}
+.kpi__vista-card--expanded::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1.5rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--color-primary) 12%, var(--color-primary) 88%, transparent);
+  opacity: 0.55;
+}
+.kpi__vista-card--expanded .kpi__table-scroll { max-height: 65vh; }
+.kpi__vista-card--expanded .kpi__table { font-size: 0.9rem; }
+.kpi__vista-card--expanded .kpi__table th,
+.kpi__vista-card--expanded .kpi__table td { padding: 0.7rem 0.8rem; }
+.kpi__vista-card--expanded .kpi__vista-canvas-wrap { height: 420px; }
+
 @media (max-width: 860px) {
   .kpi__charts { grid-template-columns: 1fr; }
   .kpi__spacer { flex-basis: 100%; }
+  .kpi__vista-grid { grid-template-columns: 1fr; }
 }
+
+/* --- Filtro de fecha extra en el toolbar (rango personalizado) --- */
+.kpi__filtro--fecha input { min-width: 150px; }
+
+/* --- Modal "Hacer reporte" --- */
+.kpi__btn--primary {
+  background: var(--color-primary);
+  color: #04121c;
+  border-color: var(--color-primary);
+}
+.kpi__btn--primary:hover { opacity: 0.9; }
+
+.kpi__modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.kpi__modal.is-open { display: flex; }
+.kpi__modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 10, 18, 0.6);
+}
+.kpi__modal-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--admin-border, rgba(255, 255, 255, 0.1));
+  border-radius: 0.9rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.kpi__modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--admin-border, rgba(255, 255, 255, 0.08));
+}
+.kpi__modal-head h3 { margin: 0; font-size: 1rem; }
+.kpi__modal-close {
+  background: none;
+  border: none;
+  color: var(--color-muted);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.kpi__modal-close:hover { color: var(--color-text); }
+.kpi__modal-body { padding: 1rem 1.1rem; overflow-y: auto; }
+.kpi__modal-todas {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding-bottom: 0.6rem;
+  margin-bottom: 0.6rem;
+  border-bottom: 1px solid var(--admin-border, rgba(255, 255, 255, 0.08));
+}
+.kpi__modal-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.kpi__modal-lista label { display: flex; align-items: center; gap: 0.55rem; font-size: 0.85rem; cursor: pointer; }
+.kpi__modal-nota { margin: 0.9rem 0 0; font-size: 0.72rem; color: var(--color-muted); line-height: 1.4; }
+.kpi__modal-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  border-top: 1px solid var(--admin-border, rgba(255, 255, 255, 0.08));
+}
+.kpi__modal-foot .kpi__btn { flex: 1; min-width: 120px; }
+.kpi__btn--csv { background: #10b981; color: #fff; border-color: #10b981; }
+.kpi__btn--csv:hover { opacity: 0.9; color: #fff; }
+.kpi__btn--xlsx { background: #22c55e; color: #fff; border-color: #22c55e; }
+.kpi__btn--xlsx:hover { opacity: 0.9; color: #fff; }
+.kpi__btn--pdf { background: #ef4444; color: #fff; border-color: #ef4444; }
+.kpi__btn--pdf:hover { opacity: 0.9; color: #fff; }

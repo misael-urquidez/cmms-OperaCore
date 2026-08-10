@@ -41,6 +41,30 @@ class Indicador(models.Model):
         db_table = "INDICADOR"
 
 
+class IndicadorActual(models.Model):
+    """Último periodo de INDICADOR por máquina más los datos de origen de
+    las fórmulas (total horas operación, fallas, paro y reparaciones),
+    calculados en vivo desde la vista `v_kpi_indicadores_actuales`
+    (backend/vistas_kpi.sql). Solo lectura."""
+
+    Codigo = models.CharField(primary_key=True, max_length=10)
+    Maquina = models.CharField(max_length=100)
+    Estado = models.CharField(max_length=50, null=True, blank=True)
+    Linea = models.CharField(max_length=50, null=True, blank=True)
+    MTTR = models.FloatField(null=True, blank=True)
+    MTBF = models.FloatField(null=True, blank=True)
+    Disponibilidad = models.IntegerField(null=True, blank=True)
+    Periodo = models.DateField(null=True, blank=True)
+    TotalHorasOperacion = models.IntegerField(null=True, blank=True)
+    TotalFallas = models.IntegerField(null=True, blank=True)
+    TiempoTotalParo = models.IntegerField(null=True, blank=True)
+    NumReparaciones = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "v_kpi_indicadores_actuales"
+
+
 class TipoMantenimiento(models.Model):
     codigo = models.CharField(max_length=5, primary_key=True)
     nombre = models.CharField(max_length=50)

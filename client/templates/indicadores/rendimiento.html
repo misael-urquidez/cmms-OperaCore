@@ -1,0 +1,40 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% block title %}Rendimiento · OperaCore{% endblock %}
+{% block breadcrumb %}Analítica{% endblock %}
+{% block page_title %}Rendimiento{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'indicadores/css/dashboard.css' %}">{% endblock %}
+{% block content %}
+<section class="kpi">
+  <header class="kpi__head">
+    <p class="kpi__eyebrow">Indicadores</p>
+    <h1>Rendimiento de trabajadores</h1>
+    <p class="kpi__sub">Órdenes de mantenimiento asignadas frente a cerradas, por técnico.</p>
+  </header>
+
+  <div class="kpi__toolbar">
+    <label class="kpi__filtro kpi__filtro--grow">Buscar
+      <input type="text" id="rendimientoFiltro" placeholder="Filtrar por nombre o nómina…">
+    </label>
+    <span class="kpi__spacer"></span>
+    <button type="button" class="kpi__btn" id="rendimientoRecargar">Actualizar</button>
+  </div>
+
+  <div class="kpi__cards" id="rendimientoCards"></div>
+
+  <article class="kpi__panel kpi__panel--wide">
+    <div class="kpi__panel-head">
+      <div>
+        <p class="kpi__panel-title">Detalle por trabajador</p>
+        <p class="kpi__panel-sub">Ordenado por órdenes asignadas · sp_rendimiento_trabajador</p>
+      </div>
+    </div>
+    <div class="kpi__table-wrap" id="rendimientoTabla">
+      <div class="kpi__loading"><div class="kpi__spinner"></div></div>
+    </div>
+  </article>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'indicadores/js/rendimiento.js' %}"></script>
+{% endblock %}
