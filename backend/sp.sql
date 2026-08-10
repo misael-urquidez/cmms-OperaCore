@@ -155,8 +155,8 @@ BEGIN
     -- PASO 2: CONSULTA PRINCIPAL DE INDICADORES POR LÍNEA
     -- =========================================================================
     SELECT
-        l.codigo AS linea,
-        l.nombre AS nombrelinea,
+        l.CODIGO AS linea,
+        l.NOMBRE AS nombrelinea,
 
         -- Calculamos el promedio de los indicadores y los redondeamos a 1 decimal.
         -- Como una línea tiene varias máquinas, AVG saca la media del grupo.
@@ -166,15 +166,15 @@ BEGIN
 
         -- ---------------------------------------------------------------------
         -- SUBCONSULTA 1: Conteo de Fallas
-        -- Cuenta cuántas fallas ocurrieron en las máquinas de ESTA línea (l.codigo)
+        -- Cuenta cuántas fallas ocurrieron en las máquinas de ESTA línea (l.CODIGO)
         -- dentro del rango de fechas solicitado.
         -- ---------------------------------------------------------------------
         (
             SELECT COUNT(*)
-            FROM reporte_falla AS rf
+            FROM REPORTE_FALLA AS rf
             -- Unimos con máquina para saber a qué línea pertenece cada falla
-            INNER JOIN maquina AS m2 ON m2.codigo = rf.maquina
-            WHERE m2.linea = l.codigo
+            INNER JOIN MAQUINA AS m2 ON m2.CODIGO = rf.maquina
+            WHERE m2.LINEA = l.CODIGO
               AND rf.fechaCreacion BETWEEN fecha_inicio AND fecha_fin
         ) AS TotalFallas,
 
@@ -185,10 +185,10 @@ BEGIN
         -- ---------------------------------------------------------------------
         (
             SELECT COUNT(*)
-            FROM orden_mantenimiento AS om
+            FROM ORDEN_MANTENIMIENTO AS om
             -- Unimos con máquina para saber a qué línea pertenece la orden
-            INNER JOIN maquina AS m3 ON m3.codigo = om.maquina
-            WHERE m3.linea = l.codigo
+            INNER JOIN MAQUINA AS m3 ON m3.CODIGO = om.maquina
+            WHERE m3.LINEA = l.CODIGO
               AND om.fechacierre BETWEEN fecha_inicio AND fecha_fin
         ) AS OrdenesCerradas
 
@@ -198,14 +198,14 @@ BEGIN
     -- TODAS las líneas de la planta, incluso si alguna no tiene máquinas
     -- o indicadores registrados aún.
     -- -------------------------------------------------------------------------
-    FROM linea AS l
+    FROM LINEA AS l
 
     -- 1. Relacionamos la línea con sus máquinas correspondientes
-    LEFT JOIN maquina AS m ON m.linea = l.codigo
+    LEFT JOIN MAQUINA AS m ON m.LINEA = l.CODIGO
 
     -- 2. Relacionamos las máquinas con sus registros de indicadores
-    LEFT JOIN indicador AS i
-           ON i.maquina = m.codigo
+    LEFT JOIN INDICADOR AS i
+           ON i.maquina = m.CODIGO
 
           -- LÓGICA DE TRASLAPE DE FECHAS:
           -- Solo tomamos los periodos de indicadores que se crucen con el rango
@@ -217,10 +217,10 @@ BEGIN
           AND (i.fechaFin IS NULL OR i.fechaFin >= fecha_inicio)
 
     -- Agrupamos los resultados por Línea (para que las funciones AVG funcionen por línea)
-    GROUP BY l.codigo, l.nombre
+    GROUP BY l.CODIGO, l.NOMBRE
 
     -- Ordenamos la lista alfabéticamente por el nombre de la línea
-    ORDER BY l.nombre;
+    ORDER BY l.NOMBRE;
 
 END $$
 
@@ -560,16 +560,16 @@ DROP PROCEDURE IF EXISTS sp_resumen_maquina;
 DELIMITER $$
 
 CREATE PROCEDURE sp_resumen_maquina(
-    IN  maquina             VARCHAR(10),
-    OUT nombre              VARCHAR(100),
-    OUT estado              VARCHAR(50),
-    OUT mtbf                FLOAT,
-    OUT mttr                FLOAT,
-    OUT disponibilidad      INT,
-    OUT total_horas         INT,
-    OUT numero_fallas       INT,
-    OUT tiempo_inactividad  INT,
-    OUT numero_reparaciones INT
+    IN  p_maquina             VARCHAR(10),
+    OUT p_nombre              VARCHAR(100),
+    OUT p_estado              VARCHAR(50),
+    OUT p_mtbf                FLOAT,
+    OUT p_mttr                FLOAT,
+    OUT p_disponibilidad      INT,
+    OUT p_total_horas         INT,
+    OUT p_numero_fallas       INT,
+    OUT p_tiempo_inactividad  INT,
+    OUT p_numero_reparaciones INT
 )
 BEGIN
     SELECT
@@ -583,17 +583,17 @@ BEGIN
         TiempoTotalParo,
         NumReparaciones
     INTO
-        nombre,
-        estado,
-        mttr,
-        mtbf,
-        disponibilidad,
-        total_horas,
-        numero_fallas,
-        tiempo_inactividad,
-        numero_reparaciones
+        p_nombre,
+        p_estado,
+        p_mttr,
+        p_mtbf,
+        p_disponibilidad,
+        p_total_horas,
+        p_numero_fallas,
+        p_tiempo_inactividad,
+        p_numero_reparaciones
     FROM v_kpi_indicadores_actuales
-    WHERE Codigo = maquina;
+    WHERE Codigo = p_maquina;
 END $$
 
 DELIMITER ;
