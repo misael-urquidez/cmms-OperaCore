@@ -554,6 +554,9 @@ INSERT INTO EDO_REFACCION (codigo, nombre, descripcion) VALUES
 ('CANIB', 'Canibalizada', 'La pieza que fue extraida de un equipo para ser utilizada temporalmente en otro equipo'),
 ('INMAQ', 'Instalada en maquina', 'Refaccion instalada en una maquina, pendiente de desmontaje o baja');
 
+
+
+
 INSERT INTO TIPO_REFACCION (nombre, descripcion) VALUES
 ('Rodamiento', 'Rodamiento para ejes y motores'),
 ('Nozzle', 'Boquilla para succión de componentes SMT'),
