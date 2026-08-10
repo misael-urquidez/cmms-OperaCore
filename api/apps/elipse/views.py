@@ -348,7 +348,7 @@ JOINS TIPICOS:
 - ORDEN_MANTENIMIENTO.maquina -> MAQUINA.codigo ; .trabajador -> TRABAJADOR.numeroNomina
 - ORDEN_MANTENIMIENTO.reporte_falla -> REPORTE_FALLA.numeroRegistro
 - REFACCION.clasificacion -> CLASIFICACION.codigo
-- Nombre completo de trabajador: CONCAT(nombre,' ',apellidoPat,' ',COALESCE(apellidoMat,''))
+- Nombre completo de trabajador: CONCAT(nombre,' ',apellidoPat,' ',IFNULL(apellidoMat,''))
 """
 
 SYSTEM_PROMPT = (
@@ -370,7 +370,7 @@ SQL_SYSTEM_PROMPT = (
     "3. LIMIT 100 maximo.\n"
     "4. Alias de columnas en espanol descriptivo.\n"
     "5. NO_SQL si la pregunta es completamente ajena a la BD.\n"
-    "6. Nombres completos: CONCAT(nombre,' ',apellidoPat,' ',COALESCE(apellidoMat,'')).\n"
+    "6. Nombres completos: CONCAT(nombre,' ',apellidoPat,' ',IFNULL(apellidoMat,'')).\n"
     "7. Fechas relativas: CURDATE(), NOW(), DATE_SUB(), DATE_ADD(), INTERVAL.\n"
     "8. Busquedas por nombre: LOWER(campo) LIKE LOWER('%texto%').\n"
     "9. Los nombres de tabla y columna respetan mayusculas/minusculas tal cual el esquema.\n"
@@ -1075,7 +1075,7 @@ def _resolve(intent, pregunta):
             " FROM ORDEN_MANTENIMIENTO o"
             " JOIN TRABAJADOR t ON t.numeroNomina = o.trabajador"
             " LEFT JOIN ESTADO_ORDEN eo ON eo.codigo = o.estado_orden"
-            " WHERE LOWER(CONCAT(t.nombre,' ',t.apellidoPat,' ',COALESCE(t.apellidoMat,''))) LIKE LOWER(%s)"
+            " WHERE LOWER(CONCAT(t.nombre,' ',t.apellidoPat,' ',IFNULL(t.apellidoMat,''))) LIKE LOWER(%s)"
             " ORDER BY o.fechaCreacion DESC LIMIT 20", ['%' + nombre + '%']
         )
         if not rows:
@@ -1142,13 +1142,13 @@ def _resolve(intent, pregunta):
         if not nombre:
             return '<p>Dime el nombre, ej: <em>"busca al trabajador Juan Perez"</em></p>'
         cols, rows = _q(
-            "SELECT t.numeroNomina Nomina, CONCAT(t.nombre,' ',t.apellidoPat,' ',COALESCE(t.apellidoMat,'')) Nombre,"
+            "SELECT t.numeroNomina Nomina, CONCAT(t.nombre,' ',t.apellidoPat,' ',IFNULL(t.apellidoMat,'')) Nombre,"
             " ro.nombre Rol, esp.nombre Especialidad,"
             " CASE WHEN t.actividad=1 THEN 'Activo' ELSE 'Inactivo' END Estado"
             " FROM TRABAJADOR t"
             " LEFT JOIN ROL ro ON ro.codigo = t.rol"
             " LEFT JOIN ESPECIALIDAD esp ON esp.numeroRegistro = t.especialidad"
-            " WHERE LOWER(CONCAT(t.nombre,' ',t.apellidoPat,' ',COALESCE(t.apellidoMat,''))) LIKE LOWER(%s)"
+            " WHERE LOWER(CONCAT(t.nombre,' ',t.apellidoPat,' ',IFNULL(t.apellidoMat,''))) LIKE LOWER(%s)"
             " LIMIT 20", ['%' + nombre + '%']
         )
         if not rows:

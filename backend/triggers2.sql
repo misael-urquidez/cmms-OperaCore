@@ -275,3 +275,69 @@ BEGIN
     END IF;
 END$$
 DELIMITER ;
+
+-- =====================================================================
+-- INVENTARIO: ESTADO_REFACCION como desglose del stock (M:M).
+-- REFACCION.stock es el TOTAL en almacen = SUMA de las cantidades por
+-- estado en ESTADO_REFACCION (ej. stock 10 = DISPO 5 + ENREP 3 + INMAQ 2).
+-- Estos triggers mantienen esa invariante automaticamente:
+--   * Al insertar una REFACCION se pre-crea su fila DISPO = stock, para
+--     que el CRUD de refacciones (que solo escribe REFACCION.stock)
+--     quede poblado en la M:M y sp_registrar_salida_refaccion funcione.
+--   * Cualquier INSERT/UPDATE/DELETE sobre ESTADO_REFACCION (el SP3 o el
+--     CRUD "Estados de refacción") recalcula REFACCION.stock.
+-- =====================================================================
+
+DROP TRIGGER IF EXISTS tg_seed_estado_dispo;
+DELIMITER $$
+CREATE TRIGGER tg_seed_estado_dispo
+AFTER INSERT ON REFACCION
+FOR EACH ROW
+BEGIN
+    INSERT INTO ESTADO_REFACCION (estado_refaccion, refaccion, cantidad)
+    VALUES ('DISPO', NEW.numeroRegistro, IFNULL(NEW.stock, 0))
+    ON DUPLICATE KEY UPDATE cantidad = VALUES(cantidad);
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_sync_refaccion_stock_insert;
+DELIMITER $$
+CREATE TRIGGER tg_sync_refaccion_stock_insert
+AFTER INSERT ON ESTADO_REFACCION
+FOR EACH ROW
+BEGIN
+    UPDATE REFACCION r
+    SET r.stock = (SELECT IFNULL(SUM(e.cantidad), 0)
+                   FROM ESTADO_REFACCION e
+                   WHERE e.refaccion = NEW.refaccion)
+    WHERE r.numeroRegistro = NEW.refaccion;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_sync_refaccion_stock_update;
+DELIMITER $$
+CREATE TRIGGER tg_sync_refaccion_stock_update
+AFTER UPDATE ON ESTADO_REFACCION
+FOR EACH ROW
+BEGIN
+    UPDATE REFACCION r
+    SET r.stock = (SELECT IFNULL(SUM(e.cantidad), 0)
+                   FROM ESTADO_REFACCION e
+                   WHERE e.refaccion = NEW.refaccion)
+    WHERE r.numeroRegistro = NEW.refaccion;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_sync_refaccion_stock_delete;
+DELIMITER $$
+CREATE TRIGGER tg_sync_refaccion_stock_delete
+AFTER DELETE ON ESTADO_REFACCION
+FOR EACH ROW
+BEGIN
+    UPDATE REFACCION r
+    SET r.stock = (SELECT IFNULL(SUM(e.cantidad), 0)
+                   FROM ESTADO_REFACCION e
+                   WHERE e.refaccion = OLD.refaccion)
+    WHERE r.numeroRegistro = OLD.refaccion;
+END$$
+DELIMITER ;

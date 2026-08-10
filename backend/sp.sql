@@ -43,37 +43,38 @@ CREATE PROCEDURE sp_cerrar_periodo_indicador(
     IN fecha_fin  DATE
 )
 BEGIN
-    DECLARE v_existe_maquina INT;
-    DECLARE v_id_abierto     INT;
-    DECLARE v_fecha_inicio   DATE;
-    DECLARE v_mtbf_actual    FLOAT;
-    DECLARE v_mttr_actual    FLOAT;
+    DECLARE existe_maquina INT;
+    DECLARE id_abierto     INT;
+    DECLARE fecha_inicio   DATE;
+    DECLARE mtbf_actual    FLOAT;
+    DECLARE mttr_actual    FLOAT;
 
     -- 1) validar que la maquina exista
-    SELECT COUNT(*) INTO v_existe_maquina
+    SELECT COUNT(*) INTO existe_maquina
     FROM MAQUINA
     WHERE codigo = maquina;
 
-    IF v_existe_maquina = 0 THEN
+    IF existe_maquina = 0 THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'La maquina especificada no existe';
     END IF;
 
     -- 2) ubicar el periodo abierto de la maquina (vista de apoyo)
+    --    (SELECT maquina): evita la ambiguedad con la columna de la vista
     SELECT numeroRegistro, fechaInicio, mtbf, mttr
-    INTO v_id_abierto, v_fecha_inicio, v_mtbf_actual, v_mttr_actual
+    INTO id_abierto, fecha_inicio, mtbf_actual, mttr_actual
     FROM v_periodo_abierto_maquina
-    WHERE maquina = maquina
+    WHERE maquina = (SELECT maquina)
     ORDER BY numeroRegistro DESC
     LIMIT 1;
 
-    IF v_id_abierto IS NULL THEN
+    IF id_abierto IS NULL THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'No hay un periodo abierto para esta maquina';
     END IF;
 
     -- 3) validar la fecha de cierre
-    IF fecha_fin < v_fecha_inicio THEN
+    IF fecha_fin < fecha_inicio THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'La fecha de fin no puede ser anterior al inicio del periodo';
     END IF;
@@ -81,11 +82,11 @@ BEGIN
     -- 4) cerrar el periodo vigente
     UPDATE INDICADOR
     SET fechaFin = fecha_fin
-    WHERE numeroRegistro = v_id_abierto;
+    WHERE numeroRegistro = id_abierto;
 
     -- 5) abrir el periodo siguiente, heredando el ultimo mtbf,mttr
     INSERT INTO INDICADOR (maquina, fechaInicio, mtbf, mttr)
-    VALUES (maquina, DATE_ADD(fecha_fin, INTERVAL 1 DAY), v_mtbf_actual, v_mttr_actual);
+    VALUES (maquina, DATE_ADD(fecha_fin, INTERVAL 1 DAY), mtbf_actual, mttr_actual);
 END $$
 
 DELIMITER ;
@@ -234,12 +235,13 @@ DELIMITER ;
 -- =====================================================================
 -- Procedimiento 3: sp_registrar_salida_refaccion
 -- =====================================================================
--- Objetivo: registrar la salida de una refaccion del almacen (cuando
---           un tecnico la usa en una reparacion) descontando el stock
---           y dejando el registro correspondiente en MOVIMIENTO, de
---           forma atomica. Antes nada en el sistema hacia esto: el
---           stock solo se editaba a mano por CRUD y MOVIMIENTO no lo
---           llenaba ningun endpoint.
+-- Objetivo: registrar la salida de una refaccion del almacen (cuando un
+--           tecnico la instala en una maquina) dejando el registro
+--           correspondiente en MOVIMIENTO de forma atomica. La salida NO
+--           descontara el stock total: el stock de REFACCION es la suma
+--           de la M:M ESTADO_REFACCION y la salida solo mueve 1 unidad de
+--           DISPO a INMAQ (la unidad queda "instalada en maquina", sigue
+--           contando en el total pero ya no esta disponible).
 -- Parámetros:
 --   refaccion    -> REFACCION.numeroRegistro
 --   orden        -> folio de la orden de mantenimiento (puede ser NULL)
@@ -248,16 +250,17 @@ DELIMITER ;
 --   hora         -> hora del movimiento (si es NULL se usa CURTIME())
 --   pieza        -> PIEZA.numeroSerie que se instala (puede ser NULL)
 -- Lógica:
---   1) Ubica la refaccion y su stock actual (vista de apoyo
---      v_refaccion_inventario, vistas_kpi.sql).
---   2) Valida que la refaccion exista y que haya stock suficiente.
+--   1) Ubica la refaccion y su cantidad DISPO actual en ESTADO_REFACCION.
+--   2) Valida que la refaccion exista y que haya al menos 1 DISPO.
 --   3) Valida la pieza si se indica.
---   4) Descuenta 1 del stock (cada movimiento es de 1 unidad).
+--   4) Mueve 1 unidad en la M:M: DISPO -1 e INMAQ +1 (INSERT de la
+--      fila INMAQ; si ya existia la fila, el INSERT fallaria con clave
+--      duplicada, por eso se asume que no debe repetirse la instalacion).
 --   5) Deja el registro de auditoria en MOVIMIENTO (tipo INSTA) con la
 --      fecha/hora indicadas (o las del sistema) y la pieza instalada.
---   6) Devuelve el stock resultante, si quedo por debajo del stockMinimo
---      (para que la app avise sin consultar aparte) y el numeroRegistro
---      del movimiento creado.
+--   6) Devuelve la cantidad DISPO resultante, si quedo por debajo del
+--      stockMinimo (para que la app avise sin consultar aparte) y el
+--      numeroRegistro del movimiento creado.
 -- =====================================================================
 
 DROP PROCEDURE IF EXISTS sp_registrar_salida_refaccion;
@@ -273,54 +276,70 @@ CREATE PROCEDURE sp_registrar_salida_refaccion(
     IN pieza        VARCHAR(30)
 )
 BEGIN
-    DECLARE v_stock_actual INT;
-    DECLARE v_stock_minimo INT;
-    DECLARE v_existe_pieza INT;
+    DECLARE id_refaccion INT;
+    DECLARE disponible   INT DEFAULT 0;
+    DECLARE stock_minimo INT;
+    DECLARE existe_pieza INT;
+    DECLARE fechaP DATE;
+    DECLARE horaP TIME;
 
-    -- 1) ubicar la refaccion y su stock actual (vista de apoyo)
-    SELECT stock, stockMinimo INTO v_stock_actual, v_stock_minimo
-    FROM v_refaccion_inventario
-    WHERE numeroRegistro = refaccion;
+    set fechaP = CURRENT_DATE();
+    set horaP = CURRENT_TIME();
+
+    -- 1) ubicar la refaccion y su cantidad DISPO actual (M:M).
+    --    (SELECT refaccion) fuerza el parametro: ESTADO_REFACCION
+    --    tambien tiene una columna "refaccion" y MySQL preferiria la
+    --    columna si se deja sin calificar.
+    SELECT r.numeroRegistro, r.stockMinimo, IFNULL(e.cantidad, 0)
+    INTO id_refaccion, stock_minimo, disponible
+    FROM REFACCION as r
+    LEFT JOIN ESTADO_REFACCION as e
+           ON e.refaccion = r.numeroRegistro AND e.estado_refaccion = 'DISPO'
+    WHERE r.numeroRegistro = (SELECT refaccion);
 
     -- 2) validar que la refaccion exista
-    IF v_stock_actual IS NULL THEN
+    IF id_refaccion IS NULL THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'La refaccion especificada no existe';
     END IF;
 
-    -- 2b) validar que haya stock suficiente (hoy el SP podia quedar en 0)
-    IF v_stock_actual < 1 THEN
+    -- 2b) validar que haya al menos una unidad disponible (DISPO)
+    IF disponible < 1 THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Stock insuficiente para la salida de refaccion';
     END IF;
 
     -- 3) validar la pieza si se indica
     IF pieza IS NOT NULL THEN
-        SELECT COUNT(*) INTO v_existe_pieza
+        SELECT COUNT(*) INTO existe_pieza
         FROM PIEZA
         WHERE numeroSerie = pieza;
 
-        IF v_existe_pieza = 0 THEN
+        IF existe_pieza = 0 THEN
             SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'La pieza especificada no existe';
         END IF;
     END IF;
 
-    -- 4) descontar el stock (cada movimiento es de 1 unidad)
-    UPDATE REFACCION
-    SET stock = stock - 1
-    WHERE numeroRegistro = refaccion;
+    -- 4) mover 1 unidad DISPO -> INMAQ en la tabla M:M ESTADO_REFACCION
+    UPDATE ESTADO_REFACCION
+    SET cantidad = cantidad - 1
+    WHERE estado_refaccion = 'DISPO'
+      AND refaccion = id_refaccion;
+
+    INSERT INTO ESTADO_REFACCION (estado_refaccion, refaccion, cantidad)
+    VALUES ('INMAQ', id_refaccion, 1);
 
     -- 5) dejar el registro de auditoria en MOVIMIENTO (tipo INSTA) con la
     --    fecha/hora indicadas (o las del sistema) y la pieza instalada.
     INSERT INTO MOVIMIENTO (descripcion, fecha, hora, tipoMovimiento, orden_mantenimiento, refaccion, PIEZA)
-    VALUES (descripcion, COALESCE(fecha, CURDATE()), COALESCE(hora, CURTIME()), 'INSTA', orden, refaccion, pieza);
+    VALUES (descripcion, fechaP, horaP, 'INSTA', orden, id_refaccion, pieza);
 
     -- 6) informar el resultado a quien llamo el procedimiento
-    SELECT (v_stock_actual - 1) AS stock_resultante,
-           v_stock_minimo AS stock_minimo_out,
-           (v_stock_actual - 1) <= v_stock_minimo AS requiere_reabastecimiento,
-           LAST_INSERT_ID() AS numero_movimiento;
+    -- SELECT (disponible - 1) AS stock_resultante,
+    --        stock_minimo AS stock_minimo_out,
+    --        (disponible - 1) <= stock_minimo AS requiere_reabastecimiento,
+    --        LAST_INSERT_ID() AS numero_movimiento;
 END $$
 
 DELIMITER ;
@@ -349,9 +368,10 @@ DELIMITER ;
 --   ordenes_cerradas  -> OUT: total de ordenes cerradas (estado CERRA)
 -- Lógica:
 --   1) Cruza TRABAJADOR con ORDEN_MANTENIMIENTO por numeroNomina.
---   2) Concatena nombre + apellidoPat + apellidoMat (con COALESCE por si
+--   2) Concatena nombre + apellidoPat + apellidoMat (con IFNULL por si
 --      el segundo apellido no existe).
---   3) Cuenta el total de ordenes asignadas y las cerradas (SUM(CASE)).
+--   3) Cuenta el total de ordenes asignadas (COUNT) y las cerradas (una
+--      subconsulta con COUNT(*)... estado_orden = 'CERRA').
 --   4) Agrupa por trabajador y devuelve los tres valores por OUT.
 -- =====================================================================
 
@@ -367,9 +387,12 @@ CREATE PROCEDURE sp_rendimiento_trabajador(
 )
 BEGIN
     SELECT
-        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', COALESCE(t.apellidoMat, '')),
+        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', ifnull(t.apellidoMat, '')),
         COUNT(o.folio),
-        SUM(CASE WHEN o.estado_orden = 'CERRA' THEN 1 ELSE 0 END)
+        (SELECT COUNT(*)
+         FROM ORDEN_MANTENIMIENTO o2
+         WHERE o2.trabajador = t.numeroNomina
+           AND o2.estado_orden = 'CERRA')
     INTO nombre, ordenes_asignadas, ordenes_cerradas
     FROM TRABAJADOR t
     INNER JOIN ORDEN_MANTENIMIENTO o ON o.trabajador = t.numeroNomina
@@ -414,18 +437,18 @@ CREATE PROCEDURE sp_calcular_depreciacion_pieza(
     INOUT factor FLOAT
 )
 BEGIN
-    DECLARE v_costo FLOAT;
+    DECLARE costo FLOAT;
 
-    SELECT costoInicial INTO v_costo
+    SELECT costoInicial INTO costo
     FROM PIEZA
     WHERE numeroSerie = pieza;
 
-    IF v_costo IS NULL THEN
+    IF costo IS NULL THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'La pieza especificada no existe';
     END IF;
 
-    SET factor = ROUND(factor * v_costo, 2);
+    SET factor = ROUND(factor * costo, 2);
 END $$
 
 DELIMITER ;
@@ -448,18 +471,18 @@ DELIMITER ;
 --             - GET /api/monitoreo/maquinas/<codigo>/indicadores/
 --               (IndicadoresMaquinaAPIView, api/apps/monitoreo/views.py)
 -- Parámetros:
---   p_maquina            -> MAQUINA.codigo (IN)
---   p_nombre             -> OUT: nombre de la maquina
---   p_estado             -> OUT: MAQUINA.estado_maquina (codigo, ej. OPERA)
---   p_total_fallas       -> OUT: total de reportes de falla de la maquina
---   p_total_ordenes      -> OUT: total de ordenes de mantenimiento
---   p_horas_operacion    -> OUT: suma de horas de operacion (REGISTRO_OPS)
---   p_mtbf               -> OUT: MTBF del ultimo periodo
---   p_mttr               -> OUT: MTTR del ultimo periodo
---   p_disponibilidad     -> OUT: % de disponibilidad del ultimo periodo
---   p_tiempo_inactividad -> OUT: SUM(REPORTE_FALLA.tiempoParo) de fallas
+--   maquina              -> MAQUINA.codigo (IN)
+--   nombre               -> OUT: nombre de la maquina
+--   estado               -> OUT: MAQUINA.estado_maquina (codigo, ej. OPERA)
+--   total_fallas         -> OUT: total de reportes de falla de la maquina
+--   total_ordenes        -> OUT: total de ordenes de mantenimiento
+--   horas_operacion      -> OUT: suma de horas de operacion (REGISTRO_OPS)
+--   mtbf                 -> OUT: MTBF del ultimo periodo
+--   mttr                 -> OUT: MTTR del ultimo periodo
+--   disponibilidad       -> OUT: % de disponibilidad del ultimo periodo
+--   tiempo_inactividad   -> OUT: SUM(REPORTE_FALLA.tiempoParo) de fallas
 --                                  con orden cerrada
---   p_numero_reparaciones-> OUT: COUNT de ordenes cerradas con reporte
+--   numero_reparaciones  -> OUT: COUNT de ordenes cerradas con reporte
 --                                  de falla
 -- Lógica:
 --   1) Wrapper delgado sobre la vista de apoyo v_kpi_indicadores_actuales
@@ -471,7 +494,7 @@ DELIMITER ;
 --      indicadores todavia, igual devuelve fila y los OUT de KPI quedan
 --      en NULL (los endpoints los convierten en 0 / "--").
 --   Patron: SP que consume una vista de apoyo (igual que el SP1 con
---   v_periodo_abierto_maquina y el SP3 con v_refaccion_inventario).
+--   v_periodo_abierto_maquina y el SP3 con la M:M ESTADO_REFACCION).
 -- =====================================================================
 
 DROP PROCEDURE IF EXISTS sp_resumen_maquina;
@@ -479,17 +502,17 @@ DROP PROCEDURE IF EXISTS sp_resumen_maquina;
 DELIMITER $$
 
 CREATE PROCEDURE sp_resumen_maquina(
-    IN  p_maquina            VARCHAR(10),
-    OUT p_nombre             VARCHAR(100),
-    OUT p_estado             VARCHAR(5),
-    OUT p_total_fallas       INT,
-    OUT p_total_ordenes      INT,
-    OUT p_horas_operacion    INT,
-    OUT p_mtbf               FLOAT,
-    OUT p_mttr               FLOAT,
-    OUT p_disponibilidad     INT,
-    OUT p_tiempo_inactividad INT,
-    OUT p_numero_reparaciones INT
+    IN  maquina             VARCHAR(10),
+    OUT nombre              VARCHAR(100),
+    OUT estado              VARCHAR(5),
+    OUT total_fallas        INT,
+    OUT total_ordenes       INT,
+    OUT horas_operacion     INT,
+    OUT mtbf                FLOAT,
+    OUT mttr                FLOAT,
+    OUT disponibilidad      INT,
+    OUT tiempo_inactividad  INT,
+    OUT numero_reparaciones INT
 )
 BEGIN
     SELECT
@@ -504,18 +527,18 @@ BEGIN
         TiempoTotalParo,
         NumReparaciones
     INTO
-        p_nombre,
-        p_estado,
-        p_total_fallas,
-        p_total_ordenes,
-        p_horas_operacion,
-        p_mtbf,
-        p_mttr,
-        p_disponibilidad,
-        p_tiempo_inactividad,
-        p_numero_reparaciones
+        nombre,
+        estado,
+        total_fallas,
+        total_ordenes,
+        horas_operacion,
+        mtbf,
+        mttr,
+        disponibilidad,
+        tiempo_inactividad,
+        numero_reparaciones
     FROM v_kpi_indicadores_actuales
-    WHERE Codigo = p_maquina;
+    WHERE Codigo = maquina;
 END $$
 
 DELIMITER ;
@@ -597,7 +620,7 @@ DELIMITER ;
 --           con el trabajador que atendio cada uno. Va como result set
 --           (no OUT) porque es una lista de N filas, no un escalar.
 -- Parámetros:
---   p_maquina -> MAQUINA.codigo
+--   maquina -> MAQUINA.codigo
 -- Lógica:
 --   1) UNION ALL entre ORDEN_MANTENIMIENTO y REPORTE_FALLA, marcando el
 --      tipo de cada fila ('ORDEN' / 'FALLA').
@@ -610,7 +633,7 @@ DROP PROCEDURE IF EXISTS sp_historial_maquina;
 DELIMITER $$
 
 CREATE PROCEDURE sp_historial_maquina(
-    IN p_maquina VARCHAR(10)
+    IN maquina VARCHAR(10)
 )
 BEGIN
     SELECT
@@ -620,10 +643,10 @@ BEGIN
         om.descripcion AS detalle,
         om.estado_orden AS estado,
         om.trabajador AS trabajador_nomina,
-        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', COALESCE(t.apellidoMat, '')) AS trabajador_nombre
+        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, '')) AS trabajador_nombre
     FROM ORDEN_MANTENIMIENTO om
     LEFT JOIN TRABAJADOR t ON t.numeroNomina = om.trabajador
-    WHERE om.maquina = p_maquina
+    WHERE om.maquina = maquina
 
     UNION ALL
 
@@ -634,10 +657,10 @@ BEGIN
         rf.asunto AS detalle,
         rf.estado_reporte AS estado,
         rf.trabajador AS trabajador_nomina,
-        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', COALESCE(t.apellidoMat, '')) AS trabajador_nombre
+        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, '')) AS trabajador_nombre
     FROM REPORTE_FALLA rf
     LEFT JOIN TRABAJADOR t ON t.numeroNomina = rf.trabajador
-    WHERE rf.maquina = p_maquina
+    WHERE rf.maquina = maquina
 
     ORDER BY fecha DESC;
 END $$

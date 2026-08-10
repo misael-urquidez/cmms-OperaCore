@@ -243,10 +243,10 @@ where fechaFin IS NULL;
 
 -- =====================================================================
 -- 12. v_refaccion_inventario: catalogo de refacciones con su stock
---     Vista de apoyo consumida por sp_registrar_salida_refaccion (sp.sql):
---     entrega los datos de stock y stockMinimo que el SP usa para
---     descontar y evaluar el reabastecimiento. v_kpi_stock es un
---     filtro de esta vista (solo refacciones en/bajo el stock minimo).
+--     Stock total (REFACCION.stock), que es la suma de las cantidades
+--     por estado en ESTADO_REFACCION (mantenida por los triggers de
+--     triggers2.sql). v_kpi_stock es un filtro de esta vista (solo
+--     refacciones en/bajo el stock minimo).
 -- =====================================================================
 DROP VIEW IF EXISTS v_refaccion_inventario;
 
