@@ -531,7 +531,7 @@ class RegistrarSalidaRefaccionAPIView(APIView):
                     [refaccion, orden, descripcion, fecha, hora, pieza],
                 )
                 # El SP termina con un SELECT: stock_resultante,
-                # stock_minimo_out, requiere_reabastecimiento, numero_movimiento
+                # numero_movimiento
                 col_names = [c[0] for c in cur.description]
                 row = cur.fetchone()
                 while cur.nextset():

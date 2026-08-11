@@ -105,7 +105,6 @@ class ReporteFalla(generic.View):
             "descripcion": request.POST.get("descripcion"),
             "causaRaiz": request.POST.get("causaRaiz"),
             "tiempoParo": request.POST.get("tiempoParo"),
-            "fechaResolucion": request.POST.get("fechaSolucion") or None,
             "maquina": request.POST.get("maquina"),
             "trabajador": request.POST.get("trabajador"),
             "tipo_severidad": request.POST.get("tipo_severidad"),
@@ -335,7 +334,6 @@ class ActualizarReporte(generic.View):
             "descripcion": request.POST.get("descripcion"),
             "causaRaiz": request.POST.get("causaRaiz"),
             "tiempoParo": request.POST.get("tiempoParo"),
-            "fechaResolucion": request.POST.get("fechaSolucion") or None,
             "maquina": request.POST.get("maquina"),
             "trabajador": request.POST.get("trabajador"),
             "tipo_severidad": request.POST.get("tipo_severidad"),
@@ -381,8 +379,8 @@ class ActualizarReporte(generic.View):
 
         reporte = dict(reporte)
         for campo in ("asunto", "descripcion", "causaRaiz", "tiempoParo",
-                      "fechaResolucion", "maquina", "trabajador",
-                      "tipo_severidad", "estado_reporte"):
+                      "maquina", "trabajador", "tipo_severidad",
+                      "estado_reporte"):
             if campo in payload:
                 reporte[campo] = payload[campo]
 

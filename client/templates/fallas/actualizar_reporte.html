@@ -28,10 +28,6 @@
         <input type="number" name="tiempoParo" id="tiempoParo" min="0" step="any" data-error-id="horas-error"
                value="{{ reporte.tiempoParo }}" />
 
-        <label for="fechaSolucion">Fecha de solucion</label>
-        <input type="date" name="fechaSolucion" id="fechaSolucion"
-               value="{{ reporte.fechaResolucion|cut:' ' }}" />
-
         <label for="maquina">Maquina</label>
         <select name="maquina" id="maquina" required>
           <option value="">Seleccione...</option>

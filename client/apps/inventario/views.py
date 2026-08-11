@@ -437,14 +437,7 @@ class CrearMovimiento(generic.View):
                 timeout=10,
             )
             if res.status_code == 201:
-                data = res.json()
-                mensaje = "Movimiento registrado correctamente."
-                if data.get("requiere_reabastecimiento"):
-                    mensaje += (
-                        " La refacción quedó en o por debajo del stock mínimo"
-                        f" ({data.get('stock_minimo')}): considera reabastecerla."
-                    )
-                messages.success(request, mensaje)
+                messages.success(request, "Movimiento registrado correctamente.")
                 return redirect("inventario:lista_movimientos")
             else:
                 try:

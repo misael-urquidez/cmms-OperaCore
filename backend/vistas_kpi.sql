@@ -259,3 +259,6 @@ left join CLASIFICACION c on c.codigo = r.clasificacion;
 -- =====================================================================
 -- FIN DE VISTAS KPI
 -- =====================================================================
+
+
+VISTA DONDE MUESTRE ESTADOS 

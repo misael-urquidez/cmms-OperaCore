@@ -341,3 +341,39 @@ BEGIN
     WHERE r.numeroRegistro = OLD.refaccion;
 END$$
 DELIMITER ;
+
+-- =====================================================================
+-- REPORTE_FALLA: FECHA DE RESOLUCIÓN AUTOMÁTICA AL CERRAR.
+-- La fecha de resolución ya no se captura en el formulario: se carga
+-- sola cuando el estado del reporte pasa a 'CERRA' (Cerrado).
+--   * INSERT: si un reporte se da de alta directamente como cerrado, se
+--     le pone la fecha de hoy.
+--   * UPDATE: solo actúa cuando el estado ACABA de pasar a CERRA (antes
+--     no estaba en CERRA, ahora sí); si el reporte ya estaba cerrado y
+--     solo se edita otra cosa, la fecha se conserva intacta.
+-- Son BEFORE porque modifican NEW.fechaResolucion antes de escribirse.
+-- =====================================================================
+
+DROP TRIGGER IF EXISTS tg_fecharesolucion_cerrado_insert;
+DELIMITER $$
+CREATE TRIGGER tg_fecharesolucion_cerrado_insert
+BEFORE INSERT ON REPORTE_FALLA
+FOR EACH ROW
+BEGIN
+    IF NEW.estado_reporte = 'CERRA' THEN
+        SET NEW.fechaResolucion = CURRENT_DATE();
+    END IF;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_fecharesolucion_cerrado_update;
+DELIMITER $$
+CREATE TRIGGER tg_fecharesolucion_cerrado_update
+BEFORE UPDATE ON REPORTE_FALLA
+FOR EACH ROW
+BEGIN
+    IF NEW.estado_reporte = 'CERRA' AND (OLD.estado_reporte IS NULL OR OLD.estado_reporte <> 'CERRA') THEN
+        SET NEW.fechaResolucion = CURRENT_DATE();
+    END IF;
+END$$
+DELIMITER ;

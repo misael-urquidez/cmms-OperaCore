@@ -130,8 +130,6 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
         data = request.data.copy()
         pieza_data = data.get("pieza_data") or None
 
-        advertencia = None
-
         with transaction.atomic():
             if data.get("tipoMovimiento") == "INSTA":
                 # INSTA: la refaccion sale del almacen y se convierte en la
@@ -178,7 +176,6 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
                             ],
                         )
                         # El SP3 termina con un SELECT: stock_resultante,
-                        # stock_minimo_out, requiere_reabastecimiento,
                         # numero_movimiento.
                         col_names = [c[0] for c in cur.description]
                         row = cur.fetchone()
@@ -198,13 +195,6 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
                 movimiento = models.Movimiento.objects.get(
                     pk=resultado.get("numero_movimiento")
                 )
-                advertencia = {
-                    "stock_resultante": resultado.get("stock_resultante"),
-                    "stock_minimo": resultado.get("stock_minimo_out"),
-                    "requiere_reabastecimiento": bool(
-                        resultado.get("requiere_reabastecimiento")
-                    ),
-                }
             else:
                 # DESMO/REHA (y cualquier otro tipo): el MOVIMIENTO se crea
                 # por ORM y no se toca el stock de la refaccion.
@@ -223,8 +213,6 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
                 movimiento = serializer.save()
 
         data_out = serializers.ListMovimientoSerializer(movimiento).data
-        if advertencia:
-            data_out.update(advertencia)
         return Response(data_out, status=status.HTTP_201_CREATED)
 
 

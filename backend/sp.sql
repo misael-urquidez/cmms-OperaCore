@@ -39,6 +39,9 @@ USE operacore;
 --   = maquina siempre verdadero. Mismo motivo por el que el resto de los
 --   SP de este archivo usan prefijo p_ / v_ en sus parámetros y variables.
 -- =====================================================================
+
+-- DOCUMENTADO
+
 DROP PROCEDURE IF EXISTS sp_cerrar_periodo_indicador;
 
 DELIMITER $$
@@ -141,6 +144,8 @@ DELIMITER ;
 --      que un SELECT normal desde Django (cursor.callproc + fetchall).
 -- =====================================================================
 
+-- DOCUMENTADO
+
 DROP PROCEDURE IF EXISTS sp_reporte_disponibilidad_planta;
 
 DELIMITER $$
@@ -167,11 +172,36 @@ BEGIN
         l.CODIGO AS linea,
         l.NOMBRE AS nombrelinea,
 
-        -- Calculamos el promedio de los indicadores y los redondeamos a 1 decimal.
-        -- Como una línea tiene varias máquinas, AVG saca la media del grupo.
-        ROUND(AVG(indi.porcentajeDispo), 1) AS disponibilidad_promedio,
-        ROUND(AVG(indi.mtbf), 1) AS mtbf_promedio,
-        ROUND(AVG(indi.mttr), 1) AS mttr_promedio,
+        -- Los promedios van como subconsultas escalares correlacionadas por
+        -- linea (con INNER JOIN indicador/maquina dentro): asi aparece UNA
+        -- fila por linea y una linea sin indicadores en el rango devuelve
+        -- NULL, igual que con el LEFT JOIN + AVG original.
+        (
+            SELECT ROUND(AVG(i.porcentajeDispo), 1)
+            FROM indicador AS i
+            INNER JOIN maquina AS m ON m.codigo = i.maquina
+            WHERE m.linea = l.CODIGO
+              AND i.fechaInicio <= fecha_fin
+              AND (i.fechaFin IS NULL OR i.fechaFin >= fecha_inicio)
+        ) AS disponibilidad_promedio,
+
+        (
+            SELECT ROUND(AVG(i.mtbf), 1)
+            FROM indicador AS i
+            INNER JOIN maquina AS m ON m.codigo = i.maquina
+            WHERE m.linea = l.CODIGO
+              AND i.fechaInicio <= fecha_fin
+              AND (i.fechaFin IS NULL OR i.fechaFin >= fecha_inicio)
+        ) AS mtbf_promedio,
+
+        (
+            SELECT ROUND(AVG(i.mttr), 1)
+            FROM indicador AS i
+            INNER JOIN maquina AS m ON m.codigo = i.maquina
+            WHERE m.linea = l.CODIGO
+              AND i.fechaInicio <= fecha_fin
+              AND (i.fechaFin IS NULL OR i.fechaFin >= fecha_inicio)
+        ) AS mttr_promedio,
 
         -- ---------------------------------------------------------------------
         -- SUBCONSULTA 1: Conteo de Fallas
@@ -201,28 +231,9 @@ BEGIN
               AND om.fechacierre BETWEEN fecha_inicio AND fecha_fin
         ) AS OrdenesCerradas
 
-    -- -------------------------------------------------------------------------
-    -- UNIÓN DE TABLAS PRINCIPALES
-    -- LEFT JOIN para mostrar TODAS las líneas de la planta, incluso si alguna
-    -- no tiene máquinas o indicadores en el rango.
-    -- -------------------------------------------------------------------------
+    -- Una fila por línea; los agregados ya son subconsultas escalares, asi
+    -- que no hace falta GROUP BY.
     FROM LINEA AS l
-
-    -- Los periodos de indicadores se filtran por traslape con el rango DENTRO
-    -- de la tabla derivada (en su WHERE) y se pre-asocian a su linea. Asi el
-    -- LEFT JOIN de abajo solo relaciona por linea y las lineas sin periodos
-    -- en el rango siguen apareciendo (columnas en NULL, que AVG ignora).
-    LEFT JOIN (
-        SELECT m.linea AS linea,
-               i.porcentajeDispo, i.mtbf, i.mttr
-        FROM indicador AS i
-        INNER JOIN maquina AS m ON m.codigo = i.maquina
-        WHERE i.fechaInicio <= fecha_fin
-          AND (i.fechaFin IS NULL OR i.fechaFin >= fecha_inicio)
-    ) AS indi ON indi.linea = l.codigo
-
-    -- Agrupamos los resultados por Línea (para que las funciones AVG funcionen por línea)
-    GROUP BY l.CODIGO, l.NOMBRE
 
     -- Ordenamos la lista alfabéticamente por el nombre de la línea
     ORDER BY l.NOMBRE;
@@ -253,8 +264,11 @@ DELIMITER ;
 --   hora         -> hora del movimiento (si es NULL se usa CURTIME())
 --   pieza        -> PIEZA.numeroSerie que se instala (puede ser NULL)
 -- Lógica:
---   1) Ubica la refaccion y su cantidad DISPO actual en ESTADO_REFACCION.
---   2) Valida que la refaccion exista y que haya al menos 1 DISPO.
+--   1a) Valida que la refaccion exista (independiente de su stock, para
+--       que el INNER JOIN del paso 1b no confunda "no existe" con
+--       "sin stock DISPO").
+--   1b) Ubica la cantidad DISPO actual en ESTADO_REFACCION (INNER JOIN).
+--   2) Valida que haya al menos 1 DISPO.
 --   3) Valida la pieza si se indica.
 --   4) Valida ANTES de tocar la M:M que la refaccion no este ya instalada
 --      (no exista fila INMAQ): asi no se descuenta DISPO sin contraparte
@@ -262,10 +276,11 @@ DELIMITER ;
 --   5) Mueve 1 unidad en la M:M: DISPO -1 e INMAQ +1.
 --   6) Deja el registro de auditoria en MOVIMIENTO (tipo INSTA) con la
 --      fecha/hora indicadas (o las del sistema) y la pieza instalada.
---   7) Devuelve la cantidad DISPO resultante, si quedo por debajo del
---      stockMinimo (para que la app avise sin consultar aparte) y el
---      numeroRegistro del movimiento creado.
+--   7) Devuelve la cantidad DISPO resultante y el numeroRegistro del
+--      movimiento creado.
 -- =====================================================================
+
+-- DOCUMENTADO
 
 DROP PROCEDURE IF EXISTS sp_registrar_salida_refaccion;
 
@@ -280,39 +295,48 @@ CREATE PROCEDURE sp_registrar_salida_refaccion(
     IN pieza        VARCHAR(30)
 )
 BEGIN
-    DECLARE id_refaccion INT;
-    DECLARE disponible   INT DEFAULT 0;
-    DECLARE stock_minimo INT;
-    DECLARE existe_pieza INT;
-    DECLARE existe_inmaq INT DEFAULT 0;
+    DECLARE numero_refaccion INT;
+    DECLARE disponible      INT DEFAULT 0;
+    DECLARE existe_pieza    INT;
+    DECLARE existe_inmaq    INT DEFAULT 0;
+    DECLARE existe_refaccion INT;
     DECLARE fechaP DATE;
     DECLARE horaP TIME;
 
     set fechaP = CURRENT_DATE();
     set horaP = CURRENT_TIME();
 
-    -- 1) ubicar la refaccion y su cantidad DISPO actual (M:M).
-    --    (SELECT refaccion) fuerza el parametro: ESTADO_REFACCION
-    --    tambien tiene una columna "refaccion" y MySQL preferiria la
-    --    columna si se deja sin calificar.
-    SELECT r.numeroRegistro, r.stockMinimo, IFNULL(e.cantidad, 0)
-    INTO id_refaccion, stock_minimo, disponible
-    FROM REFACCION as r
-    LEFT JOIN ESTADO_REFACCION as e
-           ON e.refaccion = r.numeroRegistro AND e.estado_refaccion = 'DISPO'
-    WHERE r.numeroRegistro = (SELECT refaccion);
+    -- 1a) validar que la refaccion exista (independiente de su stock:
+    --     asi el INNER JOIN del paso 1b no confunde "no existe" con
+    --     "sin stock DISPO").
+    SELECT COUNT(*) INTO existe_refaccion
+    FROM REFACCION
+    WHERE numeroRegistro = (SELECT refaccion);
 
-    -- 2) validar que la refaccion exista
-    IF id_refaccion IS NULL THEN
+    IF existe_refaccion = 0 THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'La refaccion especificada no existe';
     END IF;
 
-    -- 2b) validar que haya al menos una unidad disponible (DISPO)
-    -- IF disponible < 1 THEN
-    --     SIGNAL SQLSTATE '45000'
-    --     SET MESSAGE_TEXT = 'Stock insuficiente para la salida de refaccion';
-    -- END IF;
+    -- 1b) cantidad DISPO actual de la refaccion (M:M). El INNER JOIN solo
+    --     devuelve fila si la refaccion tiene estado DISPO; el caso "existe
+    --     pero sin fila DISPO" cae en el paso 2 con mensaje correcto.
+    --     (SELECT refaccion) fuerza el parametro: ESTADO_REFACCION tambien
+    --     tiene una columna "refaccion" y MySQL preferiria la columna si se
+    --     deja sin calificar.
+    SELECT r.numeroRegistro, IFNULL(e.cantidad, 0)
+    INTO numero_refaccion, disponible
+    FROM REFACCION AS r
+    INNER JOIN ESTADO_REFACCION AS e
+           ON e.refaccion = r.numeroRegistro
+          AND e.estado_refaccion = 'DISPO'
+    WHERE r.numeroRegistro = (SELECT refaccion);
+
+    -- 2) validar que haya al menos una unidad disponible (DISPO)
+    IF disponible < 1 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Cantidad disponible insuficiente para la salida de refaccion';
+    END IF;
 
     -- 3) validar la pieza si se indica
     IF pieza IS NOT NULL THEN
@@ -332,7 +356,7 @@ BEGIN
     SELECT COUNT(*) INTO existe_inmaq
     FROM ESTADO_REFACCION
     WHERE estado_refaccion = 'INMAQ'
-      AND refaccion = id_refaccion;
+      AND refaccion = numero_refaccion;
 
     IF existe_inmaq > 0 THEN
         SIGNAL SQLSTATE '45000'
@@ -343,22 +367,20 @@ BEGIN
     UPDATE ESTADO_REFACCION
     SET cantidad = cantidad - 1
     WHERE estado_refaccion = 'DISPO'
-      AND refaccion = id_refaccion;
+      AND refaccion = numero_refaccion;
 
     INSERT INTO ESTADO_REFACCION (estado_refaccion, refaccion, cantidad)
-    VALUES ('INMAQ', id_refaccion, 1);
+    VALUES ('INMAQ', numero_refaccion, 1);
 
     -- 6) dejar el registro de auditoria en MOVIMIENTO (tipo INSTA) con la
     --    fecha/hora indicadas (o las del sistema) y la pieza instalada.
     INSERT INTO MOVIMIENTO (descripcion, fecha, hora, tipoMovimiento, orden_mantenimiento, refaccion, PIEZA)
-    VALUES (descripcion, fechaP, horaP, 'INSTA', orden, id_refaccion, pieza);
+    VALUES (descripcion, fechaP, horaP, 'INSTA', orden, numero_refaccion, pieza);
 
     -- 7) informar el resultado a quien llamo el procedimiento: el
     --    endpoint MovimientoCreateAPIView espera ESTE result set (si no
     --    hay SELECT final, cur.description viene en None y falla).
     SELECT (disponible - 1) AS stock_resultante,
-           stock_minimo AS stock_minimo_out,
-           (disponible - 1) <= stock_minimo AS requiere_reabastecimiento,
            LAST_INSERT_ID() AS numero_movimiento;
 END $$
 
@@ -523,6 +545,8 @@ DELIMITER ;
 --   Patron: SP que consume una vista de apoyo (igual que el SP1 con
 --   v_periodo_abierto_maquina y el SP3 con la M:M ESTADO_REFACCION).
 -- =====================================================================
+
+-- DOCUMENTADO
 
 DROP PROCEDURE IF EXISTS sp_resumen_maquina_maquinaria;
 

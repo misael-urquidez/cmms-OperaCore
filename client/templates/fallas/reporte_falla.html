@@ -54,9 +54,6 @@
         <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas) <span id="horas-error"></span></label>
         <input type="number" name="tiempoParo" id="tiempoParo" min="0" step="any" data-error-id="horas-error" value="{{ datos.tiempoParo|default:'' }}" />
 
-        <label for="fechaSolucion">Fecha de solucion</label>
-        <input type="date" name="fechaSolucion" id="fechaSolucion" value="{{ datos.fechaSolucion|default:'' }}" />
-
         <label for="maquina">Maquina</label>
         <select name="maquina" id="maquina" required>
           <option value="">Seleccione...</option>
