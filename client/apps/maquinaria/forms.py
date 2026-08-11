@@ -128,19 +128,19 @@ class MaquinaForm(forms.Form):
         estados = _fetch_catalogo("v1/edo_maquina/list/", "maquinaria_edos_list")
         tipos = _fetch_catalogo("v1/tipo_maquina/list/", "maquinaria_tipos_list")
 
-        self.fields["linea"].choices = [("", "---------")] + [
+        self.fields["linea"].choices = [("", "Seleccione")] + [
             (l["codigo"], l["nombre"]) for l in lineas if "codigo" in l
         ]
-        self.fields["marca"].choices = [("", "---------")] + [
+        self.fields["marca"].choices = [("", "Seleccione")] + [
             (m["clave"], m["nombre"]) for m in marcas if "clave" in m
         ]
-        self.fields["modelo"].choices = [("", "---------")] + [
+        self.fields["modelo"].choices = [("", "Seleccione")] + [
             (m["codigo"], m["nombre"]) for m in modelos if "codigo" in m
         ]
-        self.fields["estado_maquina"].choices = [("", "---------")] + [
+        self.fields["estado_maquina"].choices = [("", "Seleccione")] + [
             (e["codigo"], e["nombre"]) for e in estados if "codigo" in e
         ]
-        self.fields["tipo_maquina"].choices = [("", "---------")] + [
+        self.fields["tipo_maquina"].choices = [("", "Seleccione")] + [
             (t.get("numeroregistro"), t["nombre"]) for t in tipos if "nombre" in t
         ]
 

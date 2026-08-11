@@ -153,7 +153,7 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("asunto"),
     {
       required: true,
-      minLength: 2,
+      minLength: 5,
       maxLength: 50,
       pattern: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/,
     },
@@ -185,7 +185,7 @@ document.addEventListener("DOMContentLoaded", function () {
       required: true,
       minLength: 10,
       maxLength: 500,
-      minWords: 3,
+      minWords: 1,
     },
     document.getElementById("causaRaiz-error"),
     estadoElement,

@@ -128,6 +128,7 @@
         <label>Fecha fin<input type="date" id="opsFechaFin" required></label>
         <label>Horas operadas<input type="number" step="1" min="0" id="opsHoras" required></label>
         <button type="submit" class="btn-plant-secondary">Registrar horas</button>
+        <a href="{% url 'maquinaria:registro-ops'%}" class="btn-plant-secondary">Ver más detale de las horas de operacion </a>
       </form>
       <p class="feedback-msg" id="drawerOpsMsg" hidden></p>
       <p class="section-hint">El MTTR y la disponibilidad se calculan solos: MTTR al cerrar una orden de mantenimiento, disponibilidad a partir de MTBF y MTTR.</p>

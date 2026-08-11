@@ -58,7 +58,7 @@
         <select name="maquina" id="maquina" required>
           <option value="">Seleccione...</option>
           {% for m in maquinas %}
-            <option value="{{ m.codigo }}" {% if datos.maquina == m.codigo %}selected{% endif %}>{{ m.nombre }}</option>
+            <option value="{{ m.codigo }}" {% if datos.maquina == m.codigo %}selected{% endif %}>{{ m.codigo }} - {{ m.nombre }}</option>
           {% endfor %}
         </select>
 
