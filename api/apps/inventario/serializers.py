@@ -1,7 +1,10 @@
 from rest_framework import serializers
 import os
 from django.conf import settings
+from django.db import transaction
 from . import models
+
+CODIGO_DISPO = "DISPO"
 
 # ------------ CLASIFICACION ----------------------------------------------------
 class ListClasificacionSerializer(serializers.ModelSerializer):
@@ -257,6 +260,8 @@ class UpdateHerramientaSerializer(serializers.ModelSerializer):
 
 # ------------ PIEZA ------------------------------------------------------------
 class ListPiezaSerializer(serializers.ModelSerializer):
+    porcentaje_desgaste = serializers.FloatField(read_only=True)
+
     class Meta:
         model = models.Pieza
         fields = "__all__"
@@ -316,7 +321,46 @@ class DetailRefaccionSerializer(serializers.ModelSerializer):
         model = models.Refaccion
         fields = "__all__"
 
+@transaction.atomic
+def _ajustar_stock_refaccion(refaccion, nuevo_stock):
+    """Mantiene la M:M ESTADO_REFACCION consistente con REFACCION.stock.
+
+    Al subir el stock, la cantidad aumentada entra como DISPO (disponible).
+    Al bajar el stock se rechaza si los estados no disponibles suman mas que
+    el nuevo stock (no quedarian unidades disponibles); si pasa la
+    validacion, el decremento se descuenta de DISPO."""
+    estados = list(refaccion.estadorefaccion_set.select_related("estado_refaccion"))
+    suma_no_dispo = sum(
+        e.cantidad for e in estados if e.estado_refaccion.codigo != CODIGO_DISPO
+    )
+    if nuevo_stock < suma_no_dispo:
+        raise serializers.ValidationError(
+            f"No se puede bajar el stock a {nuevo_stock}: hay {suma_no_dispo} "
+            "unidad(es) en estados no disponibles."
+        )
+
+    dispo = next(
+        (e for e in estados if e.estado_refaccion.codigo == CODIGO_DISPO), None
+    )
+    cantidad_dispo = nuevo_stock - suma_no_dispo
+    if dispo is not None:
+        dispo.cantidad = cantidad_dispo
+        dispo.save(update_fields=["cantidad"])
+    elif cantidad_dispo > 0:
+        models.EstadoRefaccion.objects.create(
+            estado_refaccion=models.EdoRefaccion.objects.get(codigo=CODIGO_DISPO),
+            refaccion=refaccion,
+            cantidad=cantidad_dispo,
+        )
+
+    refaccion.stock = nuevo_stock
+    refaccion.save(update_fields=["stock"])
+
+
 class CreateRefaccionSerializer(serializers.ModelSerializer):
+    codigoinventario = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    numeroorden = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
     class Meta:
         model = models.Refaccion
         fields = [
@@ -334,7 +378,18 @@ class CreateRefaccionSerializer(serializers.ModelSerializer):
             "clasificacion",
         ]
 
+    def create(self, validated_data):
+        with transaction.atomic():
+            refaccion = super().create(validated_data)
+            stock = validated_data.get("stock")
+            if stock and stock > 0:
+                _ajustar_stock_refaccion(refaccion, stock)
+        return refaccion
+
 class UpdateRefaccionSerializer(serializers.ModelSerializer):
+    codigoinventario = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    numeroorden = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
     class Meta:
         model = models.Refaccion
         fields = [
@@ -351,6 +406,13 @@ class UpdateRefaccionSerializer(serializers.ModelSerializer):
             "tipo_refaccion",
             "clasificacion",
         ]
+
+    def update(self, instance, validated_data):
+        with transaction.atomic():
+            if "stock" in validated_data:
+                _ajustar_stock_refaccion(instance, validated_data["stock"])
+            refaccion = super().update(instance, validated_data)
+        return refaccion
 
 
 # ------------ TABLAS DE RELACION / INTERMEDIAS ---------------------------------

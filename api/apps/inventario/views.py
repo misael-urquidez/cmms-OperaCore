@@ -1,12 +1,12 @@
-from datetime import datetime
-
 from django.db import connection
 from django.db.utils import OperationalError
-from django.db.models import Sum
+from django.db.models import Case, ExpressionWrapper, F, FloatField, OuterRef, Subquery, Sum, Value, When
+from django.db.models.functions import Coalesce, Least, Round
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import generics, status
 from apps.mantenimiento.models import Movimiento
+from apps.monitoreo.models import RegistroOps
 from . import models
 from . import serializers
 
@@ -242,11 +242,46 @@ class PiezaListAPIView(generics.ListAPIView):
     serializer_class = serializers.ListPiezaSerializer
 
     def get_queryset(self):
-        qs = models.Pieza.objects.select_related("maquina", "edo_pieza", "tipo_pieza").order_by("nombre")
+        qs = models.Pieza.objects.select_related("maquina", "edo_pieza", "tipo_pieza")
         maquina = self.request.query_params.get("maquina")
         if maquina:
             qs = qs.filter(maquina_id=maquina)
-        return qs
+
+        horas_op = (
+            RegistroOps.objects
+            .filter(
+                maquina_id=OuterRef("maquina_id"),
+                fechaInicio__gte=OuterRef("fechainstalacion"),
+            )
+            .values("maquina_id")
+            .annotate(total=Sum("horasOperacion"))
+            .values("total")
+        )
+
+        desgaste = Case(
+            When(
+                tiempovidautil__gt=0,
+                then=Least(
+                    Round(
+                        ExpressionWrapper(
+                            F("_horas_op") * 100.0 / F("tiempovidautil"),
+                            output_field=FloatField(),
+                        ),
+                        1,
+                    ),
+                    Value(100.0),
+                ),
+            ),
+            default=Value(0.0),
+            output_field=FloatField(),
+        )
+
+        return (
+            qs
+            .annotate(_horas_op=Coalesce(Subquery(horas_op), Value(0.0), output_field=FloatField()))
+            .annotate(porcentaje_desgaste=desgaste)
+            .order_by("nombre")
+        )
 
 
 class PiezaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -268,90 +303,6 @@ class PiezaCreateAPIView(generics.CreateAPIView):
         pieza = serializer.save()
         data = serializers.DetailPiezaSerializer(pieza).data
         return Response(data, status=status.HTTP_201_CREATED)
-
-
-class PiezaWearAPIView(APIView):
-    """Calcula horas de operacion de una pieza sumando REGISTRO_OPS
-    de la maquina asociada, desde la fecha de instalacion."""
-
-    def get(self, request):
-        maquina = request.query_params.get("maquina")
-        fecha_str = request.query_params.get("fecha_instalacion")
-
-        if not maquina or not fecha_str:
-            return Response(
-                {"error": "Se requieren 'maquina' y 'fecha_instalacion'"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            fecha_instalacion = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-        except ValueError:
-            return Response(
-                {"error": "fecha_instalacion debe ser YYYY-MM-DD"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        from apps.monitoreo.models import RegistroOps
-
-        total = (
-            RegistroOps.objects.filter(
-                maquina_id=maquina,
-                fechaInicio__gte=fecha_instalacion,
-            ).aggregate(total=Sum("horasOperacion"))["total"]
-            or 0
-        )
-
-        return Response({
-            "maquina": maquina,
-            "fecha_instalacion": fecha_str,
-            "horas_operacion": total,
-        })
-
-
-class DepreciacionPiezaAPIView(APIView):
-    """Calcula la depreciacion anual de una pieza via
-    sp_calcular_depreciacion_pieza. El SP recibe la tasa de depreciacion
-    (parametro INOUT) y regresa tasa * PIEZA.costoInicial redondeado a 2
-    decimales.
-    POST /inventario/v1/piezas/<str:pk>/depreciacion/
-    Body: {"tasa": 0.08}"""
-
-    def post(self, request, pk):
-        tasa = request.data.get("tasa")
-        if tasa is None:
-            return Response(
-                {"detail": "Falta 'tasa' (ej. 0.08 para 8% anual)."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        try:
-            tasa = float(tasa)
-        except (TypeError, ValueError):
-            return Response(
-                {"detail": "'tasa' debe ser un numero."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            with connection.cursor() as cur:
-                # p_pieza es IN (posicion 0), p_factor es INOUT (posicion 1):
-                # se manda la tasa de entrada y se lee el resultado de la
-                # variable de sesion que el driver crea para esa posicion.
-                cur.callproc("sp_calcular_depreciacion_pieza", [pk, tasa])
-                cur.execute("SELECT @_sp_calcular_depreciacion_pieza_1")
-                (depreciacion,) = cur.fetchone()
-        except OperationalError as e:
-            # SIGNAL SQLSTATE '45000' del SP: la pieza no existe.
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(
-            {
-                "pieza": pk,
-                "tasa": tasa,
-                "depreciacion_anual": depreciacion,
-            },
-            status=status.HTTP_200_OK,
-        )
 
 
 # ------------ REFACCIONES --------------------------------------------------

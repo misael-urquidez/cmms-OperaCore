@@ -12,33 +12,30 @@ function seleccionarTipo(el) {
   var campoRefaccion = document.getElementById('campo-refaccion');
   var campoDesc = document.getElementById('campo-descripcion');
   var selOrden = document.getElementById('mov-orden');
-  var selRefaccion = document.getElementById('mov-refaccion');
 
   if (tipo === 'INSTA') {
     campoOrden.style.display = '';
     campoRefaccion.style.display = '';
     campoDesc.style.display = 'none';
     selOrden.required = true;
-    selRefaccion.required = true;
   } else if (tipo === 'DESMO') {
     campoOrden.style.display = '';
     campoRefaccion.style.display = 'none';
     campoDesc.style.display = '';
     selOrden.required = true;
-    selRefaccion.required = false;
-    selRefaccion.value = '';
+    limpiarRefaccion();
   } else if (tipo === 'REHA') {
     campoOrden.style.display = '';
     campoRefaccion.style.display = '';
     campoDesc.style.display = 'none';
     selOrden.required = false;
-    selRefaccion.required = true;
   }
 
   limpiarPieza();
 
   // INSTA: se elige la pieza con el modal (existente o nueva).
-  // DESMO/REHA: solo select de piezas existentes (sin registro).
+  // DESMO/REHA: select de piezas existentes, filtrado por estado
+  // (DESMO -> instaladas, REHA -> en rehabilitacion).
   var wrapNueva = document.getElementById('pieza-nueva-wrap');
   var selectPieza = document.getElementById('mov-pieza-select');
   var resumenPieza = document.getElementById('mov-pieza-resumen');
@@ -50,7 +47,28 @@ function seleccionarTipo(el) {
     if (wrapNueva) wrapNueva.style.display = 'none';
     if (selectPieza) selectPieza.style.display = '';
     if (resumenPieza) resumenPieza.style.display = 'none';
+    filtrarPiezasPorTipo(selectPieza, tipo);
     if (selectPieza) document.getElementById('mov-pieza').value = selectPieza.value;
+  }
+}
+
+/* ---- filtro del select de piezas segun el tipo de movimiento ----
+   DESMO: solo piezas instaladas en una maquina.
+   REHA:  solo piezas en estado ENREH (en rehabilitacion). */
+function filtrarPiezasPorTipo(select, tipo) {
+  if (!select) return;
+  Array.prototype.forEach.call(select.options, function(opt) {
+    if (!opt.value) return;
+    var estado = opt.getAttribute('data-estado') || '';
+    var maquina = opt.getAttribute('data-maquina') || '';
+    var ok = true;
+    if (tipo === 'DESMO') ok = maquina !== '';
+    else if (tipo === 'REHA') ok = estado === 'ENREH';
+    opt.hidden = !ok;
+  });
+  if (select.value) {
+    var sel = select.selectedOptions && select.selectedOptions[0];
+    if (sel && sel.hidden) { select.value = ''; document.getElementById('mov-pieza').value = ''; }
   }
 }
 
@@ -63,6 +81,17 @@ function limpiarPieza() {
   });
   var resumen = document.getElementById('mov-pieza-resumen');
   if (resumen) resumen.textContent = 'Sin pieza seleccionada.';
+}
+
+/* ---- limpieza de refaccion (global: se usa tambien desde seleccionarTipo) ---- */
+function limpiarRefaccion() {
+  var hid = document.getElementById('mov-refaccion');
+  if (hid) hid.value = '';
+  document.querySelectorAll('#mov-refaccion-modal [name^="refaccion_"]').forEach(function(inp) {
+    inp.value = '';
+  });
+  var resumen = document.getElementById('mov-refaccion-resumen');
+  if (resumen) resumen.textContent = 'Sin refacción seleccionada.';
 }
 
 /* ---- modal de pieza (existente o nueva) ---- */
@@ -96,10 +125,10 @@ function limpiarPieza() {
   }
 
   function activarTab(nombre) {
-    document.querySelectorAll('.mov-pieza__tab').forEach(function(b) {
+    modal.querySelectorAll('.mov-pieza__tab').forEach(function(b) {
       b.classList.toggle('is-active', b.getAttribute('data-tab') === nombre);
     });
-    document.querySelectorAll('.mov-pieza__panel').forEach(function(p) {
+    modal.querySelectorAll('.mov-pieza__panel').forEach(function(p) {
       p.hidden = p.getAttribute('data-panel') !== nombre;
     });
     var btnRegistrar = document.getElementById('mov-pieza-registrar');
@@ -189,7 +218,7 @@ function limpiarPieza() {
   var backdrop = modal.querySelector('.fallas-modal__backdrop');
   if (backdrop) backdrop.addEventListener('click', cerrarModalPieza);
 
-  document.querySelectorAll('.mov-pieza__tab').forEach(function(tab) {
+  modal.querySelectorAll('.mov-pieza__tab').forEach(function(tab) {
     tab.addEventListener('click', function() { activarTab(tab.getAttribute('data-tab')); });
   });
 
@@ -247,6 +276,129 @@ function limpiarPieza() {
         e.preventDefault();
         alert('Selecciona o registra una pieza antes de registrar el movimiento.');
       }
+    });
+  }
+})();
+
+/* ---- modal de refaccion (existente o nueva) ---- */
+(function () {
+  var modal = document.getElementById('mov-refaccion-modal');
+  if (!modal) return;
+
+  function leerJson(id) {
+    var el = document.getElementById(id);
+    if (!el) return [];
+    try { return JSON.parse(el.textContent); } catch (e) { return []; }
+  }
+
+  var REFACCIONES = leerJson('mov-refacciones-data');
+
+  var lista = document.getElementById('mov-refaccion-lista');
+  var buscar = document.getElementById('mov-refaccion-buscar');
+  var resumen = document.getElementById('mov-refaccion-resumen');
+
+  function abrirModalRefaccion() {
+    activarTab('buscar');
+    pintarListaRefacciones();
+    modal.classList.add('is-open');
+  }
+
+  function cerrarModalRefaccion() {
+    modal.classList.remove('is-open');
+  }
+
+  function activarTab(nombre) {
+    modal.querySelectorAll('.mov-pieza__tab').forEach(function(b) {
+      b.classList.toggle('is-active', b.getAttribute('data-tab') === nombre);
+    });
+    modal.querySelectorAll('.mov-pieza__panel').forEach(function(p) {
+      p.hidden = p.getAttribute('data-panel') !== nombre;
+    });
+    var btnRegistrar = document.getElementById('mov-refaccion-registrar');
+    if (btnRegistrar) btnRegistrar.hidden = nombre !== 'nueva';
+  }
+
+  function pintarListaRefacciones() {
+    if (!lista) return;
+    lista.innerHTML = '';
+    var q = (buscar && buscar.value || '').toLowerCase().trim();
+    var filtradas = REFACCIONES.filter(function(r) {
+      if (!q) return true;
+      return (r.codigosku || '').toLowerCase().indexOf(q) !== -1 ||
+             (r.nombre || '').toLowerCase().indexOf(q) !== -1 ||
+             String(r.numeroregistro).indexOf(q) !== -1;
+    });
+    if (!filtradas.length) {
+      var vacio = document.createElement('p');
+      vacio.style.cssText = 'font-size:.85rem;opacity:.7;margin:0;';
+      vacio.textContent = 'No se encontraron refacciones. Usa la pestaña "Registrar nueva".';
+      lista.appendChild(vacio);
+      return;
+    }
+    filtradas.forEach(function(r) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mov-pieza__item';
+      var strong = document.createElement('strong');
+      strong.textContent = r.nombre || 'Refacción';
+      var span = document.createElement('span');
+      span.textContent = (r.codigosku || '') + ' · Stock: ' + (r.stock != null ? r.stock : '—');
+      btn.appendChild(strong);
+      btn.appendChild(span);
+      btn.addEventListener('click', function() { seleccionarRefaccionExistente(r); });
+      lista.appendChild(btn);
+    });
+  }
+
+  function seleccionarRefaccionExistente(r) {
+    limpiarCamposNueva();
+    document.getElementById('mov-refaccion').value = r.numeroregistro;
+    resumen.textContent = 'Refacción seleccionada: ' + (r.nombre || '') + ' — ' + (r.codigosku || '');
+    cerrarModalRefaccion();
+  }
+
+  function limpiarCamposNueva() {
+    document.querySelectorAll('#mov-refaccion-modal [name^="refaccion_"]').forEach(function(inp) {
+      inp.value = '';
+    });
+  }
+
+  /* ---- wiring ---- */
+  var btnAbrir = document.getElementById('mov-refaccion-btn');
+  if (btnAbrir) btnAbrir.addEventListener('click', abrirModalRefaccion);
+  if (buscar) buscar.addEventListener('input', pintarListaRefacciones);
+
+  var btnCerrar = document.getElementById('mov-refaccion-modal-close');
+  if (btnCerrar) btnCerrar.addEventListener('click', cerrarModalRefaccion);
+  var btnCancelar = document.getElementById('mov-refaccion-modal-cancelar');
+  if (btnCancelar) btnCancelar.addEventListener('click', cerrarModalRefaccion);
+  var backdrop = modal.querySelector('.fallas-modal__backdrop');
+  if (backdrop) backdrop.addEventListener('click', cerrarModalRefaccion);
+
+  modal.querySelectorAll('.mov-pieza__tab').forEach(function(tab) {
+    tab.addEventListener('click', function() { activarTab(tab.getAttribute('data-tab')); });
+  });
+
+  // "Usar refaccion nueva": los campos refaccion_* del modal se guardan en el
+  // formulario; la refaccion se creara en el API al registrar el movimiento.
+  var btnRegistrar = document.getElementById('mov-refaccion-registrar');
+  if (btnRegistrar) {
+    btnRegistrar.addEventListener('click', function() {
+      var requeridos = [
+        ['refaccion_codigosku', 'Código SKU'],
+        ['refaccion_nombre', 'Nombre'],
+      ];
+      for (var i = 0; i < requeridos.length; i++) {
+        var f = document.getElementById(requeridos[i][0]);
+        if (!f || !f.value) {
+          alert('Completa el campo obligatorio: ' + requeridos[i][1]);
+          return;
+        }
+      }
+      document.getElementById('mov-refaccion').value = '';
+      var nombre = document.getElementById('refaccion_nombre').value;
+      resumen.textContent = 'Refacción nueva: ' + nombre + ' (se registrará al guardar el movimiento)';
+      cerrarModalRefaccion();
     });
   }
 })();

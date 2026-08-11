@@ -353,10 +353,14 @@ BEGIN
     -- 4) validar ANTES de tocar la M:M que la refaccion no este ya
     --    instalada (no exista fila INMAQ). Asi el error es claro y, sobre
     --    todo, no se descuenta DISPO si el INSERT de INMAQ fallaria.
+    --    OJO: hay que calificar con el alias (e.refaccion) porque si no
+    --    MySQL resuelve `refaccion` al PARAMETRO del procedimiento, que
+    --    eclipsa la columna, y el COUNT cuenta TODAS las filas INMAQ
+    --    (refaccion = numero_refaccion siempre verdadero).
     SELECT COUNT(*) INTO existe_inmaq
-    FROM ESTADO_REFACCION
-    WHERE estado_refaccion = 'INMAQ'
-      AND refaccion = numero_refaccion;
+    FROM ESTADO_REFACCION AS e
+    WHERE e.estado_refaccion = 'INMAQ'
+      AND e.refaccion = numero_refaccion;
 
     IF existe_inmaq > 0 THEN
         SIGNAL SQLSTATE '45000'
@@ -364,10 +368,10 @@ BEGIN
     END IF;
 
     -- 5) mover 1 unidad DISPO -> INMAQ en la tabla M:M ESTADO_REFACCION
-    UPDATE ESTADO_REFACCION
-    SET cantidad = cantidad - 1
-    WHERE estado_refaccion = 'DISPO'
-      AND refaccion = numero_refaccion;
+    UPDATE ESTADO_REFACCION AS e
+    SET e.cantidad = e.cantidad - 1
+    WHERE e.estado_refaccion = 'DISPO'
+      AND e.refaccion = numero_refaccion;
 
     INSERT INTO ESTADO_REFACCION (estado_refaccion, refaccion, cantidad)
     VALUES ('INMAQ', numero_refaccion, 1);
@@ -450,55 +454,6 @@ DELIMITER ;
 -- Llamada (igual que el ejemplo):
 -- call srendimiento_trabajador('NOM-001', @nombre, @asignadas, @cerradas);
 -- select @nombre as Nombre, @asignadas as Ordenes_Asignadas, @cerradas as Ordenes_Cerradas;
-
--- =====================================================================
--- Procedimiento 5: scalcular_depreciacion_pieza
--- =====================================================================
--- Objetivo: calcular la depreciacion anual de una pieza usando un
---           parametro INOUT. Mismo patron que scomisiones: entra la
---           tasa de depreciacion en factor, dentro del SP se combina
---           con PIEZA.costoInicial (set factor = factor * costo) y
---           el mismo parametro sale con el resultado. Asi queda la
---           evidencia del "campo calculado" depresacionAnual.
--- Parámetros:
---   pieza  -> PIEZA.numeroSerie (IN)
---   factor -> INOUT: entra la tasa (ej. 0.08) y sale la depreciacion
---               anual (tasa * costoInicial), redondeada a 2 decimales
--- Lógica:
---   1) Valida que la pieza exista (SIGNAL si no).
---   2) Multiplica la tasa entrante por el costoInicial de la pieza.
---   3) Devuelve el resultado en el mismo parametro INOUT.
--- =====================================================================
-
-DROP PROCEDURE IF EXISTS sp_calcular_depreciacion_pieza;
-
-DELIMITER $$
-
-CREATE PROCEDURE sp_calcular_depreciacion_pieza(
-    IN  pieza    VARCHAR(30),
-    INOUT factor FLOAT
-)
-BEGIN
-    DECLARE costo FLOAT;
-
-    SELECT costoInicial INTO costo
-    FROM PIEZA
-    WHERE numeroSerie = pieza;
-
-    IF costo IS NULL THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'La pieza especificada no existe';
-    END IF;
-
-    SET factor = ROUND(factor * costo, 2);
-END $$
-
-DELIMITER ;
-
--- Llamada (igual que el ejemplo):
--- set @factor = 0.08;
--- call sp_calcular_depreciacion_pieza('PS-6205-001', @factor);
--- select @factor as DepreciacionAnual;
 
 -- =====================================================================
 -- Procedimiento 6a: sp_resumen_maquina_maquinaria (antes sp_resumen_maquina,

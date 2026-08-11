@@ -1,10 +1,10 @@
-import json
+from datetime import date
+
 import requests
 from collections import defaultdict
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
-from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views import generic
 
@@ -49,7 +49,6 @@ def _columnas_config(nombres):
         "puntoreorden": "Punto de reorden",
         "tiempoentregaapr": "Tiempo entrega",
         "porcentaje_desgaste": "% Desgaste",
-        "depresacionanual": "Dep. anual",
         "costoinicial": "Costo inicial",
         "valorresidual": "Valor residual",
         "horasoperacion": "Horas operación",
@@ -218,6 +217,15 @@ class ListaPiezas(generic.View):
         for pieza in piezas:
             maquinas_con_piezas[pieza["maquina"]].append(pieza)
 
+        _hoy = date.today().isoformat()
+        kpi_activas = sum(1 for p in piezas if p.get("edo_pieza") == "OPERA")
+        kpi_desgaste_alto = sum(1 for p in piezas if (p.get("porcentaje_desgaste") or 0) > 85)
+        kpi_garantia = sum(
+            1 for p in piezas
+            if p.get("fechagarantia") and p["fechagarantia"] >= _hoy
+        )
+        kpi_rehabilitacion = sum(1 for p in piezas if p.get("edo_pieza") == "ENREH")
+
         try:
             res = SESSION.get(f"{settings.API_BASE_URL}/fallas/v1/maquinas/", timeout=5)
             maquinas = res.json() if res.status_code == 200 else []
@@ -241,6 +249,10 @@ class ListaPiezas(generic.View):
             "base_template": _base_template(request),
             "estados_pieza": estados_pieza,
             "tipos_pieza": tipos_pieza,
+            "kpi_activas": kpi_activas,
+            "kpi_desgaste_alto": kpi_desgaste_alto,
+            "kpi_garantia": kpi_garantia,
+            "kpi_rehabilitacion": kpi_rehabilitacion,
         }
         return render(request, self.template_name, context)
 
@@ -429,6 +441,13 @@ class CrearMovimiento(generic.View):
         }
         if pieza_data:
             payload["pieza_data"] = pieza_data
+        refaccion_data = {
+            k[len("refaccion_"):]: v
+            for k, v in request.POST.items()
+            if k.startswith("refaccion_") and v
+        }
+        if refaccion_data:
+            payload["refaccion_data"] = refaccion_data
 
         try:
             res = SESSION.post(
@@ -467,6 +486,8 @@ class CrearMovimiento(generic.View):
             datos["pieza"] = [pieza_value]
         for k, v in pieza_data.items():
             datos[f"pieza_{k}"] = [v]
+        for k, v in refaccion_data.items():
+            datos[f"refaccion_{k}"] = [v]
         return render(request, self.template_name, _contexto_movimiento(request, datos))
 
 
@@ -484,15 +505,23 @@ def _contexto_movimiento(request, datos):
         except requests.exceptions.RequestException:
             return []
 
+    estados_pieza = catalogos.get("estados_pieza", [])
+    nombre_estado = {e.get("codigo"): e.get("nombre") for e in estados_pieza}
+    piezas = _get(f"{API_URL}/v1/piezas/list/")
+    for p in piezas:
+        p["edo_pieza_nombre"] = nombre_estado.get(p.get("edo_pieza"), p.get("edo_pieza"))
+
     return {
         "datos": datos,
         "catalogos": catalogos,
         "refacciones": _get(f"{API_URL}/v1/refacciones/list/"),
-        "piezas": _get(f"{API_URL}/v1/piezas/list/"),
+        "piezas": piezas,
         "ordenes": _get(f"{MANTENIMIENTO_API_URL}/v1/ordenes/list/"),
         "maquinas": _get(f"{settings.API_BASE_URL}/fallas/v1/maquinas/"),
         "tipos_pieza": catalogos.get("tipos_pieza", []),
-        "estados_pieza": catalogos.get("estados_pieza", []),
+        "estados_pieza": estados_pieza,
+        "estados_refaccion": catalogos.get("estados_refaccion", []),
+        "tipos_refaccion": catalogos.get("tipos_refaccion", []),
         "seccion": "inventario",
         "subseccion": "crear_movimiento",
         "base_template": _base_template(request),
@@ -1004,30 +1033,3 @@ class ExistenciaModalView(generic.View):
         except requests.exceptions.RequestException:
             pass
         return render(request, "inventario/modal-existencia.html", {"existencias": existencias})
-
-
-class PiezaDepreciacionProxy(generic.View):
-    """Reenvia POST /inventario/piezas/<numeroSerie>/depreciacion/ al api/
-    (SP 5: sp_calcular_depreciacion_pieza). El drawer de piezas la llama
-    por fetch() para calcular y guardar la depreciacion anual."""
-
-    def post(self, request, numeroserie):
-        try:
-            payload = json.loads(request.body or "{}")
-        except json.JSONDecodeError:
-            return JsonResponse({"detail": "JSON inválido."}, status=400)
-
-        try:
-            respuesta = SESSION.post(
-                f"{API_URL}/v2/piezas/{numeroserie}/depreciacion/",
-                json=payload,
-                timeout=10,
-            )
-        except requests.exceptions.RequestException:
-            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
-
-        try:
-            data = respuesta.json()
-        except ValueError:
-            data = {"detail": "Respuesta inválida del API."}
-        return JsonResponse(data, status=respuesta.status_code, safe=False)

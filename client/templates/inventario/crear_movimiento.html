@@ -100,16 +100,14 @@
       </select>
     </div>
 
-    {# Refacción — INSTA y REHA. Va primero porque una refacción se convierte en pieza. #}
+    {# Refacción — INSTA y REHA. Se selecciona una existente o se registra una nueva (igual que la pieza). #}
     <div id="campo-refaccion" style="margin-bottom:1rem;">
-      <label class="fallas-modal__label" for="mov-refaccion">Refacción</label>
-      <select name="refaccion" id="mov-refaccion"
-              style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem;">
-        <option value="">Seleccionar refacción...</option>
-        {% for r in refacciones %}
-          <option value="{{ r.numeroregistro }}" {% if datos.refaccion == r.numeroregistro %}selected{% endif %}>{{ r.nombre }} (stock: {{ r.stock }})</option>
-        {% endfor %}
-      </select>
+      <label class="fallas-modal__label" for="mov-refaccion-btn">Refacción</label>
+      <div class="mov-pieza" id="refaccion-wrap">
+        <button type="button" id="mov-refaccion-btn" class="btn-primary-sm">+ Seleccionar / registrar refacción</button>
+      </div>
+      <input type="hidden" name="refaccion" id="mov-refaccion" value="{% if datos.refaccion %}{{ datos.refaccion }}{% endif %}">
+      <p class="mov-pieza__resumen" id="mov-refaccion-resumen">{% if datos.refaccion %}Refacción seleccionada: {{ datos.refaccion }}{% else %}Sin refacción seleccionada.{% endif %}</p>
     </div>
 
     {# Pieza: INSTA usa botón+modal (existente o nueva). DESMO/REHA solo select de piezas existentes. #}
@@ -122,7 +120,8 @@
               style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem;">
         <option value="">Seleccionar pieza...</option>
         {% for p in piezas %}
-          <option value="{{ p.numeroserie }}" {% if datos.pieza.0 == p.numeroserie %}selected{% endif %}>{{ p.nombre }} — {{ p.numeroserie }}</option>
+          <option value="{{ p.numeroserie }}" data-estado="{{ p.edo_pieza }}" data-maquina="{{ p.maquina|default:'' }}"
+                  {% if datos.pieza.0 == p.numeroserie %}selected{% endif %}>{{ p.nombre }} — {{ p.numeroserie }} ({{ p.edo_pieza_nombre }})</option>
         {% endfor %}
       </select>
       <input type="hidden" name="pieza" id="mov-pieza" value="{% if datos.pieza %}{{ datos.pieza.0 }}{% endif %}">
@@ -243,6 +242,62 @@
         <div class="fallas-modal__footer">
           <button type="button" class="fallas-modal__btn fallas-modal__btn--close" id="mov-pieza-modal-cancelar">Cancelar</button>
           <button type="button" class="fallas-modal__btn" id="mov-pieza-registrar" hidden>Usar pieza nueva</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ---- Modal de refacción (existente o nueva) ---- #}
+  <div class="fallas-modal" id="mov-refaccion-modal" role="dialog">
+    <div class="fallas-modal__backdrop"></div>
+    <div class="fallas-modal__dialog">
+      <div class="fallas-modal__content">
+        <div class="fallas-modal__header">
+          <h2 class="fallas-modal__title">Refacción</h2>
+          <button class="fallas-modal__close" type="button" id="mov-refaccion-modal-close" aria-label="Cerrar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="fallas-modal__body">
+          <div class="mov-pieza__tabs">
+            <button type="button" class="mov-pieza__tab is-active" data-tab="buscar">Buscar existente</button>
+            <button type="button" class="mov-pieza__tab" data-tab="nueva">Registrar nueva</button>
+          </div>
+
+          {# ---- Tab: buscar refacción existente ---- #}
+          <div class="mov-pieza__panel" data-panel="buscar">
+            <input type="search" id="mov-refaccion-buscar" placeholder="Buscar por código SKU o nombre...">
+            <div class="mov-pieza__lista" id="mov-refaccion-lista"></div>
+          </div>
+
+          {# ---- Tab: registrar refacción nueva ---- #}
+          <div class="mov-pieza__panel" data-panel="nueva" hidden>
+            <div class="mov-pieza__grid">
+              <div class="mov-pieza__campo">
+                <label for="refaccion_codigosku">Código SKU *</label>
+                <input type="text" id="refaccion_codigosku" name="refaccion_codigosku" maxlength="30" placeholder="SKU-XXXX">
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="refaccion_nombre">Nombre *</label>
+                <input type="text" id="refaccion_nombre" name="refaccion_nombre" maxlength="30">
+              </div>
+              <div class="mov-pieza__campo">
+                <label for="refaccion_tipo_refaccion">Tipo de refacción</label>
+                <select id="refaccion_tipo_refaccion" name="refaccion_tipo_refaccion">
+                  <option value="">Seleccione...</option>
+                  {% for tr in tipos_refaccion %}
+                    <option value="{{ tr.numeroregistro }}">{{ tr.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fallas-modal__footer">
+          <button type="button" class="fallas-modal__btn fallas-modal__btn--close" id="mov-refaccion-modal-cancelar">Cancelar</button>
+          <button type="button" class="fallas-modal__btn" id="mov-refaccion-registrar" hidden>Usar refacción nueva</button>
         </div>
       </div>
     </div>

@@ -125,95 +125,282 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
     serializer_class = serializers.CreateMovimientoSerializer
 
     def create(self, request, *args, **kwargs):
-        from apps.inventario.serializers import CreatePiezaSerializer
-
         data = request.data.copy()
-        pieza_data = data.get("pieza_data") or None
+        tipo = data.get("tipoMovimiento")
 
         with transaction.atomic():
-            if data.get("tipoMovimiento") == "INSTA":
-                # INSTA: la refaccion sale del almacen y se convierte en la
-                # pieza instalada. La pieza se crea por ORM y el stock + el
-                # registro de MOVIMIENTO los hace el SP3
-                # (sp_registrar_salida_refaccion) dentro de la misma
-                # transaccion: si el SP lanza SIGNAL todo se revierte y no
-                # queda ninguna pieza huerfana.
-                if pieza_data:
-                    pieza_campos = dict(pieza_data)
-                    for k in ("pieza", "pieza_data"):
-                        pieza_campos.pop(k, None)
-                    if not pieza_campos.get("nombre") and data.get("refaccion"):
-                        ref = models.Refaccion.objects.filter(pk=data["refaccion"]).first()
-                        if ref:
-                            pieza_campos["nombre"] = ref.nombre
-                            pieza_campos.setdefault("costoinicial", ref.costo)
-                    if not pieza_campos.get("fechainstalacion") and data.get("fecha"):
-                        pieza_campos["fechainstalacion"] = data["fecha"]
-                    if not pieza_campos.get("maquina") and data.get("orden_mantenimiento"):
-                        orden = models.OrdenMantenimiento.objects.filter(
-                            pk=data["orden_mantenimiento"]
-                        ).first()
-                        if orden and orden.maquina_id:
-                            pieza_campos["maquina"] = orden.maquina_id
-                    pieza_ser = CreatePiezaSerializer(data=pieza_campos)
-                    pieza_ser.is_valid(raise_exception=True)
-                    pieza = pieza_ser.save()
-                    pieza_serie = pieza.numeroserie
-                else:
-                    pieza_serie = data.get("pieza") or None
-
-                try:
-                    with connection.cursor() as cur:
-                        cur.callproc(
-                            "sp_registrar_salida_refaccion",
-                            [
-                                data.get("refaccion"),
-                                data.get("orden_mantenimiento"),
-                                data.get("descripcion"),
-                                data.get("fecha"),
-                                data.get("hora"),
-                                pieza_serie,
-                            ],
-                        )
-                        # El SP3 termina con un SELECT: stock_resultante,
-                        # numero_movimiento.
-                        col_names = [c[0] for c in cur.description]
-                        row = cur.fetchone()
-                        while cur.nextset():
-                            pass
-                        if not row:
-                            raise ValidationError(
-                                "El procedimiento no devolvió un resultado."
-                            )
-                        resultado = dict(zip(col_names, row))
-                except OperationalError as e:
-                    # Los SIGNAL SQLSTATE '45000' del SP (refaccion inexistente,
-                    # stock insuficiente, pieza inexistente) llegan aqui y se
-                    # convierten en un 400; el atomic revierte la transaccion.
-                    raise ValidationError(e.args[1] if len(e.args) > 1 else str(e))
-
-                movimiento = models.Movimiento.objects.get(
-                    pk=resultado.get("numero_movimiento")
-                )
+            if tipo == "INSTA":
+                movimiento = self._registrar_insta(data)
+            elif tipo == "REHA":
+                movimiento = self._registrar_reha(data)
+            elif tipo == "DESMO":
+                movimiento = self._registrar_desmo(data)
             else:
-                # DESMO/REHA (y cualquier otro tipo): el MOVIMIENTO se crea
-                # por ORM y no se toca el stock de la refaccion.
-                if pieza_data:
-                    pieza_campos = dict(pieza_data)
-                    for k in ("pieza", "pieza_data"):
-                        pieza_campos.pop(k, None)
-                    pieza_ser = CreatePiezaSerializer(data=pieza_campos)
-                    pieza_ser.is_valid(raise_exception=True)
-                    pieza = pieza_ser.save()
-                    data["pieza"] = pieza.numeroserie
-                    data.pop("pieza_data", None)
-
+                # Cualquier otro tipo: solo se deja el registro en MOVIMIENTO.
+                data.pop("pieza_data", None)
+                data.pop("refaccion_data", None)
                 serializer = self.get_serializer(data=data)
                 serializer.is_valid(raise_exception=True)
                 movimiento = serializer.save()
 
-        data_out = serializers.ListMovimientoSerializer(movimiento).data
-        return Response(data_out, status=status.HTTP_201_CREATED)
+        return Response(
+            serializers.ListMovimientoSerializer(movimiento).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    # ------------------------------------------------------------------
+    def _crear_pieza_nueva(self, data):
+        """Crea la pieza a partir de pieza_data (INSTA). Rechaza con mensaje
+        claro si el numeroSerie ya existe para no duplicar una unidad fisica."""
+        from apps.inventario.serializers import CreatePiezaSerializer
+
+        pieza_data = data.get("pieza_data") or None
+        if not pieza_data:
+            return None, data.get("pieza") or None
+
+        pieza_campos = dict(pieza_data)
+        for k in ("pieza", "pieza_data"):
+            pieza_campos.pop(k, None)
+
+        serie = (pieza_campos.get("numeroserie") or "").strip()
+        if serie and models.Pieza.objects.filter(numeroserie=serie).exists():
+            raise ValidationError(
+                f"La serie {serie} ya existe. Usa 'Buscar existente' "
+                "para reinstalar la pieza."
+            )
+
+        if not pieza_campos.get("nombre") and data.get("refaccion"):
+            ref = models.Refaccion.objects.filter(pk=data["refaccion"]).first()
+            if ref:
+                pieza_campos["nombre"] = ref.nombre
+                pieza_campos.setdefault("costoinicial", ref.costo)
+        if not pieza_campos.get("fechainstalacion") and data.get("fecha"):
+            pieza_campos["fechainstalacion"] = data["fecha"]
+        if not pieza_campos.get("maquina") and data.get("orden_mantenimiento"):
+            orden = models.OrdenMantenimiento.objects.filter(
+                pk=data["orden_mantenimiento"]
+            ).first()
+            if orden and orden.maquina_id:
+                pieza_campos["maquina"] = orden.maquina_id
+
+        pieza_ser = CreatePiezaSerializer(data=pieza_campos)
+        pieza_ser.is_valid(raise_exception=True)
+        pieza = pieza_ser.save()
+        return pieza, pieza.numeroserie
+
+    def _call_sp_salida_refaccion(self, data, pieza_serie):
+        """Ejecuta sp_registrar_salida_refaccion (DISPO -> INMAQ + registro
+        MOVIMIENTO INSTA). Los SIGNAL del SP llegan como OperationalError y se
+        convierten en un 400; el transaction.atomic revierte todo."""
+        try:
+            with connection.cursor() as cur:
+                cur.callproc(
+                    "sp_registrar_salida_refaccion",
+                    [
+                        data.get("refaccion"),
+                        data.get("orden_mantenimiento"),
+                        data.get("descripcion"),
+                        data.get("fecha"),
+                        data.get("hora"),
+                        pieza_serie,
+                    ],
+                )
+                col_names = [c[0] for c in cur.description]
+                row = cur.fetchone()
+                while cur.nextset():
+                    pass
+                if not row:
+                    raise ValidationError(
+                        "El procedimiento no devolvió un resultado."
+                    )
+                return dict(zip(col_names, row))
+        except OperationalError as e:
+            raise ValidationError(e.args[1] if len(e.args) > 1 else str(e))
+
+    def _sincronizar_stock_refaccion(self, refaccion):
+        """Recalcula REFACCION.stock como la suma de las cantidades de la
+        M:M ESTADO_REFACCION. La BD de este entorno no tiene los triggers
+        tg_sync_refaccion_stock_* de triggers2.sql, asi que REHA debe dejar
+        el stock consistente manualmente."""
+        total = sum(
+            refaccion.estadorefaccion_set.values_list("cantidad", flat=True)
+        )
+        refaccion.stock = total
+        refaccion.save(update_fields=["stock"])
+
+    def _registrar_insta(self, data):
+        """INSTA: la refaccion sale del almacen (SP3 DISPO -> INMAQ) y la
+        pieza queda instalada en la maquina de la orden. La pieza puede ser
+        nueva (pieza_data) o existente (pieza rehabilitada en ENREH)."""
+        from apps.inventario.models import EdoPieza
+
+        pieza = None
+        if data.get("pieza_data"):
+            pieza, pieza_serie = self._crear_pieza_nueva(data)
+        else:
+            pieza_serie = data.get("pieza") or None
+            if pieza_serie:
+                pieza = models.Pieza.objects.filter(numeroserie=pieza_serie).first()
+                if not pieza:
+                    raise ValidationError(f"La pieza {pieza_serie} no existe.")
+                if not (pieza.edo_pieza_id == "ENREH" or pieza.maquina_id is None):
+                    raise ValidationError(
+                        f"La pieza {pieza_serie} está operativa en una máquina; "
+                        "usa DESMO antes de reinstalarla."
+                    )
+
+        resultado = self._call_sp_salida_refaccion(data, pieza_serie)
+        movimiento = models.Movimiento.objects.get(pk=resultado.get("numero_movimiento"))
+
+        # La pieza (existente o recién creada) queda OPERA en la maquina de
+        # la orden. Si el UPDATE fallara, el atomic revierte el SP y la pieza.
+        if pieza is not None:
+            opera = EdoPieza.objects.filter(codigo="OPERA").first()
+            if opera:
+                pieza.edo_pieza_id = "OPERA"
+            if data.get("orden_mantenimiento"):
+                orden = models.OrdenMantenimiento.objects.filter(
+                    pk=data["orden_mantenimiento"]
+                ).first()
+                if orden and orden.maquina_id:
+                    pieza.maquina_id = orden.maquina_id
+            pieza.save(update_fields=["maquina", "edo_pieza"])
+
+        return movimiento
+
+    def _registrar_reha(self, data):
+        """REHA: una pieza en ENREH (desmontada, sin maquina) se convierte en
+        refaccion disponible en almacen. Si la refaccion ya existe (por SKU) se
+        reutiliza; si no, se crea al vuelo con los datos minimos. La unidad que
+        regresa se mueve INMAQ -> DISPO cuando venia de una instalacion previa
+        (el total de ESTADO_REFACCION no se infla); si no, entra DISPO +1."""
+        import datetime
+        from apps.inventario.models import EdoRefaccion, EstadoRefaccion, Refaccion
+
+        pieza_serie = data.get("pieza") or None
+        if not pieza_serie:
+            raise ValidationError("Indica la pieza que se está rehabilitando.")
+
+        pieza = models.Pieza.objects.filter(numeroserie=pieza_serie).first()
+        if not pieza:
+            raise ValidationError(f"La pieza {pieza_serie} no existe.")
+        if pieza.maquina_id is not None:
+            raise ValidationError(
+                f"La pieza {pieza_serie} sigue instalada en una máquina; "
+                "usa DESMO antes de rehabilitarla."
+            )
+        if pieza.edo_pieza_id != "ENREH":
+            raise ValidationError(
+                "La pieza debe estar en estado 'En Rehabilitación' (ENREH) "
+                "para registrarse como refacción."
+            )
+
+        refaccion_data = data.get("refaccion_data") or None
+        refaccion_id = data.get("refaccion") or None
+
+        if refaccion_data:
+            sku = (refaccion_data.get("codigosku") or "").strip()
+            if not sku:
+                raise ValidationError("Falta el código SKU de la refacción.")
+            refaccion = Refaccion.objects.filter(codigosku=sku).first()
+            if refaccion:
+                refaccion_id = refaccion.numeroregistro
+            else:
+                nombre = (refaccion_data.get("nombre") or "").strip() or pieza.nombre
+                if len(nombre) > 30:
+                    nombre = nombre[:30]
+                if Refaccion.objects.filter(nombre=nombre).exists():
+                    raise ValidationError(
+                        f"Ya existe una refacción con el nombre '{nombre}'."
+                    )
+                refaccion = Refaccion.objects.create(
+                    codigosku=sku,
+                    nombre=nombre,
+                    costo=pieza.costoinicial,
+                    stock=0,
+                    stockminimo=0,
+                    tipo_refaccion_id=refaccion_data.get("tipo_refaccion") or None,
+                )
+                refaccion_id = refaccion.numeroregistro
+        elif not refaccion_id:
+            raise ValidationError(
+                "Indica la refacción (existente o nueva) para la rehabilitación."
+            )
+        else:
+            refaccion = Refaccion.objects.filter(pk=refaccion_id).first()
+            if not refaccion:
+                raise ValidationError("La refacción especificada no existe.")
+
+        # La unidad rehabilitada regresa al almacen:
+        #   - si la refaccion tenia una unidad INMAQ (la pieza salio de esa
+        #     instalacion), se mueve INMAQ -> DISPO (el total no cambia).
+        #   - si no, entra una unidad nueva: DISPO +1.
+        inmaq_row = EstadoRefaccion.objects.filter(
+            estado_refaccion_id="INMAQ", refaccion=refaccion
+        ).first()
+        dispo_row, _ = EstadoRefaccion.objects.get_or_create(
+            estado_refaccion_id="DISPO",
+            refaccion=refaccion,
+            defaults={"cantidad": 0},
+        )
+        if inmaq_row is not None and inmaq_row.cantidad > 0:
+            inmaq_row.cantidad -= 1
+            inmaq_row.save(update_fields=["cantidad"])
+            dispo_row.cantidad += 1
+            dispo_row.save(update_fields=["cantidad"])
+        else:
+            dispo_row.cantidad += 1
+            dispo_row.save(update_fields=["cantidad"])
+
+        self._sincronizar_stock_refaccion(refaccion)
+
+        return models.Movimiento.objects.create(
+            descripcion=data.get("descripcion")
+            or f"Rehabilitación de pieza {pieza.numeroserie}",
+            fecha=data.get("fecha") or datetime.date.today(),
+            hora=data.get("hora") or datetime.datetime.now().time(),
+            tipomovimiento="REHA",
+            orden_mantenimiento_id=data.get("orden_mantenimiento") or None,
+            refaccion=refaccion,
+            pieza=pieza,
+        )
+
+    def _registrar_desmo(self, data):
+        """DESMO: la pieza sale de su maquina (maquina = NULL) y pasa a
+        'En Rehabilitación' (ENREH), el estado previo requerido por REHA."""
+        import datetime
+
+        pieza_serie = data.get("pieza") or None
+        if not pieza_serie:
+            raise ValidationError("Indica la pieza que se está desmontando.")
+
+        pieza = models.Pieza.objects.filter(numeroserie=pieza_serie).first()
+        if not pieza:
+            raise ValidationError(f"La pieza {pieza_serie} no existe.")
+        if pieza.maquina_id is None:
+            raise ValidationError(
+                f"La pieza {pieza_serie} no está instalada en ninguna máquina."
+            )
+
+        maquina_origen = pieza.maquina
+        pieza.maquina = None
+        if pieza.edo_pieza_id in ("OPERA", "DEGRA", "FALLI"):
+            pieza.edo_pieza_id = "ENREH"
+        pieza.save(update_fields=["maquina", "edo_pieza"])
+
+        return models.Movimiento.objects.create(
+            descripcion=data.get("descripcion")
+            or (
+                f"Pieza retirada de la máquina {maquina_origen.nombre}"
+                if maquina_origen
+                else "Pieza desmontada"
+            ),
+            fecha=data.get("fecha") or datetime.date.today(),
+            hora=data.get("hora") or datetime.datetime.now().time(),
+            tipomovimiento="DESMO",
+            orden_mantenimiento_id=data.get("orden_mantenimiento") or None,
+            pieza=pieza,
+        )
 
 
 # ------------ TAREA_ORDEN (llave compuesta) ------------------------------

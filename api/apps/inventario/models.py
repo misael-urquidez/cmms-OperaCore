@@ -121,8 +121,8 @@ class Refaccion(models.Model):
     nombre = models.CharField(unique=True, max_length=30)
     codigosku = models.CharField(db_column='codigoSku', unique=True, max_length=30)  # Field name made lowercase.
     puntoreorden = models.IntegerField(db_column='puntoReorden', blank=True, null=True)  # Field name made lowercase.
-    codigoinventario = models.CharField(db_column='codigoInventario', unique=True, max_length=30)  # Field name made lowercase.
-    numeroorden = models.CharField(db_column='numeroOrden', unique=True, max_length=20)  # Field name made lowercase.
+    codigoinventario = models.CharField(db_column='codigoInventario', unique=True, max_length=30, blank=True, null=True)  # Field name made lowercase.
+    numeroorden = models.CharField(db_column='numeroOrden', unique=True, max_length=20, blank=True, null=True)  # Field name made lowercase.
     costo = models.FloatField()
     tiempoentregaapr = models.IntegerField(db_column='tiempoEntregaApr', blank=True, null=True)  # Field name made lowercase.
     stock = models.IntegerField()

@@ -121,11 +121,12 @@ class ListMovimientoSerializer(serializers.ModelSerializer):
 class CreateMovimientoSerializer(serializers.ModelSerializer):
     tipoMovimiento = serializers.CharField(source="tipomovimiento")
     pieza_data = serializers.DictField(required=False, allow_null=True, write_only=True)
+    refaccion_data = serializers.DictField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = models.Movimiento
         fields = ["tipoMovimiento", "fecha", "hora", "descripcion",
-                  "orden_mantenimiento", "refaccion", "pieza", "pieza_data"]
+                  "orden_mantenimiento", "refaccion", "pieza", "pieza_data", "refaccion_data"]
 
 
 class DetailTareaOrdenSerializer(serializers.ModelSerializer):
