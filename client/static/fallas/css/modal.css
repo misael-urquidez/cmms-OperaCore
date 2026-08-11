@@ -114,6 +114,8 @@
     color: var(--color-text);
 }
 
+.fallas-modal__value .badge { margin-right: 0.35rem; }
+
 .fallas-modal__field input[type="text"],
 .fallas-modal__field input[type="number"],
 .fallas-modal__field input[type="date"],

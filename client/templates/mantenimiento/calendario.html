@@ -31,7 +31,7 @@
 {{ trabajadores|json_script:"trabajadores-data" }}{{ maquinas|json_script:"maquinas-data" }}{{ tipos_mantenimiento|json_script:"elipseTiposMantenimientoData" }}
 <div class="calendario-head">
   <h2>Órdenes con fecha programada</h2>
-  <a href="{% url 'mantenimiento:index' %}" class="btn-orden-secondary">← Volver al listado</a>
+  <a href="{% url 'mantenimiento:index' %}" class="btn-orden-secondary" onclick="volverAtras(event, '{% url 'mantenimiento:index' %}')">← Volver</a>
 </div>
 <div id="calendar"></div>
 <div class="ordenes-list is-hidden" id="ordenesList"><p id="ordenesEmpty" hidden></p></div>

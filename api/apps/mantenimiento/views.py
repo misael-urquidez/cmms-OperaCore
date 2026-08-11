@@ -12,13 +12,14 @@ from reportlab.lib import colors
 from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from rest_framework import generics, status
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.usuarios.models import Trabajador
 from apps.maquinaria.services import cambiar_estado_maquina
 from apps.maquinaria.models import Maquina
-from django.db import transaction
+from django.db import connection, transaction
+from django.db.utils import OperationalError
 from . import models
 from . import serializers
 from apps.fallas.views import _get_reporte_data
@@ -129,14 +130,20 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
         data = request.data.copy()
         pieza_data = data.get("pieza_data") or None
 
+        advertencia = None
+
         with transaction.atomic():
-            if pieza_data:
-                # La pieza "nace" al momento de la instalacion: se crea primero
-                # y su numeroserie queda registrada como pieza_id del MOVIMIENTO.
-                pieza_campos = dict(pieza_data)
-                for k in ("pieza", "pieza_data"):
-                    pieza_campos.pop(k, None)
-                if data.get("tipoMovimiento") == "INSTA":
+            if data.get("tipoMovimiento") == "INSTA":
+                # INSTA: la refaccion sale del almacen y se convierte en la
+                # pieza instalada. La pieza se crea por ORM y el stock + el
+                # registro de MOVIMIENTO los hace el SP3
+                # (sp_registrar_salida_refaccion) dentro de la misma
+                # transaccion: si el SP lanza SIGNAL todo se revierte y no
+                # queda ninguna pieza huerfana.
+                if pieza_data:
+                    pieza_campos = dict(pieza_data)
+                    for k in ("pieza", "pieza_data"):
+                        pieza_campos.pop(k, None)
                     if not pieza_campos.get("nombre") and data.get("refaccion"):
                         ref = models.Refaccion.objects.filter(pk=data["refaccion"]).first()
                         if ref:
@@ -150,17 +157,74 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
                         ).first()
                         if orden and orden.maquina_id:
                             pieza_campos["maquina"] = orden.maquina_id
-                pieza_ser = CreatePiezaSerializer(data=pieza_campos)
-                pieza_ser.is_valid(raise_exception=True)
-                pieza = pieza_ser.save()
-                data["pieza"] = pieza.numeroserie
-                data.pop("pieza_data", None)
+                    pieza_ser = CreatePiezaSerializer(data=pieza_campos)
+                    pieza_ser.is_valid(raise_exception=True)
+                    pieza = pieza_ser.save()
+                    pieza_serie = pieza.numeroserie
+                else:
+                    pieza_serie = data.get("pieza") or None
 
-            serializer = self.get_serializer(data=data)
-            serializer.is_valid(raise_exception=True)
-            movimiento = serializer.save()
+                try:
+                    with connection.cursor() as cur:
+                        cur.callproc(
+                            "sp_registrar_salida_refaccion",
+                            [
+                                data.get("refaccion"),
+                                data.get("orden_mantenimiento"),
+                                data.get("descripcion"),
+                                data.get("fecha"),
+                                data.get("hora"),
+                                pieza_serie,
+                            ],
+                        )
+                        # El SP3 termina con un SELECT: stock_resultante,
+                        # stock_minimo_out, requiere_reabastecimiento,
+                        # numero_movimiento.
+                        col_names = [c[0] for c in cur.description]
+                        row = cur.fetchone()
+                        while cur.nextset():
+                            pass
+                        if not row:
+                            raise ValidationError(
+                                "El procedimiento no devolvió un resultado."
+                            )
+                        resultado = dict(zip(col_names, row))
+                except OperationalError as e:
+                    # Los SIGNAL SQLSTATE '45000' del SP (refaccion inexistente,
+                    # stock insuficiente, pieza inexistente) llegan aqui y se
+                    # convierten en un 400; el atomic revierte la transaccion.
+                    raise ValidationError(e.args[1] if len(e.args) > 1 else str(e))
+
+                movimiento = models.Movimiento.objects.get(
+                    pk=resultado.get("numero_movimiento")
+                )
+                advertencia = {
+                    "stock_resultante": resultado.get("stock_resultante"),
+                    "stock_minimo": resultado.get("stock_minimo_out"),
+                    "requiere_reabastecimiento": bool(
+                        resultado.get("requiere_reabastecimiento")
+                    ),
+                }
+            else:
+                # DESMO/REHA (y cualquier otro tipo): el MOVIMIENTO se crea
+                # por ORM y no se toca el stock de la refaccion.
+                if pieza_data:
+                    pieza_campos = dict(pieza_data)
+                    for k in ("pieza", "pieza_data"):
+                        pieza_campos.pop(k, None)
+                    pieza_ser = CreatePiezaSerializer(data=pieza_campos)
+                    pieza_ser.is_valid(raise_exception=True)
+                    pieza = pieza_ser.save()
+                    data["pieza"] = pieza.numeroserie
+                    data.pop("pieza_data", None)
+
+                serializer = self.get_serializer(data=data)
+                serializer.is_valid(raise_exception=True)
+                movimiento = serializer.save()
 
         data_out = serializers.ListMovimientoSerializer(movimiento).data
+        if advertencia:
+            data_out.update(advertencia)
         return Response(data_out, status=status.HTTP_201_CREATED)
 
 

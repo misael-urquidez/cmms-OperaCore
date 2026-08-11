@@ -274,3 +274,116 @@ class CalendarioView(View):
             "datos_url": f"{API_URL}/v1/ordenes/list/",
         }
         return render(request, self.template_name, context)
+
+
+class TrabajadoresListView(View):
+    template_name = "mantenimiento/trabajadores_lista.html"
+
+    def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
+        trabajadores = _obtener_lista(f"{settings.API_BASE_URL}/usuarios/v1/trabajadores/list/")
+
+        return render(request, self.template_name, {
+            "seccion": "mantenimiento",
+            "subseccion": "trabajadores",
+            "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
+            "es_tecnico": usuario.get("rol") == "TECNI",
+            "usuario": usuario,
+            "trabajadores": trabajadores,
+        })
+
+
+class TrabajadorDetalleView(View):
+    """Perfil de un trabajador: datos, indicadores y actividad
+    (ordenes de mantenimiento + reportes de falla que ha atendido)."""
+
+    template_name = "mantenimiento/trabajador_detalle.html"
+
+    def get(self, request, numeroNomina):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
+        trabajador = None
+        try:
+            resp = SESSION.get(f"{settings.API_BASE_URL}/usuarios/v1/trabajadores/{numeroNomina}/", timeout=5)
+            if resp.status_code == 200:
+                trabajador = resp.json()
+        except requests.exceptions.RequestException:
+            trabajador = None
+
+        if trabajador is None:
+            messages.warning(request, "No se pudo cargar ese trabajador.")
+            return redirect("mantenimiento:trabajadores-lista")
+
+        ordenes = _obtener_lista(
+            f"{settings.API_BASE_URL}/mantenimiento/v1/ordenes/list/?trabajador={numeroNomina}"
+        )
+        reportes = _obtener_lista(
+            f"{settings.API_BASE_URL}/fallas/v1/reportes/list/?trabajador={numeroNomina}"
+        )
+
+        ESTADOS_CERRADOS = ("CERRA", "CANCE")
+        ordenes_pendientes = [o for o in ordenes if o.get("estado_orden") not in ESTADOS_CERRADOS]
+        ordenes_cerradas = [o for o in ordenes if o.get("estado_orden") == "CERRA"]
+
+        # Maquinas distintas tocadas via ordenes o reportes (dict para deduplicar por codigo)
+        maquinas_vistas = {}
+        for o in ordenes:
+            if o.get("maquina"):
+                maquinas_vistas[o["maquina"]] = o.get("maquina_nombre")
+        for r in reportes:
+            if r.get("maquina"):
+                maquinas_vistas[r["maquina"]] = r.get("maquina_nombre")
+        maquinas_atendidas = [
+            {"codigo": codigo, "nombre": nombre} for codigo, nombre in maquinas_vistas.items()
+        ]
+
+        # Linea de tiempo combinada, ordenada por fecha/hora descendente
+        actividad = []
+        for o in ordenes:
+            actividad.append({
+                "tipo": "orden",
+                "fecha": o.get("fechacreacion"),
+                "hora": o.get("horacreacion"),
+                "titulo": f"Orden {o.get('folio')}",
+                "detalle": o.get("descripcion"),
+                "maquina_nombre": o.get("maquina_nombre"),
+                "estado": o.get("estado_orden_nombre"),
+                "folio": o.get("folio"),
+            })
+        for r in reportes:
+            actividad.append({
+                "tipo": "falla",
+                "fecha": r.get("fechaCreacion"),
+                "hora": r.get("horaCreacion"),
+                "titulo": r.get("asunto"),
+                "detalle": r.get("descripcion"),
+                "maquina_nombre": r.get("maquina_nombre"),
+                "estado": r.get("tipo_severidad_nombre"),
+                "numeroRegistro": r.get("numeroRegistro"),
+            })
+        actividad.sort(key=lambda a: (a["fecha"] or "", a["hora"] or ""), reverse=True)
+
+        return render(request, self.template_name, {
+            "seccion": "mantenimiento",
+            "subseccion": "trabajadores",
+            "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
+            "es_tecnico": usuario.get("rol") == "TECNI",
+            "usuario": usuario,
+            "trabajador": trabajador,
+            "ordenes": ordenes,                     # NUEVO
+            "ordenes_cerradas": ordenes_cerradas,    # NUEVO
+            "ordenes_pendientes": ordenes_pendientes,
+            "reportes": reportes,                    # NUEVO
+            "total_ordenes": len(ordenes),
+            "total_cerradas": len(ordenes_cerradas),
+            "total_reportes": len(reportes),
+            "maquinas_atendidas": maquinas_atendidas,
+            "actividad": actividad,
+        })

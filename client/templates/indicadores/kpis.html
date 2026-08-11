@@ -1,0 +1,114 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% block title %}KPI's · OperaCore{% endblock %}
+{% block breadcrumb %}Analítica{% endblock %}
+{% block page_title %}KPI's{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'indicadores/css/dashboard.css' %}">{% endblock %}
+{% block content %}
+<section class="kpi">
+  <header class="kpi__head">
+    <p class="kpi__eyebrow">Indicadores</p>
+    <h1>KPI's de la planta</h1>
+    <p class="kpi__sub">Detalle completo de cada indicador, listo para consultar en tabla o en gráfica.</p>
+  </header>
+
+  <div class="kpi__toolbar">
+    <label class="kpi__filtro kpi__filtro--grow">Buscar
+      <input type="text" id="kpiFiltroTablas" placeholder="Filtrar filas en todas las tablas…">
+    </label>
+    <label class="kpi__filtro">Periodo del reporte
+      <select id="kpiFiltroPeriodo">
+        <option value="">Todo el historial</option>
+        <option value="7">Últimos 7 días</option>
+        <option value="30">Últimos 30 días</option>
+        <option value="90">Últimos 90 días</option>
+        <option value="365">Último año</option>
+        <option value="custom">Rango personalizado…</option>
+      </select>
+    </label>
+    <label class="kpi__filtro kpi__filtro--fecha" id="kpiFiltroFechaInicioWrap" hidden>Desde
+      <input type="date" id="kpiFiltroFechaInicio">
+    </label>
+    <label class="kpi__filtro kpi__filtro--fecha" id="kpiFiltroFechaFinWrap" hidden>Hasta
+      <input type="date" id="kpiFiltroFechaFin">
+    </label>
+    <span class="kpi__spacer"></span>
+    <button type="button" class="kpi__btn kpi__btn--primary" id="kpiAbrirReporte">Hacer reporte</button>
+    <button type="button" class="kpi__btn" id="kpiRecargarTodo">Actualizar todo</button>
+  </div>
+
+  <section class="kpi__panel kpi__panel--wide">
+    <div class="kpi__panel-head">
+      <div>
+        <p class="kpi__panel-title">Reporte de disponibilidad por línea</p>
+        <p class="kpi__panel-sub">Disponibilidad, MTBF y MTTR promedio por línea, más fallas y órdenes cerradas, para el rango que elijas.</p>
+      </div>
+    </div>
+    <div class="kpi__toolbar">
+      <label class="kpi__filtro kpi__filtro--fecha">Desde
+        <input type="date" id="reporteDispoFechaInicio">
+      </label>
+      <label class="kpi__filtro kpi__filtro--fecha">Hasta
+        <input type="date" id="reporteDispoFechaFin">
+      </label>
+      <button type="button" class="kpi__btn kpi__btn--primary" id="reporteDispoGenerar">Generar</button>
+    </div>
+    <div class="kpi__table-wrap" id="reporteDispoResultado">
+      <p class="kpi__table-empty">Elige un rango de fechas y da clic en "Generar".</p>
+    </div>
+  </section>
+
+  <div class="kpi__vista-grid" id="kpiVistaGrid">
+    <!-- Cada tarjeta se genera desde kpis-tablas.js a partir de la lista VISTAS -->
+  </div>
+
+  <div class="kpi__modal" id="kpiModalCerrarPeriodo" role="dialog" aria-modal="true" aria-labelledby="kpiModalCerrarPeriodoTitulo">
+    <div class="kpi__modal-backdrop" data-kpi-cerrar-modal-periodo></div>
+    <div class="kpi__modal-dialog">
+      <div class="kpi__modal-head">
+        <h3 id="kpiModalCerrarPeriodoTitulo">Cerrar periodo de indicador</h3>
+        <button type="button" class="kpi__modal-close" data-kpi-cerrar-modal-periodo aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="kpi__modal-body">
+        <label class="kpi__filtro">Máquina
+          <select id="cerrarPeriodoMaquina"></select>
+        </label>
+        <label class="kpi__filtro">Fecha de cierre
+          <input type="date" id="cerrarPeriodoFecha">
+        </label>
+        <p class="kpi__modal-nota" id="cerrarPeriodoMsg"></p>
+      </div>
+      <div class="kpi__modal-foot">
+        <button type="button" class="kpi__btn kpi__btn--primary" id="cerrarPeriodoConfirmar">Cerrar periodo</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi__modal" id="kpiModalReporte" role="dialog" aria-modal="true" aria-labelledby="kpiModalReporteTitulo">
+    <div class="kpi__modal-backdrop" data-kpi-cerrar-modal></div>
+    <div class="kpi__modal-dialog">
+      <div class="kpi__modal-head">
+        <h3 id="kpiModalReporteTitulo">Hacer reporte</h3>
+        <button type="button" class="kpi__modal-close" data-kpi-cerrar-modal aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="kpi__modal-body">
+        <label class="kpi__modal-todas">
+          <input type="checkbox" id="kpiCheckTodas" checked> Seleccionar todas las vistas
+        </label>
+        <ul class="kpi__modal-lista" id="kpiListaVistas"></ul>
+        <p class="kpi__modal-nota">El periodo elegido junto al buscador se aplica al generar el reporte. Solo acota filas con columnas de fecha; las vistas sin fecha se incluyen completas.</p>
+      </div>
+      <div class="kpi__modal-foot">
+        <button type="button" class="kpi__btn kpi__btn--csv" data-formato="csv">Descargar CSV</button>
+        <button type="button" class="kpi__btn kpi__btn--xlsx" data-formato="xlsx">Descargar Excel</button>
+        <button type="button" class="kpi__btn kpi__btn--pdf" data-formato="pdf">Descargar PDF</button>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{% static 'indicadores/js/kpis-tablas.js' %}"></script>
+<script src="{% static 'indicadores/js/kpis-acciones.js' %}"></script>
+{% endblock %}

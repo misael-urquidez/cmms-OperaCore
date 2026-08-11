@@ -3,243 +3,462 @@
 {% block title %}Reporte de Falla · OperaCore{% endblock %}
 {% block breadcrumb %}Fallas{% endblock %}
 {% block page_title %}Nuevo reporte de falla{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}"><link rel="stylesheet" href="{% static 'fallas/css/elipse-falla.css' %}">{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">
+<link rel="stylesheet" href="{% static 'fallas/css/elipse-falla.css' %}">
+<style>
+  /* --- CONTENEDOR GENERAL --- */
+  .form-card-container {
+    background: var(--color-surface, #1e293b);
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+    border-radius: 0.85rem;
+    padding: 1.5rem;
+    margin-top: 1.25rem;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .form-grid { grid-template-columns: 1fr; }
+  }
+
+  /* --- CAMPOS Y FORMULARIOS --- */
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+    position: relative;
+  }
+  .form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text, #f8fafc);
+  }
+  .form-control-custom {
+    background: var(--color-bg, #0f172a);
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+    color: var(--color-text, #f8fafc);
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+  .form-control-custom:focus {
+    border-color: var(--color-primary, #38bdf8);
+  }
+  .form-control-custom[readonly] {
+    opacity: 0.75;
+    cursor: not-allowed;
+  }
+
+  /* --- DISEÑO CORREGIDO PARA LA ZONA DE SUBIDA DE IMAGEN --- */
+  .file-drop-area {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .drop-zone-custom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed var(--line, rgba(255, 255, 255, 0.2));
+    border-radius: 0.6rem;
+    padding: 1.5rem 1rem;
+    background: var(--color-bg, #0f172a);
+    cursor: pointer;
+    text-align: center;
+    position: static !important;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+  .drop-zone-custom:hover {
+    border-color: var(--color-primary, #38bdf8);
+    background: rgba(56, 189, 248, 0.04);
+  }
+  .drop-zone-custom .icon {
+    font-size: 2rem;
+    margin-bottom: 0.4rem;
+    line-height: 1;
+  }
+  .drop-text-primary {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text, #f8fafc);
+    margin: 0;
+  }
+  .drop-text-secondary {
+    font-size: 0.75rem;
+    color: var(--color-muted, #94a3b8);
+    margin-top: 0.2rem;
+  }
+  .preview-box-custom {
+    border-radius: 0.6rem;
+    overflow: hidden;
+    background: var(--color-bg, #0f172a);
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+  }
+  .preview-box-custom img {
+    max-width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    border-radius: 0.4rem;
+  }
+
+  /* --- DISEÑO MEJORADO DE LA GUÍA DE ESTRUCTURACIÓN --- */
+  .guias-card {
+    background: var(--color-surface, #1e293b);
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+    border-radius: 0.85rem;
+    overflow: hidden;
+    margin-top: 1rem;
+    transition: border-color 0.2s;
+  }
+  .guias-card:hover {
+    border-color: rgba(56, 189, 248, 0.3);
+  }
+  .guias-card details {
+    width: 100%;
+  }
+  .guias-card summary {
+    padding: 0.9rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-primary, #38bdf8);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .guias-card summary::-webkit-details-marker {
+    display: none;
+  }
+  .guias-card summary::after {
+    content: '▾';
+    font-size: 1.1rem;
+    transition: transform 0.2s ease;
+    color: var(--color-muted, #94a3b8);
+  }
+  .guias-card details[open] summary::after {
+    transform: rotate(180deg);
+  }
+  .guias-content {
+    padding: 0 1.25rem 1.25rem 1.25rem;
+    border-top: 1px solid var(--line, rgba(255, 255, 255, 0.05));
+  }
+  .guias__intro {
+    font-size: 0.85rem;
+    color: var(--color-muted, #94a3b8);
+    margin: 0.8rem 0 1rem 0;
+    line-height: 1.45;
+  }
+  .guias__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .guias__item {
+    background: var(--color-bg, #0f172a);
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+    border-radius: 0.5rem;
+    padding: 0.75rem 0.9rem;
+    font-size: 0.825rem;
+    color: var(--color-text, #cbd5e1);
+    line-height: 1.4;
+  }
+  .guias__item strong {
+    color: var(--color-primary, #38bdf8);
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-  <h1>Reporte de Falla</h1>
+<div class="dashboard-container">
+ 
+  <div class="panel-header-flex">
+    <h2>Nuevo reporte de falla</h2>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <button type="button" class="btn-elipse-falla" id="btnElipseFalla" title="Describe la falla y Elipse te ayuda">
+        <span class="elipse-bolt">⚡</span> Redactar con Elipse
+      </button>
 
-  <button type="button" class="btn-elipse-falla" id="btnElipseFalla" title="Describe la falla y Elipse te ayuda a llenar el formulario">
-    <span class="elipse-bolt">⚡</span> Ayúdame a redactar con Elipse
-  </button>
+      <!-- BOTÓN NUEVO DE EVALUACIÓN CON IA -->
+      <button type="button" class="btn-elipse-falla" id="btnEvaluarIa" onclick="document.getElementById('inputEvaluarDocx').click()">
+        ✨ Evaluar con IA
+      </button>
+      <input type="file" id="inputEvaluarDocx" accept=".docx,.pdf" hidden>
 
-  <button type="button" class="btn-elipse-falla" id="btnImportarDocx" title="Sube un reporte llenado en Word o PDF y Elipse lo lee por ti" onclick="document.getElementById('inputImportarDocx').click()">
-    📄 Importar Word o PDF
-  </button>
-  <input type="file" id="inputImportarDocx" accept=".docx,.pdf" hidden>
-  <a class="btn-elipse-falla" href="{% static 'fallas/plantillas/plantilla_reporte_falla.docx' %}" download style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">
-    ⬇️ Descargar plantilla
-  </a>
+      <button type="button" class="btn-elipse-falla" id="btnImportarDocx" onclick="document.getElementById('inputImportarDocx').click()">
+        📄 Importar Doc
+      </button>
+      <input type="file" id="inputImportarDocx" accept=".docx,.pdf" hidden>
 
-  <div class="guias">
-    <details open>
-      <summary>¿Que hacer en un reporte de falla?</summary>
-      <p class="guias__intro">Estas instrucciones tienen como objetivo estructurar el levantamiento del reporte ante una anomalia detectada en una maquinaria industrial, guiando al usuario para que la informacion capturada en el sistema sea precisa y tecnica, facilitando la pronta rehabilitacion del servicio y la documentacion tecnica necesaria.</p>
-      <ul class="guias__lista">
-        <li><strong>Asunto:</strong> Define la falla con un nombre preciso (ej. "Engrane de transmision roto", "Fuga de refrigerante en sellado principal"). Debe ser un titulo breve y descriptivo que identifique de inmediato la anomalia.</li>
-        <li><strong>Descripcion:</strong> Brinda una descripcion inicial detallada de que sucede. Analiza la Identidad (que tiene el defecto). Descripcion inicial de que sucede.</li>
-        <li><strong>Causa raiz:</strong> Basado en el diagnostico analitico, identifica que es lo que sucede frente a lo que podria suceder pero no ocurre para delimitar las causas. Busca modificaciones recientes en el ambiente o la operacion que pudieran haber originado el defecto.</li>
-        <li><strong>Tiempo de paro:</strong> Registra el tiempo de paro real generado por la falla, considerando los tiempos de operacion habituales. Si la maquina no se detuvo, registra "0". Este dato es crucial para medir la Magnitud de la afectacion.</li>
-        <li><strong>Maquina:</strong> Selecciona la maquina afectada para registrar correctamente el equipo involucrado.</li>
-        <li><strong>Severidad:</strong> Determina si el recurso afectado es Vital para asignar la urgencia correcta.</li>
-        <li><strong>Tipo de falla:</strong> Categoriza la anomalia para actualizar el historial de la maquina y prevenir futuras recurrencias, en la misma maquina o en otras.</li>
-        <li><strong>Evidencia:</strong> Si es posible y seguro, adjunta imagenes o documentos que sirvan de evidencia de la falla. Esto soporta la descripcion detallada del problema y la identificacion de la causa raiz.</li>
-      </ul>
+      <a class="btn-elipse-falla" href="{% static 'fallas/plantillas/plantilla_reporte_falla.docx' %}" download style="text-decoration:none;">
+        ⬇️ Plantilla
+      </a>
+    </div>
+  </div>
+
+  <!-- GUÍA ESTRUCTURADA DE REPORTE -->
+  <div class="guias-card">
+    <details>
+      <summary>💡 ¿Cómo estructurar un reporte de falla?</summary>
+      <div class="guias-content">
+        <p class="guias__intro">
+          Estas instrucciones tienen como objetivo estructurar el levantamiento del reporte ante una anomalía detectada en maquinaria industrial, guiando para que la información capturada sea precisa y técnica, facilitando la pronta rehabilitación del servicio.
+        </p>
+        <ul class="guias__grid">
+          <li class="guias__item">
+            <strong>📌 Asunto</strong>
+            Define la falla con un nombre preciso (ej. "Engrane de transmisión roto"). Breve y descriptivo.
+          </li>
+          <li class="guias__item">
+            <strong>📝 Descripción</strong>
+            Detalla qué sucede exactamente y cuál componente tiene el defecto observado.
+          </li>
+          <li class="guias__item">
+            <strong>🔍 Causa raíz</strong>
+            Identifica posibles modificaciones recientes u operaciones inusuales que originaron la falla.
+          </li>
+          <li class="guias__item">
+            <strong>⏱️ Tiempo de paro</strong>
+            Registra las horas reales de paro. Si la máquina continuó operando, coloca "0".
+          </li>
+          <li class="guias__item">
+            <strong>⚙️ Máquina</strong>
+            Selecciona el equipo específico del catálogo para vincular correctamente su historial.
+          </li>
+          <li class="guias__item">
+            <strong>⚠️ Severidad</strong>
+            Determina si el recurso afectado es vital para asignar la urgencia adecuada.
+          </li>
+          <li class="guias__item">
+            <strong>🏷️ Tipo de falla</strong>
+            Categoriza la anomalía para alimentar las métricas y prevenir recurrencias.
+          </li>
+          <li class="guias__item">
+            <strong>📸 Evidencia</strong>
+            Adjunta imágenes claras que soporten el diagnóstico inicial de la falla.
+          </li>
+        </ul>
+      </div>
     </details>
   </div>
 
-  <form method="post" action="{% url 'fallas:reporte' %}" enctype="multipart/form-data">
-    {% csrf_token %}
-    <div class="contenedor">
-      <div class="left-side">
-    <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
-
-        <label for="asunto">Asunto  <span id="asunto-error"></span></label>
-        <input type="text" name="asunto" id="asunto" data-error-id="asunto-error"  required maxlength="500" value="{{ datos.asunto|default:'' }}" />
-
-        <label for="descripcion">Descripcion <span id="descripcion-error"></span></label>
-        <textarea name="descripcion" id="descripcion" maxlength="500" data-error-id="descripcion-error">{{ datos.descripcion|default:'' }}</textarea>
-
-        <label for="causaRaiz">Causa raiz <span id="causaRaiz-error"></span></label>
-        <input type="text" name="causaRaiz" id="causaRaiz" required maxlength="500" data-error-id="causaRaiz-error" value="{{ datos.causaRaiz|default:'' }}" />
-
-        <label for="tiempoParo">Tiempo que estuvo en paro la maquina (horas) <span id="horas-error"></span></label>
-        <input type="number" name="tiempoParo" id="tiempoParo" min="0" step="any" data-error-id="horas-error" value="{{ datos.tiempoParo|default:'' }}" />
-
-        <label for="fechaSolucion">Fecha de solucion</label>
-        <input type="date" name="fechaSolucion" id="fechaSolucion" value="{{ datos.fechaSolucion|default:'' }}" />
-
-        <label for="maquina">Maquina</label>
-        <select name="maquina" id="maquina" required>
-          <option value="">Seleccione...</option>
-          {% for m in maquinas %}
-            <option value="{{ m.codigo }}" {% if datos.maquina == m.codigo %}selected{% endif %}>{{ m.nombre }}</option>
-          {% endfor %}
-        </select>
-
-        <label for="tipo_severidad">Severidad</label>
-        <select name="tipo_severidad" id="tipo_severidad" required>
-          <option value="">Seleccione...</option>
-          {% for s in severidades %}
-            <option value="{{ s.codigo }}" {% if datos.tipo_severidad == s.codigo %}selected{% endif %}>{{ s.nombre }}</option>
-          {% endfor %}
-        </select>
-
-        <div class="sugerencia-ia" id="sugerenciaIA" hidden>
-          <div class="sugerencia-ia__head">
-            <span class="sugerencia-ia__icono">🔎</span>
-            <span id="sugerenciaIATitulo">Analizando historial de la máquina…</span>
+  <!-- FORMULARIO DE REPORTE DE FALLA -->
+  <div class="form-card-container">
+    <form method="post" action="{% url 'fallas:reporte' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="form-grid">
+       
+        <!-- COLUMNA IZQUIERDA (Campos del formulario) -->
+        <div class="left-side">
+          <div class="form-group">
+            <label for="asunto">Asunto <span id="asunto-error" class="text-danger"></span></label>
+            <input type="text" name="asunto" id="asunto" class="form-control-custom" required maxlength="500" value="{{ datos.asunto|default:'' }}" placeholder="Ej. Fuga de aceite en pistón principal" />
           </div>
-          <p class="sugerencia-ia__causa" id="sugerenciaIACausa"></p>
-          <p class="sugerencia-ia__justif" id="sugerenciaIAJustif"></p>
-          <div class="sugerencia-ia__acciones">
-            <button type="button" class="sugerencia-ia__usar" id="sugerenciaIAUsar">Usar esta sugerencia</button>
-            <button type="button" class="sugerencia-ia__cerrar" id="sugerenciaIACerrar">Ignorar</button>
+
+          <div class="form-group">
+            <label for="descripcion">Descripción <span id="descripcion-error" class="text-danger"></span></label>
+            <textarea name="descripcion" id="descripcion" class="form-control-custom" rows="3" maxlength="500">{{ datos.descripcion|default:'' }}</textarea>
           </div>
-        </div>
 
-        <label for="tipo_falla">Selecione una o mas fallas encontradas</label>
-        <select name="tipo_falla" id="tipo_falla" required>
-          <option value="">Seleccione...</option>
-          {% for tf in tipos_falla %}
-            <option value="{{ tf.numeroRegistro }}" {% if datos.tipo_falla == tf.numeroRegistro %}selected{% endif %}>{{ tf.nombre }}</option>
-          {% endfor %}
-        </select>
-        <div class="contenedor-tipo-fallas" id="nuevas-fallas">
+          <div class="form-group">
+            <label for="causaRaiz">Causa raíz <span id="causaRaiz-error" class="text-danger"></span></label>
+            <input type="text" name="causaRaiz" id="causaRaiz" class="form-control-custom" required maxlength="500" value="{{ datos.causaRaiz|default:'' }}" />
+          </div>
 
-        </div>
-        <div class="botones">
-            <button onclick="quitarSelect('tipo-falla')">- Quitar</button>
-            <button onclick="anadirFalla()">+ Añadir</button>
-        </div>
+          <div class="form-group">
+            <label for="tiempoParo">Tiempo en paro (horas) <span id="horas-error" class="text-danger"></span></label>
+            <input type="number" name="tiempoParo" id="tiempoParo" class="form-control-custom" min="0" step="any" value="{{ datos.tiempoParo|default:'' }}" />
+          </div>
 
+          <div class="form-group">
+            <label for="fechaSolucion">Fecha de solución estimada</label>
+            <input type="date" name="fechaSolucion" id="fechaSolucion" class="form-control-custom" value="{{ datos.fechaSolucion|default:'' }}" />
+          </div>
 
-        <label for="estado_reporte">Estado del reporte</label>
-        <select name="estado_reporte" id="estado_reporte" required>
-          <option value="">Seleccione...</option>
-          {% for e in estados %}
-            <option value="{{ e.codigo }}" {% if datos.estado_reporte == e.codigo %}selected{% endif %}>{{ e.nombre }}</option>
-          {% endfor %}
-        </select>
+          <div class="form-group">
+            <label for="maquina">Máquina</label>
+            <select name="maquina" id="maquina" class="form-control-custom" required>
+              <option value="">Seleccione una máquina...</option>
+              {% for m in maquinas %}
+                <option value="{{ m.codigo }}" {% if datos.maquina == m.codigo %}selected{% endif %}>
+                  {{ m.nombre }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
 
-        <label for="trabajador">Selecciona el trabajador</label>
-        <select name="trabajador" id="trabajador" required>
-          <option value="">Seleccione...</option>
-          {% for t in trabajadores %}
-            <option value="{{ t.numeroNomina }}" {% if datos.trabajador == t.numeroNomina %}selected{% elif not datos and usuario.numeroNomina == t.numeroNomina %}selected{% endif %}>{{ t.nombre }} {{ t.apellidoPat }}</option>
-          {% endfor %}
-        </select>
+          <div class="form-group">
+            <label for="tipo_severidad">Severidad</label>
+            <select name="tipo_severidad" id="tipo_severidad" class="form-control-custom" required>
+              <option value="">Seleccione severidad...</option>
+              {% for s in severidades %}
+                <option value="{{ s.codigo|default:s.nombre }}" {% if datos.tipo_severidad == s.codigo %}selected{% endif %}>
+                  {{ s.nombre|default:s.codigo }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
 
-
-
-
-      </div>
-
-      <div class="right-side">
-
-        <div class="card drag-drop">
-          <h3>Adjunta evidencia (opcional)</h3>
-          <div class="file-wrapper">
-            <label for="fileDrag" class="drop-zone" id="dropZoneLabel">
-              <div class="icon">📤</div>
-              <p>Haz clic</p>
-              <span>Sube la imagen</span>
-            </label>
-            <input type="file" id="fileDrag" name="imagen" accept="image/*" style="display: none;"> 
-            <div class="preview-box" id="previewDrag">
-              <span class="placeholder">Vista previa</span>
+          <div class="form-group">
+            <label for="tipo_falla">Tipo de falla</label>
+            <select name="tipo_falla" id="tipo_falla" class="form-control-custom" required>
+              <option value="">Seleccione tipo de falla...</option>
+              {% for tf in tipos_falla %}
+                <option value="{{ tf.numeroRegistro }}" {% if datos.tipo_falla == tf.numeroRegistro %}selected{% endif %}>
+                  {{ tf.nombre }}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="contenedor-tipo-fallas" id="nuevas-fallas"></div>
+            <div class="botones" style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+              <button type="button" class="btn-exportar" onclick="quitarSelect('tipo-falla')">- Quitar</button>
+              <button type="button" class="btn-ver-mas" onclick="anadirFalla()">+ Añadir otra</button>
             </div>
           </div>
+
+          <div class="form-group">
+            <label>Estado inicial</label>
+            <input type="text" value="Abierto" class="form-control-custom" readonly>
+            <input type="hidden" name="estado_reporte" value="ABIER">
+          </div>
+
+          <div class="form-group">
+            <label>Trabajador que reporta</label>
+            <input type="text" value="{{ usuario.nombre }} {{ usuario.apellidoPat }}" class="form-control-custom" readonly>
+            <input type="hidden" name="trabajador" value="{{ usuario.numeroNomina }}">
+          </div>
         </div>
 
-        <div class="contenedor-botones">
-        <button type="submit" id="boton-registrar">Reportar falla</button>
-        <a class="btn-cancel" href="{% url 'fallas:lista' %}">Cancelar</a>
+        <!-- COLUMNA DERECHA (Carga de evidencia corregida + Botones) -->
+        <div class="right-side">
+          <div class="form-group">
+            <label>Adjuntar Evidencia (opcional)</label>
+            <div class="file-drop-area">
+              <label for="fileDrag" class="drop-zone-custom" id="dropZoneLabel">
+                <span class="icon">📥</span>
+                <p class="drop-text-primary">Haz clic o arrastra la imagen aquí</p>
+                <span class="drop-text-secondary">Soporta formatos JPG, PNG, WEBP</span>
+              </label>
+              <input type="file" id="fileDrag" name="imagen" accept="image/*" style="display: none;">
+             
+              <div class="preview-box-custom" id="previewDrag">
+                <span style="color: var(--color-muted, #94a3b8); font-size: 0.8rem;">Vista previa de imagen</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button type="submit" class="btn-ver-mas" id="boton-registrar" style="flex: 1; padding: 0.65rem;">Reportar falla</button>
+            <a class="btn-actualizar" href="{% url 'fallas:lista' %}" style="padding: 0.65rem 1.2rem; text-align: center;">Cancelar</a>
+          </div>
         </div>
 
       </div>
-    </div>
-  </form>
+    </form>
+  </div>
 
-  {# ---- datos de catalogo para que Elipse pueda proponer codigos validos ---- #}
+  <!-- SCRIPTS DE ELIPSE Y DATA -->
   {{ maquinas|json_script:"elipseMaquinasData" }}
   {{ severidades|json_script:"elipseSeveridadesData" }}
   {{ tipos_falla|json_script:"elipseTiposFallaData" }}
   {{ estados|json_script:"elipseEstadosData" }}
 
-  {# ---- panel lateral de Elipse: no toca la BD, solo propone texto ---- #}
+  <!-- PANEL ELIPSE SLIDE-OVER -->
   <div class="elipse-falla-overlay" id="elipseFallaOverlay" hidden></div>
   <aside class="elipse-falla-panel" id="elipseFallaPanel" aria-hidden="true">
     <div class="elipse-falla-panel__head">
       <div class="elipse-falla-panel__title"><span class="elipse-bolt">⚡</span> Elipse</div>
-      <button type="button" class="elipse-falla-panel__close" id="elipseFallaClose" aria-label="Cerrar panel">✕</button>
+      <button type="button" class="elipse-falla-panel__close" id="elipseFallaClose">&times;</button>
     </div>
-
-    <div class="elipse-falla-panel__tabs" role="tablist">
-      <button type="button" class="elipse-falla-panel__tab is-active" id="elipseTabRedactar" data-modo="redactar" role="tab" aria-selected="true">
-        ✍️ Redactar
-      </button>
-      <button type="button" class="elipse-falla-panel__tab" id="elipseTabDiagnosticar" data-modo="diagnosticar" role="tab" aria-selected="false">
-        🩺 Diagnosticar
-      </button>
+    <div class="elipse-falla-panel__tabs">
+      <button type="button" class="elipse-falla-panel__tab is-active" id="elipseTabRedactar">✍️ Redactar</button>
+      <button type="button" class="elipse-falla-panel__tab" id="elipseTabDiagnosticar">🩺 Diagnosticar</button>
     </div>
-
-    <p class="elipse-falla-panel__hint" id="elipseFallaHint">
-      Cuéntame qué pasó con la máquina. Voy preguntando lo que falte
-      (severidad, estado, fecha…) y lleno el formulario contigo.
-    </p>
     <div class="elipse-falla-panel__chat" id="elipseFallaChat"></div>
     <form class="elipse-falla-panel__form" id="elipseFallaForm" onsubmit="return false;">
-      <textarea id="elipseFallaInput" rows="2" placeholder="Ej. la banda del pick and place se trabó, lleva 2 horas parada..."></textarea>
+      <textarea id="elipseFallaInput" rows="2" placeholder="Describe lo que ocurrió con el equipo..."></textarea>
       <button type="button" class="elipse-falla-panel__btn" id="elipseFallaBtn">➤</button>
     </form>
-    <p class="elipse-falla-panel__footnote" id="elipseFallaFootnote">Elipse solo propone texto; nada se guarda hasta que tú das "Reportar falla".</p>
   </aside>
 
+  <!-- MODAL DE EVALUACIÓN CON IA (INCORPORADO) -->
+  <div class="modal-evaluacion-overlay" id="modalEvaluacionIa" hidden>
+    <div class="modal-evaluacion-container">
+      <div class="modal-evaluacion-header">
+        <h3>✨ Evaluación del Reporte de Falla con IA</h3>
+        <button type="button" class="modal-evaluacion-close" id="btnCloseModalEvaluacion">&times;</button>
+      </div>
+      <div class="modal-evaluacion-body">
+        <div id="evaluacionLoading" class="evaluacion-state">
+          <div class="spinner-evaluacion"></div>
+          <p>Analizando la calidad, técnica y completitud del reporte...</p>
+        </div>
+        <div id="evaluacionResults" class="evaluacion-state" hidden>
+          <div class="kpi-score-card">
+            <div class="score-circle" id="scoreCircle">
+              <span id="scoreValue">0</span><small>/100</small>
+            </div>
+            <div class="score-info">
+              <h4 id="scoreDictamen">Calculando...</h4>
+              <p id="scoreResumen">Esperando dictamen...</p>
+            </div>
+          </div>
+          <div class="evaluacion-detalles" id="evaluacionDetallesGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
 {% endblock %}
+
 {% block extra_js %}
 <script>
-  window.ELIPSE_FALLA_CONFIG = {
-      csrf: "{{ csrf_token }}",
-      urlAutocompletar: "{% url 'elipse:autocompletar_falla' %}",
-      urlDiagnostico: "{% url 'elipse:sugerencia_diagnostico' %}"
+  window.ELIPSE_FALLA_CONFIG = { 
+    csrf: "{{ csrf_token }}", 
+    urlAutocompletar: "{% url 'elipse:autocompletar_falla' %}", 
+    urlDiagnostico: "{% url 'elipse:sugerencia_diagnostico' %}",
+    urlEvaluacion: ""
   };
-</script>
-<script>
-  window.SUGERENCIA_IA_CONFIG = {
-      csrf: "{{ csrf_token }}",
-      url: "{% url 'elipse:sugerencia_diagnostico' %}"
-  };
-</script>
-<script>
-  // Si llegamos desde el mapa de máquinas con ?maquina=CODIGO, la
-  // dejamos ya seleccionada en el formulario.
-  (function () {
-    var codigo = new URLSearchParams(window.location.search).get("maquina");
-    if (!codigo) return;
-    var select = document.getElementById("maquina");
-    if (select) select.value = codigo;
-    window.history.replaceState({}, "", window.location.pathname);
-  })();
+  window.SUGERENCIA_IA_CONFIG = { csrf: "{{ csrf_token }}", url: "{% url 'elipse:sugerencia_diagnostico' %}" };
 </script>
 <script src="{% static 'fallas/js/preview-imagenes.js' %}"></script>
 <script src="{% static 'fallas/js/añadir-elementos.js' %}"></script>
 <script src="{% static 'js/validaciones-inputs.js' %}"></script>
-<script>
-  // Si el registro fallo y volvimos a renderizar con datos, restauramos
-  // los selects dinamicos de tipo de falla.
-  (function () {
-    {% if datos %}
-    var ids = {{ datos.tipo_falla_ids|safe }};
-    var base = document.getElementById("tipo_falla");
-    if (base && ids && ids.length) {
-      base.value = ids[0];
-      base.dispatchEvent(new Event("change"));
-    }
-    for (var i = 1; i < ids.length; i++) {
-      anadirFalla();
-      var dynamic = document.querySelectorAll("#nuevas-fallas select");
-      var last = dynamic[dynamic.length - 1];
-      if (last) {
-        last.value = ids[i];
-        last.dispatchEvent(new Event("change"));
-      }
-    }
-    {% endif %}
-  })();
-</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
 <script src="{% static 'js/extraer-texto-doc.js' %}"></script>
 <script src="{% static 'fallas/js/elipse-falla.js' %}"></script>
 <script src="{% static 'fallas/js/sugerencia-diagnostico.js' %}"></script>
+<script src="{% static 'fallas/js/confirmar-reporte.js' %}"></script>
+
+<!-- NUEVO SCRIPT DE EVALUACIÓN CON IA -->
+<script src="{% static 'fallas/js/evaluacion-reporte-ia.js' %}"></script>
 {% endblock %}

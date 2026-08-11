@@ -279,7 +279,7 @@
         <h1>⚙ OPERACORE | Panel de Detalle Técnico</h1>
         <div class="header-actions">
             <!-- Botón para volver directamente al Index general usando el namespace correcto -->
-            <a class="btn-action btn-secondary" href="{% url 'maquinaria:index' %}">&larr; Menú Principal</a>
+            <a class="btn-action btn-secondary" href="{% url 'maquinaria:index' %}" onclick="volverAtras(event, '{% url 'maquinaria:index' %}')">&larr; Volver</a>
         </div>
     </header>
 
@@ -367,6 +367,80 @@
                 <p style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Arrastra para rotar el modelo</p>
             </div>
         </div>
+
+        {% if resumen %}
+        <div class="detail-card" style="margin-top: 25px;">
+            <h2>Resumen de Mantenimiento</h2>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                <div class="info-group" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+                    <span>Total de Fallas Reportadas:</span>
+                    <b style="font-size: 22px;">{{ resumen.total_fallas|default:"0" }}</b>
+                </div>
+                <div class="info-group" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+                    <span>Total de Órdenes de Mantenimiento:</span>
+                    <b style="font-size: 22px;">{{ resumen.total_ordenes|default:"0" }}</b>
+                </div>
+                <div class="info-group" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+                    <span>Horas de Operación Acumuladas:</span>
+                    <b style="font-size: 22px;">{{ resumen.horas_operacion|default:"0" }} hrs</b>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-card" style="margin-top: 25px;">
+            <h2>Indicadores Actuales</h2>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                <div class="info-group" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+                    <span>MTBF:</span>
+                    <b style="font-size: 22px;">{{ resumen.mtbf|default:"—" }} hrs</b>
+                </div>
+                <div class="info-group" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+                    <span>MTTR:</span>
+                    <b style="font-size: 22px;">{{ resumen.mttr|default:"—" }} hrs</b>
+                </div>
+                <div class="info-group" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+                    <span>Disponibilidad:</span>
+                    <b style="font-size: 22px;">{{ resumen.disponibilidad|default:"—" }}%</b>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if historial %}
+        <div class="detail-card" style="margin-top: 25px;">
+            <h2>Historial de Órdenes y Fallas</h2>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                <thead>
+                    <tr style="text-align: left; border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 8px;">Tipo</th>
+                        <th style="padding: 8px;">Folio</th>
+                        <th style="padding: 8px;">Fecha</th>
+                        <th style="padding: 8px;">Detalle</th>
+                        <th style="padding: 8px;">Estado</th>
+                        <th style="padding: 8px;">Trabajador</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for h in historial %}
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 8px;">{{ h.tipo }}</td>
+                        <td style="padding: 8px;">{{ h.identificador }}</td>
+                        <td style="padding: 8px;">{{ h.fecha }}</td>
+                        <td style="padding: 8px; color: var(--text-muted);">{{ h.detalle }}</td>
+                        <td style="padding: 8px;">{{ h.estado }}</td>
+                        <td style="padding: 8px;">
+                            {% if h.trabajador_nomina %}
+                            <a href="{% url 'mantenimiento:trabajadores-detalle' h.trabajador_nomina %}" style="color: var(--accent); text-decoration: none;">{{ h.trabajador_nombre }}</a>
+                            {% else %}
+                            <span style="color: var(--text-muted);">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
         {% else %}
         <div class="error-box">
             <h3>No se pudo cargar la información de esta máquina o el equipo no existe.</h3>

@@ -101,6 +101,8 @@ class CreateTipoMovimientoSerializer(serializers.ModelSerializer):
 
 # ------------ TAREA_ORDEN (llave compuesta: tarea, orden_mantenimiento) --
 class ListTareaOrdenSerializer(serializers.ModelSerializer):
+    tarea_instruccion = serializers.CharField(source="tarea.instruccion", read_only=True, default=None)
+
     class Meta:
         model = models.TareaOrden
         fields = "__all__"

@@ -31,7 +31,8 @@ function anadirFalla() {
     nuevoDiv.setAttribute("data-index", contador);
 
     var nuevoSelect = document.createElement("select");
-    nuevoSelect.className = "falla-select";
+    // 💡 CAMBIO AQUÍ: Agregamos "form-control-custom" junto a "falla-select"
+    nuevoSelect.className = "falla-select form-control-custom"; 
     nuevoSelect.name = "tipo_falla_" + contador;
     nuevoSelect.required = true;
 

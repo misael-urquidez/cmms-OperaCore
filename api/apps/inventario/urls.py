@@ -10,6 +10,10 @@ urlpatterns = [
     # Catálogos agregados
     path("v1/catalogos/", views.CatalogosInventarioAPIView.as_view(), name="catalogos"),
 
+    # ------------ MOVIMIENTOS ------------
+    path("v1/movimientos/list/", views.MovimientoListAPIView.as_view(), name="movimientos-list"),
+    path("v2/movimientos/salida-refaccion/", views.RegistrarSalidaRefaccionAPIView.as_view(), name="movimientos-salida-refaccion"),
+
     # ------------ REFACCIONES ------------
     path("v1/refacciones/list/", views.RefaccionListAPIView.as_view(), name="refacciones-list"),
     path("v1/refacciones/<int:pk>/", views.RefaccionDetailAPIView.as_view(), name="refacciones-detail"),
@@ -19,6 +23,7 @@ urlpatterns = [
     path("v1/piezas/list/", views.PiezaListAPIView.as_view(), name="piezas-list"),
     path("v1/piezas/wear/", views.PiezaWearAPIView.as_view(), name="piezas-wear"),
     path("v1/piezas/<str:pk>/", views.PiezaDetailAPIView.as_view(), name="piezas-detail"),
+    path("v1/piezas/<str:pk>/depreciacion/", views.DepreciacionPiezaAPIView.as_view(), name="piezas-depreciacion"),
     path("v2/piezas/create/", views.PiezaCreateAPIView.as_view(), name="piezas-create"),
 
     # ------------ HERRAMIENTAS ------------

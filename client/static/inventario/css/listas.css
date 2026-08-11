@@ -1,0 +1,69 @@
+/* ==========================================================================
+   Inventario: estilos de las listas de piezas y refacciones en el panel
+   admin. El panel tecnico carga tecni.css / tecni-inventario.css, que ya
+   definen estas clases; en base_admin.html no se cargan, por eso se
+   replican aqui con la paleta del admin (variables compartidas de themes).
+   ========================================================================== */
+
+/* -------- tarjetas KPI -------- */
+.tecni-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+.tecni-stat-card {
+    background: var(--color-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: 0.8rem;
+    padding: 1.1rem 1.2rem;
+    display: flex; align-items: flex-start; gap: 0.9rem;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.tecni-stat-card:hover { border-color: var(--color-primary); transform: translateY(-2px); }
+.tecni-stat-card__icon {
+    width: 40px; height: 40px; border-radius: 0.6rem;
+    display: grid; place-items: center; flex-shrink: 0;
+}
+.tecni-stat-card__icon svg { width: 20px; height: 20px; }
+.tecni-stat-card__icon--green  { background: rgba(52, 211, 153, 0.14);  color: #34d399; }
+.tecni-stat-card__icon--amber  { background: rgba(251, 191, 36, 0.14);  color: #fbbf24; }
+.tecni-stat-card__icon--rose   { background: rgba(251, 113, 133, 0.14); color: #fb7185; }
+.tecni-stat-card__label { margin: 0; font-size: 0.74rem; color: var(--color-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.tecni-stat-card__value { margin: 0.15rem 0 0; font-size: 1.55rem; font-weight: 700; line-height: 1.1; }
+.tecni-stat-card__hint  { margin: 0.2rem 0 0; font-size: 0.72rem; color: var(--color-muted); }
+
+/* -------- drawer piezas -------- */
+.inv-drawer { position:fixed; inset:0; z-index:60; visibility:hidden; }
+.inv-drawer[aria-hidden="false"] { visibility:visible; }
+.inv-drawer__backdrop { position:absolute; inset:0; background:rgba(2,6,15,.55); opacity:0; transition:opacity .18s ease; }
+.inv-drawer[aria-hidden="false"] .inv-drawer__backdrop { opacity:1; }
+.inv-drawer__panel { position:absolute; top:0; right:0; height:100%; width:min(420px,92vw); background:var(--color-surface); border-left:1px solid var(--line); padding:1.25rem; overflow-y:auto; transform:translateX(100%); transition:transform .2s ease; box-shadow:-12px 0 30px rgba(0,0,0,.35); }
+.inv-drawer[aria-hidden="false"] .inv-drawer__panel { transform:translateX(0); }
+.inv-drawer__head { display:flex; justify-content:space-between; align-items:start; gap:.75rem; }
+.inv-drawer__kicker { margin:0; color:var(--color-primary); font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+.inv-drawer__head h2 { margin:.15rem 0 .4rem; font-size:1.15rem; overflow-wrap:anywhere; }
+.inv-drawer__close { border:none; background:transparent; color:var(--color-muted); cursor:pointer; padding:.25rem; border-radius:.4rem; flex:none; }
+.inv-drawer__close:hover { color:var(--color-text); background:var(--hover-soft); }
+.inv-drawer__body { margin-top:1.3rem; }
+
+.inv-drawer__maquina { border-bottom:1px solid var(--line); }
+.inv-drawer__maquina:last-child { border-bottom:none; }
+.inv-drawer__maquina summary { display:flex; align-items:baseline; gap:.5rem; padding:.65rem 0; cursor:pointer; font-weight:600; font-size:.9rem; list-style:none; }
+.inv-drawer__maquina summary::-webkit-details-marker { display:none; }
+.inv-drawer__maquina summary::before { content:"▸"; font-size:.75rem; color:var(--color-muted); flex:none; }
+.inv-drawer__maquina[open] summary::before { content:"▾"; }
+.inv-drawer__maquina-codigo { font-size:.75rem; font-weight:400; color:var(--color-muted); }
+
+.inv-drawer__piezas { padding:.25rem 0 .5rem 1rem; }
+.inv-drawer__pieza-row { padding:.45rem 0; border-bottom:1px solid var(--line); }
+.inv-drawer__pieza-row:last-child { border-bottom:none; }
+.inv-drawer__pieza-info { display:flex; justify-content:space-between; align-items:baseline; gap:.5rem; }
+.inv-drawer__pieza-nombre { font-size:.84rem; font-weight:500; }
+.inv-drawer__pieza-ns { font-size:.72rem; color:var(--color-muted); }
+.inv-drawer__pieza-metricas { display:flex; align-items:center; gap:.5rem; margin-top:.3rem; }
+.inv-drawer__progress { flex:1; height:.45rem; border-radius:.3rem; background:var(--hover-soft); overflow:hidden; }
+.inv-drawer__progress-bar { height:100%; border-radius:.3rem; background:linear-gradient(90deg, #22c55e, #f59e0b, #ef4444); transition:width .3s ease; }
+.inv-drawer__pieza-pct { font-size:.75rem; font-weight:600; min-width:3rem; text-align:right; }
+.inv-drawer__pieza-dep { font-size:.72rem; color:var(--color-muted); white-space:nowrap; }
+.inv-drawer__piezas-vacia { font-size:.8rem; color:var(--color-muted); margin:0; }
