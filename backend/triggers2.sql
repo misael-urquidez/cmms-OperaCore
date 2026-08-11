@@ -377,3 +377,109 @@ BEGIN
     END IF;
 END$$
 DELIMITER ;
+
+-- =====================================================================
+-- VALIDACIONES DE FECHAS / INTEGRIDAD DE PERIODOS
+-- Evitan errores lógicos de fechas a nivel BD (los Serializers de Django
+-- dan el mismo mensaje con mejor UX; estos triggers son la red de
+-- seguridad para INSERT/UPDATE directos por SQL):
+--   * REGISTRO_OPS: un periodo de horas no puede solaparse con otro de
+--     la misma máquina (un solapamiento duplica horas en el SUM y el
+--     MTBF sale inflado).
+--   * INDICADOR: una máquina solo puede tener UN periodo abierto
+--     (fechaFin IS NULL); evita periodos huérfanos si alguien inserta
+--     por fuera del SP o hay una carrera entre triggers.
+--   * INDICADOR: al cerrar un periodo (UPDATE fechaFin) la fecha de fin
+--     no puede ser anterior a la de inicio.
+-- =====================================================================
+
+DROP TRIGGER IF EXISTS tg_regops_sin_solapamiento_insert;
+DELIMITER $$
+CREATE TRIGGER tg_regops_sin_solapamiento_insert
+BEFORE INSERT ON REGISTRO_OPS
+FOR EACH ROW
+BEGIN
+    DECLARE solapados INT;
+
+    IF NEW.fechaFin < NEW.fechaInicio THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La fecha de fin no puede ser anterior al inicio del periodo';
+    END IF;
+
+    SELECT COUNT(*)
+    INTO solapados
+    FROM REGISTRO_OPS AS ro
+    WHERE ro.maquina = NEW.maquina
+      AND NEW.fechaInicio <= ro.fechaFin
+      AND ro.fechaInicio <= NEW.fechaFin;
+
+    IF solapados > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El rango de fechas se solapa con otro registro de horas de operacion de la misma maquina';
+    END IF;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_regops_sin_solapamiento_update;
+DELIMITER $$
+CREATE TRIGGER tg_regops_sin_solapamiento_update
+BEFORE UPDATE ON REGISTRO_OPS
+FOR EACH ROW
+BEGIN
+    DECLARE solapados INT;
+
+    IF NEW.fechaFin < NEW.fechaInicio THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La fecha de fin no puede ser anterior al inicio del periodo';
+    END IF;
+
+    SELECT COUNT(*)
+    INTO solapados
+    FROM REGISTRO_OPS AS ro
+    WHERE ro.maquina = NEW.maquina
+      AND ro.numeroRegistro <> NEW.numeroRegistro
+      AND NEW.fechaInicio <= ro.fechaFin
+      AND ro.fechaInicio <= NEW.fechaFin;
+
+    IF solapados > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El rango de fechas se solapa con otro registro de horas de operacion de la misma maquina';
+    END IF;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_indicador_unico_periodo_abierto;
+DELIMITER $$
+CREATE TRIGGER tg_indicador_unico_periodo_abierto
+BEFORE INSERT ON INDICADOR
+FOR EACH ROW
+BEGIN
+    DECLARE abiertos INT;
+
+    IF NEW.fechaFin IS NULL THEN
+        SELECT COUNT(*)
+        INTO abiertos
+        FROM INDICADOR AS i
+        WHERE i.maquina = NEW.maquina
+          AND i.fechaFin IS NULL;
+
+        IF abiertos > 0 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'La maquina ya tiene un periodo de indicador abierto';
+        END IF;
+    END IF;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_indicador_fecha_cierre_valida;
+DELIMITER $$
+CREATE TRIGGER tg_indicador_fecha_cierre_valida
+BEFORE UPDATE ON INDICADOR
+FOR EACH ROW
+BEGIN
+    IF NEW.fechaFin IS NOT NULL AND NEW.fechaFin < NEW.fechaInicio THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La fecha de fin no puede ser anterior al inicio del periodo';
+    END IF;
+END$$
+DELIMITER ;

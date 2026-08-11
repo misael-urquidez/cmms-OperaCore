@@ -311,7 +311,7 @@ class RegistroOpsAPIView(APIView):
             maquina = Maquina.objects.get(codigo=codigo)
         except Maquina.DoesNotExist as exc:
             raise NotFound("Máquina no encontrada.") from exc
-        serializer = RegistroOpsSerializer(data=request.data)
+        serializer = RegistroOpsSerializer(data=request.data, context={"maquina": maquina})
         serializer.is_valid(raise_exception=True)
         registro = services.registrar_horas_operacion(maquina=maquina, **serializer.validated_data)
         return Response({
@@ -330,7 +330,7 @@ class RegistroOpsUpdateAPIView(APIView):
             registro = RegistroOps.objects.get(pk=pk)
         except RegistroOps.DoesNotExist as exc:
             raise NotFound("Registro no encontrado.") from exc
-        serializer = RegistroOpsSerializer(data=request.data, partial=True)
+        serializer = RegistroOpsSerializer(data=request.data, partial=True, context={"maquina": registro.maquina})
         serializer.is_valid(raise_exception=True)
         for attr, val in serializer.validated_data.items():
             setattr(registro, attr, val)

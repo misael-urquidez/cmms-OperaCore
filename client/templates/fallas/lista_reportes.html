@@ -32,7 +32,7 @@
   <select class="filter-select" data-filter="maquina">
     <option value="">Todas las máquinas</option>
     {% for m in maquinas %}
-      <option value="{{ m.codigo }}">{{ m.nombre }}</option>
+      <option value="{{ m.codigo }}">{{ m.codigo }} - {{ m.nombre }}</option>
     {% endfor %}
   </select>
 </div>
