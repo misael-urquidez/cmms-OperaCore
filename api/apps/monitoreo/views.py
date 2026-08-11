@@ -94,7 +94,7 @@ class IndicadoresMaquinaAPIView(APIView):
                 "numero_reparaciones": 0,
             })
 
-        (_nombre, _estado, p_mttr, p_mtbf, p_disponibilidad,
+        (_nombre, _estado, p_mtbf, p_mttr, p_disponibilidad,
          p_total_horas, p_numero_fallas, p_tiempo_inactividad,
          p_numero_reparaciones) = fila
 
