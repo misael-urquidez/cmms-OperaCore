@@ -460,6 +460,7 @@ GESTION_REGISTRY = {
         "campos": [
             {"name": "nombre", "label": "Nombre", "tipo": "text", "requerido": True, "columna": True},
             {"name": "descripcion", "label": "Descripción", "tipo": "textarea", "requerido": False, "columna": False},
+            {"name": "stock", "label": "Stock", "tipo": "int", "requerido": True, "columna": True},
             {"name": "imagen", "label": "Imagen", "tipo": "file", "requerido": False, "columna": False,
              "file_api_name": "imagen"},
             {"name": "tipo_herramienta", "label": "Tipo de herramienta", "tipo": "select", "requerido": False, "columna": True,

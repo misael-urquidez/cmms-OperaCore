@@ -9,6 +9,7 @@ from apps.mantenimiento.models import Movimiento
 from apps.monitoreo.models import RegistroOps
 from . import models
 from . import serializers
+from .stock import CODIGO_DISPO, recalcular_stock_herramienta, validar_cantidad_estado_herramienta
 
 
 # ------------ PING & CATÁLOGOS AGREGADOS ----------------------------------
@@ -212,7 +213,16 @@ class ProveedorCreateAPIView(generics.CreateAPIView):
 
 # ------------ HERRAMIENTAS -------------------------------------------------
 class HerramientaListAPIView(generics.ListAPIView):
-    queryset = models.Herramienta.objects.select_related("tipo_herramienta").order_by("nombre")
+    queryset = models.Herramienta.objects.select_related("tipo_herramienta").annotate(
+        _disponibles=Coalesce(
+            Subquery(
+                models.EstadoHerramienta.objects.filter(
+                    herramienta=OuterRef("pk"), edo_herramienta_id=CODIGO_DISPO
+                ).values("cantidad")
+            ),
+            Value(0),
+        )
+    ).order_by("nombre")
     serializer_class = serializers.ListHerramientaSerializer
 
 
@@ -384,6 +394,18 @@ class EstadoHerramientaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method in ["PUT", "PATCH"]:
             return serializers.UpdateEstadoHerramientaSerializer
         return serializers.DetailEstadoHerramientaSerializer
+
+    def perform_destroy(self, instance):
+        validar_cantidad_estado_herramienta(
+            instance.herramienta, instance.edo_herramienta_id, 0
+        )
+        # PK compuesta emulada: delete() del objeto usaria solo "herramienta"
+        # en el WHERE y borraria todos los estados. Se borra con la llave completa.
+        models.EstadoHerramienta.objects.filter(
+            herramienta=instance.herramienta,
+            edo_herramienta_id=instance.edo_herramienta_id,
+        ).delete()
+        recalcular_stock_herramienta(instance.herramienta)
 
     def get_object(self):
         obj = generics.get_object_or_404(

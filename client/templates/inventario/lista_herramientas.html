@@ -1,4 +1,4 @@
-{% extends "base_admin.html" %}
+{% extends base_template %}
 {% load static %}
 
 {% block title %}Herramientas · OperaCore{% endblock %}
@@ -13,9 +13,8 @@
       <summary>¿Qué información se gestiona en este listado?</summary>
       <p class="guias__intro">Listado del equipamiento de trabajo disponible para tareas de mantenimiento:</p>
       <ul class="guias__lista">
-        <li><strong>Identificación:</strong> Serie y código de etiqueta rápido.</li>
-        <li><strong>Calibración:</strong> Muestra la fecha del último mantenimiento metrológico.</li>
-        <li><strong>Estado:</strong> Condición actual (Disponible, Prestada, En calibración, Baja).</li>
+        <li><strong>Stock:</strong> total de unidades registradas de la herramienta.</li>
+        <li><strong>Disponible:</strong> unidades listas para asignarse a una orden de mantenimiento; las asignadas quedan "En uso" hasta cerrar/cancelar la orden.</li>
       </ul>
     </details>
   </div>
@@ -32,23 +31,26 @@
       <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
         <thead>
           <tr style="border-bottom: 1px solid var(--admin-border); color: var(--color-muted);">
-            <th style="padding: 0.75rem;">N° Serie</th>
-            <th style="padding: 0.75rem;">Código Etiqueta</th>
+            <th style="padding: 0.75rem;">Registro</th>
             <th style="padding: 0.75rem;">Nombre</th>
-            <th style="padding: 0.75rem;">Ubicación</th>
-            <th style="padding: 0.75rem;">Últ. Calibración</th>
-            <th style="padding: 0.75rem;">Estado</th>
+            <th style="padding: 0.75rem;">Tipo</th>
+            <th style="padding: 0.75rem;">Stock</th>
+            <th style="padding: 0.75rem;">Disponible</th>
+            <th style="padding: 0.75rem;">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {% for h in herramientas %}
             <tr style="border-bottom: 1px solid var(--line);">
-              <td style="padding: 0.75rem;"><strong>{{ h.numeroserie }}</strong></td>
-              <td style="padding: 0.75rem;">{{ h.codigoetiqueta }}</td>
+              <td style="padding: 0.75rem;"><strong>{{ h.numeroregistro }}</strong></td>
               <td style="padding: 0.75rem;">{{ h.nombre }}</td>
-              <td style="padding: 0.75rem;">{{ h.ubicacion_taller|default:"--" }}</td>
-              <td style="padding: 0.75rem;">{{ h.fechaultimacalibracion|default:"N/A" }}</td>
-              <td style="padding: 0.75rem;">{{ h.edo_herramienta|default:"--" }}</td>
+              <td style="padding: 0.75rem;">{{ h.tipo_herramienta_nombre|default:"--" }}</td>
+              <td style="padding: 0.75rem;">{{ h.stock|default:0 }}</td>
+              <td style="padding: 0.75rem;">{{ h.disponibles|default:0 }}</td>
+              <td style="padding: 0.75rem; white-space: nowrap;">
+                <button type="button" class="btn-primary-sm" onclick="abrirModalExistenciaHerramienta({{ h.numeroregistro }})">Existencia</button>
+                <a href="{% url 'inventario:editar_herramienta' h.numeroregistro %}" class="btn-primary-sm">Editar</a>
+              </td>
             </tr>
           {% empty %}
             <tr>
@@ -61,4 +63,14 @@
       </table>
     </div>
   </div>
+
+  <div class="fallas-modal" id="modal-existencia" role="dialog"></div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'inventario/js/modal.js' %}"></script>
 {% endblock %}

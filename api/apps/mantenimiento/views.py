@@ -23,6 +23,7 @@ from django.db.utils import OperationalError
 from . import models
 from . import serializers
 from apps.fallas.views import _get_reporte_data
+from apps.inventario.stock import liberar_herramienta_de_orden
 
 
 class PingAPIView(APIView):
@@ -465,6 +466,16 @@ class HerraOrdenDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
             return serializers.UpdateHerraOrdenSerializer
         return serializers.DetailHerraOrdenSerializer
 
+    def perform_destroy(self, instance):
+        liberar_herramienta_de_orden(instance.herramienta_id)
+        # PK compuesta emulada: delete() del objeto usaria solo "herramienta"
+        # en el WHERE y borraria las filas de TODAS las ordenes. Se borra con
+        # la llave completa.
+        models.HerraOrden.objects.filter(
+            herramienta=instance.herramienta_id,
+            orden_mantenimiento=instance.orden_mantenimiento_id,
+        ).delete()
+
     def get_object(self):
         obj = generics.get_object_or_404(
             self.get_queryset(),
@@ -557,7 +568,12 @@ class OrdenMantenimientoAsignarAPIView(APIView):
         serializer = serializers.AsignarTrabajadorOrdenSerializer(data=request.data); serializer.is_valid(raise_exception=True)
         try: orden.trabajador = Trabajador.objects.get(pk=serializer.validated_data["trabajador"])
         except Trabajador.DoesNotExist: return Response({"trabajador": "No existe ese trabajador."}, status=400)
-        if orden.estado_orden_id == "SOLIC": orden.estado_orden_id = "PROGR"
+        # Una orden correctiva nace como SOLIC (solicitada por falla, no
+        # programada) y se queda asi aunque se le asigne responsable: no debe
+        # volverse "Programada". Solo las ordenes planificadas (preventivo,
+        # predictivo, etc.) pasan SOLIC -> PROGR al asignar.
+        if orden.estado_orden_id == "SOLIC" and orden.tipo_mantenimiento_id != "CORRE":
+            orden.estado_orden_id = "PROGR"
         orden.save(update_fields=["trabajador", "estado_orden"])
         return Response(serializers.DetailOrdenMantenimientoSerializer(orden).data)
 
@@ -602,6 +618,10 @@ class OrdenMantenimientoCerrarAPIView(APIView):
 
         orden.fechacierre, orden.horacierre, orden.estado_orden_id = ahora.date(), ahora.time(), "CERRA"
         orden.save(update_fields=["diagnostico", "notas", "horasintervenidas", "fechacierre", "horacierre", "estado_orden"])
+
+        # Las herramientas asignadas a la orden regresan a DISPO (disponibles).
+        for ho in models.HerraOrden.objects.filter(orden_mantenimiento=orden):
+            liberar_herramienta_de_orden(ho.herramienta_id)
 
         # Movimientos de inventario capturados en el drawer de cierre. Por
         # cada renglon: si trae "pieza" (la pieza fisica que salio de la
@@ -669,6 +689,9 @@ class OrdenMantenimientoCancelarAPIView(APIView):
             raise NotFound("Orden no encontrada.") from exc
         if orden.estado_orden_id in ("CERRA", "CANCE"):
             return Response({"detail": "Esta orden ya está cerrada o cancelada."}, status=400)
+        # Las herramientas asignadas a la orden regresan a DISPO (disponibles).
+        for ho in models.HerraOrden.objects.filter(orden_mantenimiento=orden):
+            liberar_herramienta_de_orden(ho.herramienta_id)
         orden.estado_orden_id = "CANCE"
         orden.reporte_falla = None
         orden.save(update_fields=["estado_orden", "reporte_falla"])

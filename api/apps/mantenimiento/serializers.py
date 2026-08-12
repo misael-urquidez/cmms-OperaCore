@@ -1,6 +1,8 @@
 from rest_framework import serializers
+from django.db import transaction
 from apps.fallas.models import ReporteFalla
 from apps.inventario.models import Herramienta, Pieza, Refaccion
+from apps.inventario.stock import asignar_herramienta_a_orden, liberar_herramienta_de_orden
 from apps.usuarios.models import Trabajador
 from . import models
 
@@ -168,11 +170,35 @@ class CreateHerraOrdenSerializer(serializers.ModelSerializer):
         model = models.HerraOrden
         fields = ["herramienta", "orden_mantenimiento"]
 
+    def create(self, validated_data):
+        with transaction.atomic():
+            instancia = super().create(validated_data)
+            asignar_herramienta_a_orden(instancia.herramienta_id)
+        return instancia
+
 
 class UpdateHerraOrdenSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.HerraOrden
         fields = ["herramienta", "orden_mantenimiento"]
+
+    def update(self, instance, validated_data):
+        with transaction.atomic():
+            nueva_herramienta = validated_data.get("herramienta", instance.herramienta)
+            nueva_orden = validated_data.get("orden_mantenimiento", instance.orden_mantenimiento)
+            if nueva_herramienta.pk != instance.herramienta_id:
+                liberar_herramienta_de_orden(instance.herramienta_id)
+                asignar_herramienta_a_orden(nueva_herramienta.pk)
+            # PK compuesta emulada: save() del objeto usaria solo "herramienta"
+            # en el WHERE y pisaria otras filas. Se actualiza con la llave completa.
+            models.HerraOrden.objects.filter(
+                herramienta=instance.herramienta_id,
+                orden_mantenimiento=instance.orden_mantenimiento_id,
+            ).update(
+                herramienta=nueva_herramienta,
+                orden_mantenimiento=nueva_orden,
+            )
+        return instance
 
 
 # ------------ TRABA_ORDE_PERSONAL (llave compuesta: trabajador, orden_mantenimiento) --
@@ -270,20 +296,24 @@ class CreateOrdenMantenimientoSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        from django.db import transaction
         from django.utils import timezone
         tareas_ids = validated_data.pop("tareas", None) or []
         herramientas_ids = validated_data.pop("herramientas", None) or []
         trabajadores_ids = validated_data.pop("trabajadores", None) or []
         ahora = timezone.localtime()
         folio = f"OMP{ahora:%y%m%d%H%M%S}"
-        estado = models.EstadoOrden.objects.filter(codigo="PROGR" if validated_data.get("trabajador") else "SOLIC").first()
+        tipo = validated_data.get("tipo_mantenimiento")
+        if tipo is not None and tipo.codigo == "CORRE":
+            estado = models.EstadoOrden.objects.filter(codigo="SOLIC").first()
+        else:
+            estado = models.EstadoOrden.objects.filter(codigo="PROGR" if validated_data.get("trabajador") else "SOLIC").first()
         with transaction.atomic():
             orden = models.OrdenMantenimiento.objects.create(folio=folio, fechacreacion=ahora.date(), horacreacion=ahora.time(), estado_orden=estado, **validated_data)
             fechainicio = validated_data.get("fechaprogramada") or ahora.date()
             for tid in tareas_ids:
                 models.TareaOrden.objects.create(tarea_id=tid, orden_mantenimiento=orden, fechainicio=fechainicio, horainicio=ahora.time())
             for hid in herramientas_ids:
+                asignar_herramienta_a_orden(hid)
                 models.HerraOrden.objects.create(herramienta_id=hid, orden_mantenimiento=orden)
             principal = validated_data.get("trabajador")
             for nomina in trabajadores_ids:
@@ -359,7 +389,6 @@ class UpdateOrdenMantenimientoSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
-        from django.db import transaction
         from django.utils import timezone
         tareas_ids = validated_data.pop("tareas", None)
         herramientas_ids = validated_data.pop("herramientas", None)
@@ -377,8 +406,11 @@ class UpdateOrdenMantenimientoSerializer(serializers.ModelSerializer):
                 for tid in tareas_ids:
                     models.TareaOrden.objects.create(tarea_id=tid, orden_mantenimiento=instance, fechainicio=fechainicio, horainicio=timezone.localtime().time())
             if herramientas_ids is not None:
+                for ho in models.HerraOrden.objects.filter(orden_mantenimiento=instance):
+                    liberar_herramienta_de_orden(ho.herramienta_id)
                 models.HerraOrden.objects.filter(orden_mantenimiento=instance).delete()
                 for hid in herramientas_ids:
+                    asignar_herramienta_a_orden(hid)
                     models.HerraOrden.objects.create(herramienta_id=hid, orden_mantenimiento=instance)
             if trabajadores_ids is not None:
                 models.TrabaOrdePersonal.objects.filter(orden_mantenimiento=instance).delete()

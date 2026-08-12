@@ -18,6 +18,7 @@ urlpatterns = [
     # ------------ HERRAMIENTAS --------------------------------------------------
     path("herramientas/", views.ListaHerramientas.as_view(), name="lista_herramientas"),
     path("herramientas/crear/", views.CrearHerramienta.as_view(), name="crear_herramienta"),
+    path("herramientas/<int:pk>/editar/", views.EditarHerramienta.as_view(), name="editar_herramienta"),
 
     # ------------ MOVIMIENTOS --------------------------------------------------
     path("movimientos/", views.ListaMovimientos.as_view(), name="lista_movimientos"),
@@ -54,4 +55,5 @@ urlpatterns = [
     # ------------ MODALES (fragmentos HTML) --------------------------------
     path("modal/proveedor/<str:pk>/", views.ProveedorModalView.as_view(), name="modal_proveedor"),
     path("modal/existencia/<int:refaccion_id>/", views.ExistenciaModalView.as_view(), name="modal_existencia"),
+    path("modal/existencia-herramienta/<int:herramienta_id>/", views.ExistenciaHerramientaModalView.as_view(), name="modal_existencia_herramienta"),
 ]

@@ -78,10 +78,11 @@
 
     {% if puede_cerrar %}
     <form id="ordenTrabajoForm">
+      <div id="estadoCerrarOrden" style="font-family: monospace; font-size: 14px;"></div>
       <div class="doc-orden__grid">
-        <div class="doc-orden__field"><label>Diagnóstico</label><textarea id="twDiagnostico"></textarea></div>
-        <div class="doc-orden__field"><label>Notas</label><textarea id="twNotas"></textarea></div>
-        <div class="doc-orden__field doc-orden__field--horas"><label>Horas</label><input id="twHoras" type="number" min="0" step=".1" required></div>
+        <div class="doc-orden__field"><label>Diagnóstico <span id="twDiagnostico-error"></span></label><textarea id="twDiagnostico" data-error-id="twDiagnostico-error"></textarea></div>
+        <div class="doc-orden__field"><label>Notas <span id="twNotas-error"></span></label><textarea id="twNotas" data-error-id="twNotas-error"></textarea></div>
+        <div class="doc-orden__field doc-orden__field--horas"><label>Horas <span id="twHoras-error"></span></label><input id="twHoras" type="number" min="0" step=".1" required data-error-id="twHoras-error"></div>
       </div>
       <div class="orden-mov" id="ordenMovSection">
         <p class="orden-mov__label">Refacciones / piezas usadas</p>
@@ -200,4 +201,5 @@
 {% endblock %}
 {% block extra_js %}
 {% if puede_iniciar or puede_cerrar %}<script src="{% static 'mantenimiento/js/orden-trabajo.js' %}"></script>{% endif %}
+{% if puede_cerrar %}<script src="{% static 'js/validaciones-inputs.js' %}"></script><script src="{% static 'mantenimiento/js/validaciones-orden-trabajo.js' %}"></script>{% endif %}
 {% endblock %}

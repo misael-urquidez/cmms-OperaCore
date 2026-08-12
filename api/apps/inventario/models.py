@@ -90,6 +90,7 @@ class Herramienta(models.Model):
     nombre = models.CharField(unique=True, max_length=100)
     descripcion = models.CharField(max_length=255, blank=True, null=True)
     imagen = models.CharField(max_length=255, blank=True, null=True)
+    stock = models.IntegerField()
     tipo_herramienta = models.ForeignKey(TipoHerramienta, models.DO_NOTHING, db_column='tipo_herramienta', blank=True, null=True)
 
     class Meta:

@@ -73,7 +73,7 @@ class DocumentoOrden(View):
             "puede_modificar": (not es_tecnico) or (not orden_cerrada),
             # Estas dos controlan si se muestra el bloque "Completar orden"
             # (tecnico + orden abierta) y en que paso: iniciar o cerrar.
-            "puede_iniciar": es_tecnico and orden.get("estado_orden") == "PROGR",
+            "puede_iniciar": es_tecnico and orden.get("estado_orden") in ("PROGR", "SOLIC"),
             "puede_cerrar": es_tecnico and orden.get("estado_orden") == "ENPRO",
             "piezas": [p for p in todas_piezas if p.get("maquina") == orden.get("maquina")],
             "refacciones": _obtener_lista(f"{settings.API_BASE_URL}/inventario/v1/refacciones/list/"),

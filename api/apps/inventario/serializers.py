@@ -3,6 +3,11 @@ import os
 from django.conf import settings
 from django.db import transaction
 from . import models
+from .stock import (
+    ajustar_stock_herramienta,
+    recalcular_stock_herramienta,
+    validar_cantidad_estado_herramienta,
+)
 
 CODIGO_DISPO = "DISPO"
 
@@ -210,6 +215,9 @@ class UpdateProveedorSerializer(serializers.ModelSerializer):
 
 # ------------ HERRAMIENTA -------------------------------------------------------
 class ListHerramientaSerializer(serializers.ModelSerializer):
+    disponibles = serializers.IntegerField(source="_disponibles", read_only=True, default=0)
+    tipo_herramienta_nombre = serializers.CharField(source="tipo_herramienta.nombre", read_only=True, default=None)
+
     class Meta:
         model = models.Herramienta
         fields = "__all__"
@@ -221,10 +229,11 @@ class DetailHerramientaSerializer(serializers.ModelSerializer):
 
 class CreateHerramientaSerializer(serializers.ModelSerializer):
     imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
+    stock = serializers.IntegerField(required=False, default=0)
 
     class Meta:
         model = models.Herramienta
-        fields = ["nombre", "descripcion", "imagen", "tipo_herramienta"]
+        fields = ["nombre", "descripcion", "imagen", "tipo_herramienta", "stock"]
 
     def create(self, validated_data):
         imagen_file = validated_data.pop("imagen", None)
@@ -236,14 +245,20 @@ class CreateHerramientaSerializer(serializers.ModelSerializer):
                 for chunk in imagen_file.chunks():
                     dest.write(chunk)
             validated_data["imagen"] = f"inventario/{imagen_file.name}"
-        return super().create(validated_data)
+        stock = validated_data.get("stock", 0) or 0
+        with transaction.atomic():
+            herramienta = super().create(validated_data)
+            if stock > 0:
+                ajustar_stock_herramienta(herramienta, stock)
+        return herramienta
 
 class UpdateHerramientaSerializer(serializers.ModelSerializer):
     imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
+    stock = serializers.IntegerField(required=False)
 
     class Meta:
         model = models.Herramienta
-        fields = ["nombre", "descripcion", "imagen", "tipo_herramienta"]
+        fields = ["nombre", "descripcion", "imagen", "tipo_herramienta", "stock"]
 
     def update(self, instance, validated_data):
         imagen_file = validated_data.pop("imagen", None)
@@ -255,7 +270,11 @@ class UpdateHerramientaSerializer(serializers.ModelSerializer):
                 for chunk in imagen_file.chunks():
                     dest.write(chunk)
             validated_data["imagen"] = f"inventario/{imagen_file.name}"
-        return super().update(instance, validated_data)
+        stock = validated_data.pop("stock", None)
+        with transaction.atomic():
+            if stock is not None:
+                ajustar_stock_herramienta(instance, stock)
+            return super().update(instance, validated_data)
 
 
 # ------------ PIEZA ------------------------------------------------------------
@@ -452,10 +471,53 @@ class CreateEstadoHerramientaSerializer(serializers.ModelSerializer):
         model = models.EstadoHerramienta
         fields = ["herramienta", "edo_herramienta", "cantidad"]
 
+    def create(self, validated_data):
+        with transaction.atomic():
+            instancia = super().create(validated_data)
+            recalcular_stock_herramienta(instancia.herramienta)
+        return instancia
+
 class UpdateEstadoHerramientaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EstadoHerramienta
         fields = ["herramienta", "edo_herramienta", "cantidad"]
+
+    def update(self, instance, validated_data):
+        with transaction.atomic():
+            edo_objeto = validated_data.get("edo_herramienta", instance.edo_herramienta)
+            edo_codigo = getattr(edo_objeto, "codigo", edo_objeto)
+            nueva_cantidad = validated_data.get("cantidad", instance.cantidad)
+            validar_cantidad_estado_herramienta(
+                instance.herramienta, edo_codigo, nueva_cantidad
+            )
+            if edo_codigo == instance.edo_herramienta_id:
+                # PK compuesta emulada: save()/delete() usan solo "herramienta"
+                # en el WHERE y pisarian los demas estados. Se actualiza con
+                # .update() y la llave completa.
+                models.EstadoHerramienta.objects.filter(
+                    herramienta=instance.herramienta,
+                    edo_herramienta_id=instance.edo_herramienta_id,
+                ).update(cantidad=nueva_cantidad)
+            else:
+                # Cambio de estado: la fila "nace" en otro edo_herramienta.
+                if models.EstadoHerramienta.objects.filter(
+                    herramienta=instance.herramienta,
+                    edo_herramienta_id=edo_codigo,
+                ).exists():
+                    raise serializers.ValidationError(
+                        {"edo_herramienta": "La herramienta ya tiene este estado."}
+                    )
+                models.EstadoHerramienta.objects.filter(
+                    herramienta=instance.herramienta,
+                    edo_herramienta_id=instance.edo_herramienta_id,
+                ).delete()
+                models.EstadoHerramienta.objects.create(
+                    herramienta=instance.herramienta,
+                    edo_herramienta_id=edo_codigo,
+                    cantidad=nueva_cantidad,
+                )
+            recalcular_stock_herramienta(instance.herramienta)
+        return instance
 
 
 class ListEstadoRefaccionSerializer(serializers.ModelSerializer):
