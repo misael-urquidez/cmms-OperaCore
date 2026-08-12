@@ -59,7 +59,7 @@
     cursor: not-allowed;
   }
 
-  /* --- DISEÑO CORREGIDO PARA LA ZONA DE SUBIDA DE IMAGEN --- */
+  /* --- ZONA DE SUBIDA DE IMAGEN --- */
   .file-drop-area {
     display: flex;
     flex-direction: column;
@@ -78,17 +78,17 @@
     background: var(--color-bg, #0f172a);
     cursor: pointer;
     text-align: center;
-    position: static !important;
     transition: border-color 0.2s, background-color 0.2s;
   }
   .drop-zone-custom:hover {
     border-color: var(--color-primary, #38bdf8);
     background: rgba(56, 189, 248, 0.04);
   }
-  .drop-zone-custom .icon {
-    font-size: 2rem;
+  .drop-zone-custom .icon-svg {
+    width: 32px;
+    height: 32px;
     margin-bottom: 0.4rem;
-    line-height: 1;
+    color: var(--color-primary, #38bdf8);
   }
   .drop-text-primary {
     font-size: 0.875rem;
@@ -119,7 +119,7 @@
     border-radius: 0.4rem;
   }
 
-  /* --- DISEÑO MEJORADO DE LA GUÍA DE ESTRUCTURACIÓN --- */
+  /* --- GUÍA DE ESTRUCTURACIÓN --- */
   .guias-card {
     background: var(--color-surface, #1e293b);
     border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
@@ -131,9 +131,7 @@
   .guias-card:hover {
     border-color: rgba(56, 189, 248, 0.3);
   }
-  .guias-card details {
-    width: 100%;
-  }
+  .guias-card details { width: 100%; }
   .guias-card summary {
     padding: 0.9rem 1.25rem;
     font-weight: 600;
@@ -147,18 +145,14 @@
     user-select: none;
     background: rgba(255, 255, 255, 0.02);
   }
-  .guias-card summary::-webkit-details-marker {
-    display: none;
-  }
+  .guias-card summary::-webkit-details-marker { display: none; }
   .guias-card summary::after {
     content: '▾';
     font-size: 1.1rem;
     transition: transform 0.2s ease;
     color: var(--color-muted, #94a3b8);
   }
-  .guias-card details[open] summary::after {
-    transform: rotate(180deg);
-  }
+  .guias-card details[open] summary::after { transform: rotate(180deg); }
   .guias-content {
     padding: 0 1.25rem 1.25rem 1.25rem;
     border-top: 1px solid var(--line, rgba(255, 255, 255, 0.05));
@@ -188,9 +182,17 @@
   }
   .guias__item strong {
     color: var(--color-primary, #38bdf8);
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
     margin-bottom: 0.25rem;
     font-size: 0.85rem;
+  }
+  .guias-icon-svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    flex-shrink: 0;
   }
 </style>
 {% endblock %}
@@ -202,17 +204,14 @@
     <h2>Nuevo reporte de falla</h2>
     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
       <button type="button" class="btn-elipse-falla" id="btnElipseFalla" title="Describe la falla y Elipse te ayuda">
-        <span class="elipse-bolt">⚡</span> Redactar con Elipse
-      </button>
-      <input type="file" id="inputEvaluarDocx" accept=".docx,.pdf" hidden>
-
-      <button type="button" class="btn-elipse-falla" id="btnImportarDocx" onclick="document.getElementById('inputImportarDocx').click()">
-        📄 Importar Doc
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Redactar con Elipse
       </button>
       <input type="file" id="inputImportarDocx" accept=".docx,.pdf" hidden>
 
-      <a class="btn-elipse-falla" href="{% static 'fallas/plantillas/plantilla_reporte_falla.docx' %}" download style="text-decoration:none;">
-        ⬇️ Plantilla
+      <a class="btn-elipse-falla" href="{% static 'fallas/plantillas/plantilla_reporte_falla.docx' %}" download style="text-decoration:none; display: inline-flex; align-items: center; gap: 0.4rem;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Plantilla
       </a>
     </div>
   </div>
@@ -220,42 +219,69 @@
   <!-- GUÍA ESTRUCTURADA DE REPORTE -->
   <div class="guias-card">
     <details>
-      <summary>💡 ¿Cómo estructurar un reporte de falla?</summary>
+      <summary style="display: flex; align-items: center; gap: 0.5rem;">
+        <svg class="guias-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        ¿Cómo estructurar un reporte de falla?
+      </summary>
       <div class="guias-content">
         <p class="guias__intro">
           Estas instrucciones tienen como objetivo estructurar el levantamiento del reporte ante una anomalía detectada en maquinaria industrial, guiando para que la información capturada sea precisa y técnica, facilitando la pronta rehabilitación del servicio.
         </p>
         <ul class="guias__grid">
           <li class="guias__item">
-            <strong>📌 Asunto</strong>
+            <strong>
+              <svg class="guias-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l5.58-5.58c.94-.94.94-2.48 0-3.42L12 2z"/><circle cx="7" cy="7" r=".5"/></svg>
+              Asunto
+            </strong>
             Define la falla con un nombre preciso (ej. "Engrane de transmisión roto"). Breve y descriptivo.
           </li>
           <li class="guias__item">
-            <strong>📝 Descripción</strong>
+            <strong>
+              <svg class="guias-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Descripción
+            </strong>
             Detalla qué sucede exactamente y cuál componente tiene el defecto observado.
           </li>
           <li class="guias__item">
-            <strong>🔍 Causa raíz</strong>
+            <strong>
+              <svg class="guias-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Causa raíz
+            </strong>
             Identifica posibles modificaciones recientes u operaciones inusuales que originaron la falla.
           </li>
           <li class="guias__item">
-            <strong>⏱️ Tiempo de paro</strong>
+            <strong>
+              <svg class="guias-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Tiempo de paro
+            </strong>
             Registra las horas reales de paro. Si la máquina continuó operando, coloca "0".
           </li>
           <li class="guias__item">
-            <strong>⚙️ Máquina</strong>
+            <strong>
+              <svg class="guias-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Máquina
+            </strong>
             Selecciona el equipo específico del catálogo para vincular correctamente su historial.
           </li>
           <li class="guias__item">
-            <strong>⚠️ Severidad</strong>
+            <strong>
+              <svg class="guias-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Severidad
+            </strong>
             Determina si el recurso afectado es vital para asignar la urgencia adecuada.
           </li>
           <li class="guias__item">
-            <strong>🏷️ Tipo de falla</strong>
+            <strong>
+              <svg class="guias-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+              Tipo de falla
+            </strong>
             Categoriza la anomalía para alimentar las métricas y prevenir recurrencias.
           </li>
           <li class="guias__item">
-            <strong>📸 Evidencia</strong>
+            <strong>
+              <svg class="guias-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              Evidencia
+            </strong>
             Adjunta imágenes claras que soporten el diagnóstico inicial de la falla.
           </li>
         </ul>
@@ -269,7 +295,7 @@
       {% csrf_token %}
       <div class="form-grid">
        
-        <!-- COLUMNA IZQUIERDA (Campos del formulario) -->
+        <!-- COLUMNA IZQUIERDA -->
         <div class="left-side">
           <div class="form-group">
             <label for="asunto">Asunto <span id="asunto-error" class="text-danger"></span></label>
@@ -350,13 +376,13 @@
           </div>
         </div>
 
-        <!-- COLUMNA DERECHA (Carga de evidencia corregida + Botones) -->
+        <!-- COLUMNA DERECHA -->
         <div class="right-side">
           <div class="form-group">
             <label>Adjuntar Evidencia (opcional)</label>
             <div class="file-drop-area">
               <label for="fileDrag" class="drop-zone-custom" id="dropZoneLabel">
-                <span class="icon">📥</span>
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <p class="drop-text-primary">Haz clic o arrastra la imagen aquí</p>
                 <span class="drop-text-secondary">Soporta formatos JPG, PNG, WEBP</span>
               </label>
@@ -378,22 +404,25 @@
     </form>
   </div>
 
-  <!-- SCRIPTS DE ELIPSE Y DATA -->
-  {{ maquinas|json_script:"elipseMaquinasData" }}
-  {{ severidades|json_script:"elipseSeveridadesData" }}
-  {{ tipos_falla|json_script:"elipseTiposFallaData" }}
-  {{ estados|json_script:"elipseEstadosData" }}
-
-  <!-- PANEL ELIPSE SLIDE-OVER -->
+  <!-- PANEL ELIPSE -->
   <div class="elipse-falla-overlay" id="elipseFallaOverlay" hidden></div>
   <aside class="elipse-falla-panel" id="elipseFallaPanel" aria-hidden="true">
     <div class="elipse-falla-panel__head">
-      <div class="elipse-falla-panel__title"><span class="elipse-bolt">⚡</span> Elipse</div>
+      <div class="elipse-falla-panel__title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Elipse
+      </div>
       <button type="button" class="elipse-falla-panel__close" id="elipseFallaClose">&times;</button>
     </div>
     <div class="elipse-falla-panel__tabs">
-      <button type="button" class="elipse-falla-panel__tab is-active" id="elipseTabRedactar">✍️ Redactar</button>
-      <button type="button" class="elipse-falla-panel__tab" id="elipseTabDiagnosticar">🩺 Diagnosticar</button>
+      <button type="button" class="elipse-falla-panel__tab is-active" id="elipseTabRedactar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Redactar
+      </button>
+      <button type="button" class="elipse-falla-panel__tab" id="elipseTabDiagnosticar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Diagnosticar
+      </button>
     </div>
     <div class="elipse-falla-panel__chat" id="elipseFallaChat"></div>
     <form class="elipse-falla-panel__form" id="elipseFallaForm" onsubmit="return false;">
@@ -402,42 +431,14 @@
     </form>
   </aside>
 
-  <!-- MODAL DE EVALUACIÓN CON IA (INCORPORADO) -->
-  <div class="modal-evaluacion-overlay" id="modalEvaluacionIa" hidden>
-    <div class="modal-evaluacion-container">
-      <div class="modal-evaluacion-header">
-        <h3>✨ Evaluación del Reporte de Falla con IA</h3>
-        <button type="button" class="modal-evaluacion-close" id="btnCloseModalEvaluacion">&times;</button>
-      </div>
-      <div class="modal-evaluacion-body">
-        <div id="evaluacionLoading" class="evaluacion-state">
-          <div class="spinner-evaluacion"></div>
-          <p>Analizando la calidad, técnica y completitud del reporte...</p>
-        </div>
-        <div id="evaluacionResults" class="evaluacion-state" hidden>
-          <div class="kpi-score-card">
-            <div class="score-circle" id="scoreCircle">
-              <span id="scoreValue">0</span><small>/100</small>
-            </div>
-            <div class="score-info">
-              <h4 id="scoreDictamen">Calculando...</h4>
-              <p id="scoreResumen">Esperando dictamen...</p>
-            </div>
-          </div>
-          <div class="evaluacion-detalles" id="evaluacionDetallesGrid"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  window.ELIPSE_FALLA_CONFIG = { 
-    csrf: "{{ csrf_token }}", 
-    urlAutocompletar: "{% url 'elipse:autocompletar_falla' %}", 
+  window.ELIPSE_FALLA_CONFIG = {
+    csrf: "{{ csrf_token }}",
+    urlAutocompletar: "{% url 'elipse:autocompletar_falla' %}",
     urlDiagnostico: "{% url 'elipse:sugerencia_diagnostico' %}",
     urlEvaluacion: ""
   };
@@ -452,8 +453,4 @@
 <script src="{% static 'js/extraer-texto-doc.js' %}"></script>
 <script src="{% static 'fallas/js/elipse-falla.js' %}"></script>
 <script src="{% static 'fallas/js/sugerencia-diagnostico.js' %}"></script>
-<script src="{% static 'fallas/js/confirmar-reporte.js' %}"></script>
-
-<!-- NUEVO SCRIPT DE EVALUACIÓN CON IA -->
-<script src="{% static 'fallas/js/evaluacion-reporte-ia.js' %}"></script>
 {% endblock %}

@@ -524,6 +524,170 @@ textarea.form-control-custom {
   }
 }
 
+/* ============================================================
+   ESTILOS DEL MODAL EMERGENTE (OVERLAY & CONTENEDOR)
+   ============================================================ */
+.fallas-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.fallas-modal.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.fallas-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 16, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 1;
+}
+
+.fallas-modal__dialog {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.fallas-modal__content {
+  background: var(--color-surface, #1e293b);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.2s ease;
+}
+
+.fallas-modal.is-open .fallas-modal__content {
+  transform: scale(1) translateY(0);
+}
+
+.fallas-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+}
+
+.fallas-modal__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-text, #f8fafc);
+}
+
+.fallas-modal__close {
+  background: transparent;
+  border: none;
+  color: var(--color-muted, #94a3b8);
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.fallas-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fallas-modal__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1.25rem;
+}
+
+.fallas-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.fallas-modal__label {
+  font-size: 0.725rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-muted, #94a3b8);
+}
+
+.fallas-modal__value {
+  font-size: 0.9rem;
+  color: var(--color-text, #f8fafc);
+  font-weight: 500;
+}
+
+.fallas-modal__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fallas-modal__text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text, #cbd5e1);
+  background: var(--color-bg, #0f172a);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.85rem;
+}
+
+.fallas-modal__img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+
+.fallas-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+}
+
+.fallas-modal__btn {
+  padding: 0.5rem 1.25rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fallas-modal__btn--close {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text, #f8fafc);
+}
+
+.fallas-modal__btn--primary {
+  background: var(--color-primary, #38bdf8);
+  color: #0f172a;
+}
+
 /* Colores de Estado */
 .badge-est-en-espera { background: rgba(234, 179, 8, 0.15);  color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); }
 .badge-est-abierto   { background: rgba(239, 68, 68, 0.15);  color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
