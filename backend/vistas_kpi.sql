@@ -261,4 +261,3 @@ left join CLASIFICACION c on c.codigo = r.clasificacion;
 -- =====================================================================
 
 
-VISTA DONDE MUESTRE ESTADOS 
