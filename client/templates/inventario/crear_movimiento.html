@@ -65,7 +65,7 @@
       </div>
       <div>
         <p class="tecni-stat-card__label">Rehabilitación</p>
-        <p class="tecni-stat-card__hint">Pieza → Refacción en almacén</p>
+        <p class="tecni-stat-card__hint">Pieza ENREH → Operativa</p>
       </div>
     </div>
   </section>
@@ -100,7 +100,7 @@
       </select>
     </div>
 
-    {# Refacción — INSTA y REHA. Se selecciona una existente o se registra una nueva (igual que la pieza). #}
+    {# Refacción — INSTA. Se selecciona una existente o se registra una nueva. #}
     <div id="campo-refaccion" style="margin-bottom:1rem;">
       <label class="fallas-modal__label" for="mov-refaccion-btn">Refacción</label>
       <div class="mov-pieza" id="refaccion-wrap">
@@ -110,11 +110,11 @@
       <p class="mov-pieza__resumen" id="mov-refaccion-resumen">{% if datos.refaccion %}Refacción seleccionada: {{ datos.refaccion }}{% else %}Sin refacción seleccionada.{% endif %}</p>
     </div>
 
-    {# Pieza: INSTA usa botón+modal (existente o nueva). DESMO/REHA solo select de piezas existentes. #}
+    {# Pieza: INSTA usa botón+modal (siempre registra nueva). DESMO/REHA solo select de piezas existentes. #}
     <div id="campo-pieza" style="margin-bottom:1rem;">
       <label class="fallas-modal__label" for="mov-pieza-btn">Pieza</label>
       <div class="mov-pieza" id="pieza-nueva-wrap">
-        <button type="button" id="mov-pieza-btn" class="btn-primary-sm">+ Seleccionar / registrar pieza</button>
+        <button type="button" id="mov-pieza-btn" class="btn-primary-sm">+ Registrar pieza</button>
       </div>
       <select id="mov-pieza-select"
               style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem;">
@@ -154,18 +154,7 @@
         </div>
 
         <div class="fallas-modal__body">
-          <div class="mov-pieza__tabs">
-            <button type="button" class="mov-pieza__tab is-active" data-tab="buscar">Buscar existente</button>
-            <button type="button" class="mov-pieza__tab" data-tab="nueva">Registrar nueva</button>
-          </div>
-
-          {# ---- Tab: buscar pieza existente ---- #}
-          <div class="mov-pieza__panel" data-panel="buscar">
-            <input type="search" id="mov-pieza-buscar" placeholder="Buscar por número de serie o nombre...">
-            <div class="mov-pieza__lista" id="mov-pieza-lista"></div>
-          </div>
-
-          {# ---- Tab: registrar pieza nueva (misma estructura que en gestión) ---- #}
+          {# INSTA: la pieza siempre es nueva, no se busca una existente. #}
           <div class="mov-pieza__panel" data-panel="nueva" hidden>
             <div class="mov-pieza__grid">
               <div class="mov-pieza__campo">

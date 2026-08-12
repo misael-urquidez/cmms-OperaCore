@@ -166,8 +166,8 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
         serie = (pieza_campos.get("numeroserie") or "").strip()
         if serie and models.Pieza.objects.filter(numeroserie=serie).exists():
             raise ValidationError(
-                f"La serie {serie} ya existe. Usa 'Buscar existente' "
-                "para reinstalar la pieza."
+                f"La serie {serie} ya existe. Si la pieza quedó desmontada, "
+                "úsala en DESMO/REHA; no vuelvas a registrarla."
             )
 
         if not pieza_campos.get("nombre") and data.get("refaccion"):
@@ -218,43 +218,23 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
         except OperationalError as e:
             raise ValidationError(e.args[1] if len(e.args) > 1 else str(e))
 
-    def _sincronizar_stock_refaccion(self, refaccion):
-        """Recalcula REFACCION.stock como la suma de las cantidades de la
-        M:M ESTADO_REFACCION. La BD de este entorno no tiene los triggers
-        tg_sync_refaccion_stock_* de triggers2.sql, asi que REHA debe dejar
-        el stock consistente manualmente."""
-        total = sum(
-            refaccion.estadorefaccion_set.values_list("cantidad", flat=True)
-        )
-        refaccion.stock = total
-        refaccion.save(update_fields=["stock"])
-
     def _registrar_insta(self, data):
         """INSTA: la refaccion sale del almacen (SP3 DISPO -> INMAQ) y la
-        pieza queda instalada en la maquina de la orden. La pieza puede ser
-        nueva (pieza_data) o existente (pieza rehabilitada en ENREH)."""
+        pieza recien creada (siempre pieza nueva) queda instalada en la
+        maquina de la orden."""
         from apps.inventario.models import EdoPieza
 
-        pieza = None
-        if data.get("pieza_data"):
-            pieza, pieza_serie = self._crear_pieza_nueva(data)
-        else:
-            pieza_serie = data.get("pieza") or None
-            if pieza_serie:
-                pieza = models.Pieza.objects.filter(numeroserie=pieza_serie).first()
-                if not pieza:
-                    raise ValidationError(f"La pieza {pieza_serie} no existe.")
-                if not (pieza.edo_pieza_id == "ENREH" or pieza.maquina_id is None):
-                    raise ValidationError(
-                        f"La pieza {pieza_serie} está operativa en una máquina; "
-                        "usa DESMO antes de reinstalarla."
-                    )
+        if not data.get("pieza_data"):
+            raise ValidationError(
+                "INSTA requiere registrar la pieza nueva que se instala."
+            )
+        pieza, pieza_serie = self._crear_pieza_nueva(data)
 
         resultado = self._call_sp_salida_refaccion(data, pieza_serie)
         movimiento = models.Movimiento.objects.get(pk=resultado.get("numero_movimiento"))
 
-        # La pieza (existente o recién creada) queda OPERA en la maquina de
-        # la orden. Si el UPDATE fallara, el atomic revierte el SP y la pieza.
+        # La pieza recién creada queda OPERA en la maquina de la orden. Si el
+        # UPDATE fallara, el atomic revierte el SP y la pieza.
         if pieza is not None:
             opera = EdoPieza.objects.filter(codigo="OPERA").first()
             if opera:
@@ -270,13 +250,11 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
         return movimiento
 
     def _registrar_reha(self, data):
-        """REHA: una pieza en ENREH (desmontada, sin maquina) se convierte en
-        refaccion disponible en almacen. Si la refaccion ya existe (por SKU) se
-        reutiliza; si no, se crea al vuelo con los datos minimos. La unidad que
-        regresa se mueve INMAQ -> DISPO cuando venia de una instalacion previa
-        (el total de ESTADO_REFACCION no se infla); si no, entra DISPO +1."""
+        """REHA: una pieza desmontada y en ENREH (sin maquina) se rehabilita:
+        queda OPERA y, si la orden seleccionada trae maquina, se reasigna a esa
+        maquina (igual que INSTA). No se crea ni modifica ninguna refaccion:
+        la pieza fisica conserva su registro."""
         import datetime
-        from apps.inventario.models import EdoRefaccion, EstadoRefaccion, Refaccion
 
         pieza_serie = data.get("pieza") or None
         if not pieza_serie:
@@ -293,67 +271,17 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
         if pieza.edo_pieza_id != "ENREH":
             raise ValidationError(
                 "La pieza debe estar en estado 'En Rehabilitación' (ENREH) "
-                "para registrarse como refacción."
+                "para rehabilitarse."
             )
 
-        refaccion_data = data.get("refaccion_data") or None
-        refaccion_id = data.get("refaccion") or None
-
-        if refaccion_data:
-            sku = (refaccion_data.get("codigosku") or "").strip()
-            if not sku:
-                raise ValidationError("Falta el código SKU de la refacción.")
-            refaccion = Refaccion.objects.filter(codigosku=sku).first()
-            if refaccion:
-                refaccion_id = refaccion.numeroregistro
-            else:
-                nombre = (refaccion_data.get("nombre") or "").strip() or pieza.nombre
-                if len(nombre) > 30:
-                    nombre = nombre[:30]
-                if Refaccion.objects.filter(nombre=nombre).exists():
-                    raise ValidationError(
-                        f"Ya existe una refacción con el nombre '{nombre}'."
-                    )
-                refaccion = Refaccion.objects.create(
-                    codigosku=sku,
-                    nombre=nombre,
-                    costo=pieza.costoinicial,
-                    stock=0,
-                    stockminimo=0,
-                    tipo_refaccion_id=refaccion_data.get("tipo_refaccion") or None,
-                )
-                refaccion_id = refaccion.numeroregistro
-        elif not refaccion_id:
-            raise ValidationError(
-                "Indica la refacción (existente o nueva) para la rehabilitación."
-            )
-        else:
-            refaccion = Refaccion.objects.filter(pk=refaccion_id).first()
-            if not refaccion:
-                raise ValidationError("La refacción especificada no existe.")
-
-        # La unidad rehabilitada regresa al almacen:
-        #   - si la refaccion tenia una unidad INMAQ (la pieza salio de esa
-        #     instalacion), se mueve INMAQ -> DISPO (el total no cambia).
-        #   - si no, entra una unidad nueva: DISPO +1.
-        inmaq_row = EstadoRefaccion.objects.filter(
-            estado_refaccion_id="INMAQ", refaccion=refaccion
-        ).first()
-        dispo_row, _ = EstadoRefaccion.objects.get_or_create(
-            estado_refaccion_id="DISPO",
-            refaccion=refaccion,
-            defaults={"cantidad": 0},
-        )
-        if inmaq_row is not None and inmaq_row.cantidad > 0:
-            inmaq_row.cantidad -= 1
-            inmaq_row.save(update_fields=["cantidad"])
-            dispo_row.cantidad += 1
-            dispo_row.save(update_fields=["cantidad"])
-        else:
-            dispo_row.cantidad += 1
-            dispo_row.save(update_fields=["cantidad"])
-
-        self._sincronizar_stock_refaccion(refaccion)
+        pieza.edo_pieza_id = "OPERA"
+        if data.get("orden_mantenimiento"):
+            orden = models.OrdenMantenimiento.objects.filter(
+                pk=data["orden_mantenimiento"]
+            ).first()
+            if orden and orden.maquina_id:
+                pieza.maquina_id = orden.maquina_id
+        pieza.save(update_fields=["maquina", "edo_pieza"])
 
         return models.Movimiento.objects.create(
             descripcion=data.get("descripcion")
@@ -362,7 +290,6 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
             hora=data.get("hora") or datetime.datetime.now().time(),
             tipomovimiento="REHA",
             orden_mantenimiento_id=data.get("orden_mantenimiento") or None,
-            refaccion=refaccion,
             pieza=pieza,
         )
 

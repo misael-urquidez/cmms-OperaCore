@@ -26,14 +26,15 @@ function seleccionarTipo(el) {
     limpiarRefaccion();
   } else if (tipo === 'REHA') {
     campoOrden.style.display = '';
-    campoRefaccion.style.display = '';
+    campoRefaccion.style.display = 'none';
     campoDesc.style.display = 'none';
     selOrden.required = false;
+    limpiarRefaccion();
   }
 
   limpiarPieza();
 
-  // INSTA: se elige la pieza con el modal (existente o nueva).
+  // INSTA: se registra la pieza nueva con el modal (solo "Registrar nueva").
   // DESMO/REHA: select de piezas existentes, filtrado por estado
   // (DESMO -> instaladas, REHA -> en rehabilitacion).
   var wrapNueva = document.getElementById('pieza-nueva-wrap');
@@ -115,7 +116,7 @@ function limpiarRefaccion() {
 
   function abrirModalPieza() {
     prefilarDesdeRefaccion();
-    activarTab('buscar');
+    activarTab('nueva');
     pintarListaPiezas();
     modal.classList.add('is-open');
   }
