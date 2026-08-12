@@ -5,7 +5,7 @@ app_name = "inventario"
 
 urlpatterns = [
     # Dashboard / Index
-    path("", views.Index.as_view(), name="index"),
+    path("", views.AlmacenInventarioView.as_view(), name="index"),
 
     # ------------ REFACCIONES --------------------------------------------------
     path("refacciones/", views.ListaRefacciones.as_view(), name="lista_refacciones"),
@@ -55,4 +55,7 @@ urlpatterns = [
     # ------------ MODALES (fragmentos HTML) --------------------------------
     path("modal/proveedor/<str:pk>/", views.ProveedorModalView.as_view(), name="modal_proveedor"),
     path("modal/existencia/<int:refaccion_id>/", views.ExistenciaModalView.as_view(), name="modal_existencia"),
+
+
+    path("almacen/", views.AlmacenInventarioView.as_view(), name="almacen"),
 ]

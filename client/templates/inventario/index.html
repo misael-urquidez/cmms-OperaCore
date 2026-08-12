@@ -1,7 +1,728 @@
 {% extends base_template %}
-{% block title %}Inventario · OperaCore{% endblock %}
+{% load static %}
+
+{% block title %}Almacén de Mantenimiento · OperaCore{% endblock %}
+{% block breadcrumb %}Inventario{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'inventario/css/almacen.css' %}">
+<style>
+/* ==========================================================================
+   LAYOUT Y FILTROS ADAPTABLES A MÓVIL
+   ========================================================================== */
+
+.almacen-grid-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 1.25rem;
+  align-items: start;
+  margin-top: 1rem;
+  width: 100%;
+}
+
+/* BARRA DE FILTROS RESPONSIVA: En PC se ve en fila, en móvil se apila limpiamente */
+.filter-bar-unified {
+  display: flex;
+  flex-wrap: wrap; /* Permite que los selectores bajen de línea en celulares */
+  gap: 0.6rem;
+  background: var(--color-surface, #1e293b);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-radius: 0.85rem 0.85rem 0 0;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-sizing: border-box;
+}
+
+.search-box-inline {
+  position: relative;
+  flex: 1 1 200px; /* Ancho mínimo para el input de búsqueda */
+  min-width: 0;
+}
+
+.search-box-inline input {
+  width: 100%;
+  padding: 0.55rem 0.85rem 0.55rem 2.2rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-radius: 0.5rem;
+  color: #f8fafc;
+  font-size: 0.825rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.search-box-inline::before {
+  content: "🔍";
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  opacity: 0.5;
+}
+
+.select-dark-inline {
+  flex: 1 1 130px;
+  min-width: 0;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  color: #f8fafc;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+/* TABLA Y CONTENEDOR */
+.table-responsive-custom {
+  width: 100%;
+  overflow-x: auto;
+  background: var(--color-surface, #1e293b);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-top: none;
+  border-radius: 0 0 0.85rem 0.85rem;
+  padding: 0.5rem 1rem 1rem 1rem;
+  box-sizing: border-box;
+}
+
+.table-almacen {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.table-almacen th {
+  padding: 0.85rem 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.table-almacen td {
+  padding: 0.85rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+}
+
+/* BOTONES Y BADGES */
+.btn-proveedor-pill {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--color-primary, #38bdf8);
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+}
+
+.badge-status {
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-transform: capitalize;
+}
+
+.qty-badge-gray {
+  background: #334155;
+  color: #f8fafc;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: inline-block;
+}
+
+/* COLORES CLASIFICACIÓN / ESTADOS */
+.badge-clasif-baja { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-clasif-mediana { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.badge-clasif-alta { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+
+.badge-ref-disponible { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-ref-reparacion { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.badge-ref-baja { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.badge-ref-canalizada { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+.badge-her-disponible { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-her-reparacion { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.badge-her-uso { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+.badge-her-baja { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+.badge-pie-operativa { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-pie-degradada { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.badge-pie-fallida { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.badge-pie-rehabilitacion { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); }
+.badge-pie-baja { background: rgba(100, 116, 139, 0.2); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); }
+
+.stock-alert { color: #f87171; font-weight: 700; }
+.stock-ok { color: #34d399; font-weight: 700; }
+
+/* MODAL PROVEEDOR */
+.fallas-modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(5px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 1rem;
+}
+.fallas-modal-backdrop.is-active { display: flex; }
+.fallas-modal__dialog {
+  width: 100%;
+  max-width: 600px;
+  background: var(--color-surface, #1e293b);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
+  border-radius: 0.85rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.fallas-modal__header {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.fallas-modal__title { margin: 0; font-size: 1.15rem; color: #f8fafc; font-weight: 700; }
+.fallas-modal__close { background: transparent; border: none; color: #94a3b8; cursor: pointer; padding: 0.25rem; }
+.fallas-modal__close:hover { color: #f8fafc; }
+.fallas-modal__body { padding: 1.5rem; color: #cbd5e1; font-size: 0.9rem; }
+.fallas-modal__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+.fallas-modal__field { display: flex; flex-direction: column; gap: 0.2rem; }
+.fallas-modal__label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+.fallas-modal__value { color: #f8fafc; font-weight: 600; text-decoration: none; }
+a.fallas-modal__value:hover { color: var(--color-primary, #38bdf8); }
+.fallas-modal__section { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.fallas-modal__text { margin: 0.25rem 0 0 0; color: #f8fafc; }
+.fallas-modal__footer { padding: 1rem 1.5rem; background: rgba(15, 23, 42, 0.4); border-top: 1px solid rgba(255, 255, 255, 0.1); text-align: right; }
+.fallas-modal__btn--close {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   REGLAS EXCLUSIVAS PARA TABLET / MÓVIL (<= 900px)
+   ========================================================================== */
+.col-mobile-detail { display: none; }
+
+@media (max-width: 900px) {
+  .almacen-grid-layout {
+    grid-template-columns: 1fr; /* Coloca el sidebar de disponibilidad abajo */
+  }
+
+  /* La barra de filtros apila los elementos completamente en celulares */
+  .filter-bar-unified {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-box-inline, .select-dark-inline {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  /* Transformación de la tabla a tarjetas perfectamente alineadas */
+  .table-almacen thead {
+    display: none;
+  }
+  .table-almacen tbody tr {
+    display: block;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    margin-bottom: 0.85rem;
+    padding: 0.85rem 1rem;
+  }
+  .table-almacen td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.45rem 0 !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    white-space: normal !important;
+    text-align: right;
+  }
+  .table-almacen td:last-child {
+    border-bottom: none !important;
+  }
+  /* Agrega la etiqueta a la izquierda */
+  .table-almacen td::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    text-align: left;
+    padding-right: 0.5rem;
+  }
+
+  .col-mobile-toggle { display: flex !important; }
+  .mobile-hidden { display: none !important; }
+  .mobile-hidden.is-expanded { display: flex !important; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-  <h1>Módulo de Inventario</h1>
-  <p>Estado del API para este módulo: <code>{{ api_status }}</code></p>
-  <p class="hint">Esta vista ya está jalando datos de <code>api/</code> vía <code>requests</code>. Reemplázala por tus listas/formularios reales.</p>
+<div class="dashboard-container">
+
+  <!-- CABECERA Y PESTAÑAS DE ALMACÉN -->
+  <div class="panel-header-flex">
+    <div>
+      <span class="label-sub" style="color: var(--color-primary, #38bdf8);">INVENTARIO</span>
+      <h2 style="margin: 0; font-size: 1.6rem;">Almacén de mantenimiento</h2>
+    </div>
+
+    <div class="tab-filters-pills">
+      <button type="button" class="tab-pill active" onclick="cambiarSeccion('refacciones', this)">Refacciones</button>
+      <button type="button" class="tab-pill" onclick="cambiarSeccion('herramientas', this)">Herramientas</button>
+      <button type="button" class="tab-pill" onclick="cambiarSeccion('piezas', this)">Piezas</button>
+    </div>
+  </div>
+
+  <div class="almacen-grid-layout">
+    
+    <main class="panel-main-content">
+
+      <!-- =================================================================== -->
+      <!-- PESTAÑA 1: REFACCIONES -->
+      <!-- =================================================================== -->
+      <div id="sec-refacciones" class="seccion-almacen active">
+        <!-- BARRA UNIFICADA: Búsqueda y Filtros en una sola línea -->
+        <div class="filter-bar-unified">
+          <div class="search-box-inline">
+            <input type="text" placeholder="Buscar refacción por nombre, SKU..." onkeyup="filtrarTabla('tabla-refacciones', this.value)">
+          </div>
+          <select class="select-dark-inline" onchange="filtrarColumna('tabla-refacciones', 2, this.value)">
+            <option value="">Todas las Máquinas</option>
+            {% for m in maquinas %}<option value="{{ m.nombre }}">{{ m.nombre }}</option>{% endfor %}
+          </select>
+          <select class="select-dark-inline" onchange="filtrarColumna('tabla-refacciones', 4, this.value)">
+            <option value="">Todos los Tipos</option>
+            {% for tr in catalogos.tipos_refaccion %}<option value="{{ tr.nombre }}">{{ tr.nombre }}</option>{% endfor %}
+          </select>
+          <select class="select-dark-inline" onchange="filtrarColumna('tabla-refacciones', 3, this.value)">
+            <option value="">Todas las Clasificaciones</option>
+            <option value="Baja criticidad">Baja criticidad</option>
+            <option value="Mediana criticidad">Mediana criticidad</option>
+            <option value="Alta criticidad">Alta criticidad</option>
+          </select>
+          <select class="select-dark-inline" onchange="filtrarColumna('tabla-refacciones', 6, this.value)">
+            <option value="">Todos los Estados</option>
+            <option value="Disponible">Disponible</option>
+            <option value="En reparacion">En reparación</option>
+            <option value="Baja">Baja</option>
+            <option value="Canalizada">Canalizada</option>
+          </select>
+        </div>
+
+        <div class="table-responsive-custom">
+          <table class="table-almacen" id="tabla-refacciones">
+            <thead>
+              <tr>
+                <th>Refacción</th>
+                <th>SKU</th>
+                <th>Aplica a (Máquinas)</th>
+                <th>Clasificación</th>
+                <th>Tipo</th>
+                <th>Proveedor</th>
+                <th>Estado y Cantidad</th>
+                <th>Stock Total</th>
+                <th class="col-mobile-detail">Detalles</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in refacciones %}
+              <tr>
+                <td data-label="Refacción" class="text-main"><strong>{{ r.nombre }}</strong></td>
+                <td data-label="SKU" class="text-muted-custom">{{ r.codigosku }}</td>
+                <td data-label="Aplica a" class="text-muted-custom mobile-hidden">{{ r.maquinas_aplicables }}</td>
+                <td data-label="Clasificación">
+                  {% if 'Alta' in r.clasificacion_nombre or 'critica' in r.clasificacion_nombre|lower %}
+                    <span class="badge-status badge-clasif-alta">{{ r.clasificacion_nombre }}</span>
+                  {% elif 'Mediana' in r.clasificacion_nombre %}
+                    <span class="badge-status badge-clasif-mediana">{{ r.clasificacion_nombre }}</span>
+                  {% else %}
+                    <span class="badge-status badge-clasif-baja">{{ r.clasificacion_nombre }}</span>
+                  {% endif %}
+                </td>
+                <td data-label="Tipo" class="text-muted-custom mobile-hidden">{{ r.tipo_nombre }}</td>
+                <td data-label="Proveedor">
+                  <button type="button" class="btn-proveedor-pill" 
+                          data-prov='{{ r.proveedor_json|safe }}'
+                          onclick="abrirModalProveedorBtn(this, '{{ r.proveedor_nombre }}')">
+                    {{ r.proveedor_nombre }}
+                  </button>
+                </td>
+                <td data-label="Estado" class="mobile-hidden">
+                  {% if 'reparacion' in r.estado_detalle|lower or 'reparación' in r.estado_detalle|lower %}
+                    <span class="badge-status badge-ref-reparacion">
+                      {{ r.estado_detalle }} 
+                      <span class="qty-badge-gray">{{ r.stock }}</span>
+                    </span>
+                  {% elif 'baja' in r.estado_detalle|lower %}
+                    <span class="badge-status badge-ref-baja">
+                      {{ r.estado_detalle }} 
+                      <span class="qty-badge-gray">{{ r.stock }}</span>
+                    </span>
+                  {% elif 'canalizada' in r.estado_detalle|lower %}
+                    <span class="badge-status badge-ref-canalizada">
+                      {{ r.estado_detalle }} 
+                      <span class="qty-badge-gray">{{ r.stock }}</span>
+                    </span>
+                  {% else %}
+                    <span class="badge-status badge-ref-disponible">
+                      Disponible 
+                      <span class="qty-badge-gray">{{ r.stock }}</span>
+                    </span>
+                  {% endif %}
+                </td>
+                <td data-label="Stock">
+                  <strong class="{% if r.stock <= r.stockminimo %}stock-alert{% else %}stock-ok{% endif %}">
+                    {{ r.stock }}
+                  </strong>
+                  <span class="text-muted-custom">/ min {{ r.stockminimo }}</span>
+                </td>
+                <td data-label="Acción" class="col-mobile-toggle col-mobile-detail">
+                  <button type="button" class="btn-proveedor-pill" onclick="toggleMobileRow(this)">Ver detalles ▾</button>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="9" class="text-center">No hay refacciones registradas.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- PESTAÑA 2: HERRAMIENTAS -->
+      <!-- =================================================================== -->
+      <div id="sec-herramientas" class="seccion-almacen">
+        <!-- BARRA UNIFICADA: HERRAMIENTAS -->
+        <div class="filter-bar-unified">
+          <div class="search-box-inline">
+            <input type="text" placeholder="Buscar herramientas..." onkeyup="filtrarTabla('tabla-herramientas', this.value)">
+          </div>
+          <select class="select-dark-inline" onchange="filtrarColumna('tabla-herramientas', 2, this.value)">
+            <option value="">Todos los Tipos</option>
+            {% for th in catalogos.tipos_herramienta %}<option value="{{ th.nombre }}">{{ th.nombre }}</option>{% endfor %}
+          </select>
+          <select class="select-dark-inline" onchange="filtrarColumna('tabla-herramientas', 3, this.value)">
+            <option value="">Todos los Estados</option>
+            <option value="Disponible">Disponible</option>
+            <option value="En Reparacion">En Reparación</option>
+            <option value="En Uso">En Uso</option>
+            <option value="Baja">Baja</option>
+          </select>
+        </div>
+
+        <div class="table-responsive-custom">
+          <table class="table-almacen" id="tabla-herramientas">
+            <thead>
+              <tr>
+                <th>Herramienta</th>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Estado y Cantidad</th>
+                <th>Descripción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in herramientas %}
+              <tr>
+                <td data-label="Herramienta" class="text-main"><strong>{{ h.nombre }}</strong></td>
+                <td data-label="Código" class="text-muted-custom">HER-{{ h.numeroregistro|stringformat:"04d" }}</td>
+                <td data-label="Tipo" class="text-muted-custom">{{ h.tipo_nombre }}</td>
+                <td data-label="Estado / Cantidad">
+                  {% if 'uso' in h.estado_detalle|lower %}
+                    <span class="badge-status badge-her-uso">
+                      En Uso <span class="qty-badge-gray">1</span>
+                    </span>
+                  {% elif 'reparacion' in h.estado_detalle|lower or 'reparación' in h.estado_detalle|lower %}
+                    <span class="badge-status badge-her-reparacion">
+                      En Reparación <span class="qty-badge-gray">1</span>
+                    </span>
+                  {% elif 'baja' in h.estado_detalle|lower %}
+                    <span class="badge-status badge-her-baja">
+                      Baja <span class="qty-badge-gray">1</span>
+                    </span>
+                  {% else %}
+                    <span class="badge-status badge-her-disponible">
+                      Disponible <span class="qty-badge-gray">1</span>
+                    </span>
+                  {% endif %}
+                </td>
+                <td data-label="Descripción" class="text-muted-custom mobile-hidden">{{ h.descripcion|default:"-" }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center">No hay herramientas registradas.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- PESTAÑA 3: PIEZAS -->
+      <!-- =================================================================== -->
+      <div id="sec-piezas" class="seccion-almacen">
+        <!-- BARRA UNIFICADA: PIEZAS -->
+        <div class="filter-bar-unified">
+          <div class="search-box-inline">
+            <input type="text" placeholder="Buscar piezas por número de serie, nombre..." onkeyup="filtrarTabla('tabla-piezas', this.value)">
+          </div>
+          <select class="select-dark-inline" onchange="filtrarColumna('tabla-piezas', 3, this.value)">
+            <option value="">Todas las Máquinas</option>
+            {% for m in maquinas %}<option value="{{ m.nombre }}">{{ m.nombre }}</option>{% endfor %}
+          </select>
+          <select class="select-dark-inline" onchange="filtrarColumna('tabla-piezas', 2, this.value)">
+            <option value="">Todos los Tipos</option>
+            {% for tp in catalogos.tipos_pieza %}<option value="{{ tp.nombre }}">{{ tp.nombre }}</option>{% endfor %}
+          </select>
+          <select class="select-dark-inline" onchange="filtrarColumna('tabla-piezas', 6, this.value)">
+            <option value="">Todos los Estados</option>
+            <option value="Operativa">Operativa</option>
+            <option value="Degradada">Degradada</option>
+            <option value="Fallida">Fallida</option>
+            <option value="En Rehabilitacion">En Rehabilitación</option>
+            <option value="Baja">Baja</option>
+          </select>
+        </div>
+
+        <div class="table-responsive-custom">
+          <table class="table-almacen" id="tabla-piezas">
+            <thead>
+              <tr>
+                <th>Pieza</th>
+                <th>No. Serie</th>
+                <th>Tipo</th>
+                <th>Máquina</th>
+                <th>Horas Op.</th>
+                <th>Vida Útil</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in piezas %}
+              <tr>
+                <td data-label="Pieza" class="text-main"><strong>{{ p.nombre }}</strong></td>
+                <td data-label="No. Serie" class="text-muted-custom">{{ p.numeroserie }}</td>
+                <td data-label="Tipo" class="text-muted-custom mobile-hidden">{{ p.tipo_nombre }}</td>
+                <td data-label="Máquina" class="text-muted-custom">{{ p.maquina_nombre }}</td>
+                <td>{{ p.horasoperacion }} hrs</td>
+                <td data-label="Vida Útil" class="mobile-hidden">{{ p.tiempovidautil }} hrs</td>
+                <td data-label="Estado">
+                  {% if 'degradada' in p.estado_nombre|lower %}
+                    <span class="badge-status badge-pie-degradada">{{ p.estado_nombre }}</span>
+                  {% elif 'fallida' in p.estado_nombre|lower or 'falla' in p.estado_nombre|lower %}
+                    <span class="badge-status badge-pie-fallida">{{ p.estado_nombre }}</span>
+                  {% elif 'rehabilitacion' in p.estado_nombre|lower or 'rehabilitación' in p.estado_nombre|lower %}
+                    <span class="badge-status badge-pie-rehabilitacion">{{ p.estado_nombre }}</span>
+                  {% elif 'baja' in p.estado_nombre|lower %}
+                    <span class="badge-status badge-pie-baja">{{ p.estado_nombre }}</span>
+                  {% else %}
+                    <span class="badge-status badge-pie-operativa">{{ p.estado_nombre }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="7" class="text-center">No hay piezas registradas.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- SIDEBAR DE DISPONIBILIDAD Y ALERTAS -->
+    <aside class="almacen-sidebar">
+      <div class="widget-card">
+        <div class="widget-title"><h3>DISPONIBILIDAD</h3></div>
+        <div class="kpi-progress-list">
+          <div class="progress-item">
+            <div class="progress-labels"><span>Herramientas</span><strong>{{ kpi_herramientas_disp }}% disponible</strong></div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ kpi_herramientas_disp }}%;"></div></div>
+          </div>
+          <div class="progress-item">
+            <div class="progress-labels"><span>Refacciones</span><strong>{{ kpi_refacciones_disp }}% disponible</strong></div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ kpi_refacciones_disp }}%;"></div></div>
+          </div>
+          <div class="progress-item">
+            <div class="progress-labels"><span>Piezas</span><strong>{{ kpi_piezas_disp }}% disponible</strong></div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ kpi_piezas_disp }}%;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="widget-card">
+        <div class="widget-title"><h3>ALERTAS DE STOCK</h3></div>
+        <div class="stock-alerts-list">
+          {% for alert in alertas_stock %}
+          <div class="alert-item">
+            <strong class="text-main">{{ alert.nombre }}</strong>
+            <span class="subtext"><span class="stock-alert">{{ alert.stock }} en stock</span> &middot; mínimo {{ alert.stockminimo }} &middot; {{ alert.proveedor_nombre }}</span>
+          </div>
+          {% empty %}
+          <p class="subtext">No hay alertas de stock bajo actualmente.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- =================================================================== -->
+<!-- MODAL DE PROVEEDOR INTEGRADO -->
+<!-- =================================================================== -->
+<div id="modal-proveedor-container" class="fallas-modal-backdrop" role="dialog" aria-modal="true">
+  <div class="fallas-modal__dialog" role="document">
+    <div class="fallas-modal__content">
+      <div class="fallas-modal__header">
+        <h2 class="fallas-modal__title" id="prov-modal-title">Proveedor — </h2>
+        <button class="fallas-modal__close" type="button" onclick="cerrarModalProveedor()" aria-label="Cerrar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="fallas-modal__body">
+        <div class="fallas-modal__grid" id="prov-modal-body-grid">
+          <div class="fallas-modal__field">
+            <span class="fallas-modal__label">Código</span>
+            <span class="fallas-modal__value" id="prov-codigo">-</span>
+          </div>
+          <div class="fallas-modal__field">
+            <span class="fallas-modal__label">RFC</span>
+            <span class="fallas-modal__value" id="prov-rfc">-</span>
+          </div>
+          <div class="fallas-modal__field">
+            <span class="fallas-modal__label">Razón Social</span>
+            <span class="fallas-modal__value" id="prov-razonsocial">-</span>
+          </div>
+          <div class="fallas-modal__field">
+            <span class="fallas-modal__label">Nombre Comercial</span>
+            <span class="fallas-modal__value" id="prov-nombrecomercial">-</span>
+          </div>
+          <div class="fallas-modal__field">
+            <span class="fallas-modal__label">Teléfono</span>
+            <a class="fallas-modal__value" id="prov-telefono-link" href="#">-</a>
+          </div>
+          <div class="fallas-modal__field">
+            <span class="fallas-modal__label">Email</span>
+            <a class="fallas-modal__value" id="prov-email-link" href="#">-</a>
+          </div>
+        </div>
+
+        <div class="fallas-modal__section">
+          <span class="fallas-modal__label">Dirección</span>
+          <p class="fallas-modal__text" id="prov-direccion">-</p>
+        </div>
+
+        <div class="fallas-modal__section">
+          <span class="fallas-modal__label">Contacto</span>
+          <p class="fallas-modal__text" id="prov-contacto">-</p>
+        </div>
+      </div>
+
+      <div class="fallas-modal__footer">
+        <button type="button" class="fallas-modal__btn fallas-modal__btn--close" onclick="cerrarModalProveedor()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function cambiarSeccion(seccionId, btn) {
+    document.querySelectorAll('.seccion-almacen').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-pill').forEach(el => el.classList.remove('active'));
+    document.getElementById('sec-' + seccionId).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function filtrarTabla(tablaId, busqueda) {
+    const filter = busqueda.toLowerCase();
+    document.querySelectorAll(`#${tablaId} tbody tr`).forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+    });
+  }
+
+  function filtrarColumna(tablaId, colIndex, valor) {
+    const filter = valor.toLowerCase();
+    document.querySelectorAll(`#${tablaId} tbody tr`).forEach(row => {
+      const cell = row.children[colIndex];
+      row.style.display = (!filter || (cell && cell.textContent.toLowerCase().includes(filter))) ? '' : 'none';
+    });
+  }
+
+  function toggleMobileRow(btn) {
+    const tr = btn.closest('tr');
+    const hiddenFields = tr.querySelectorAll('.mobile-hidden');
+    hiddenFields.forEach(el => el.classList.toggle('is-expanded'));
+    btn.innerText = btn.innerText.includes('▾') ? 'Ocultar ▴' : 'Ver detalles ▾';
+  }
+
+  function cerrarModalProveedor() {
+    document.getElementById('modal-proveedor-container').classList.remove('is-active');
+  }
+
+  function abrirModalProveedorBtn(btn, fallbackNombre) {
+    let prov = {};
+    try {
+      prov = JSON.parse(btn.getAttribute('data-prov') || '{}');
+    } catch(e) {
+      console.error("Error leyendo JSON del proveedor", e);
+    }
+
+    const nombreTitle = prov.nombrecomercial || prov.razonsocial || fallbackNombre || "Detalles";
+    document.getElementById('prov-modal-title').innerText = "Proveedor — " + nombreTitle;
+    
+    document.getElementById('prov-codigo').innerText = prov.codigo || "-";
+    document.getElementById('prov-rfc').innerText = prov.rfc || "-";
+    document.getElementById('prov-razonsocial').innerText = prov.razonsocial || "-";
+    document.getElementById('prov-nombrecomercial').innerText = prov.nombrecomercial || "-";
+
+    const tel = prov.telefono || "";
+    const telLink = document.getElementById('prov-telefono-link');
+    telLink.innerText = tel || "-";
+    telLink.href = tel ? "tel:" + tel : "#";
+
+    const mail = prov.email || "";
+    const mailLink = document.getElementById('prov-email-link');
+    mailLink.innerText = mail || "-";
+    mailLink.href = mail ? "mailto:" + mail : "#";
+
+    let dir = (prov.dircalle || "") + " #" + (prov.dirnumero || "") + " CP " + (prov.dircodigopostal || "");
+    document.getElementById('prov-direccion').innerText = dir.trim() !== "# CP" ? dir : "Sin dirección registrada";
+
+    let cont = (prov.contnombre || "") + " " + (prov.contapellpat || "") + " " + (prov.contapellmat || "");
+    document.getElementById('prov-contacto').innerText = cont.trim() || "Sin contacto registrado";
+
+    document.getElementById('modal-proveedor-container').classList.add('is-active');
+  }
+</script>
 {% endblock %}

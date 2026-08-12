@@ -81,8 +81,9 @@
                 </button>
                 <div class="tecni-sidebar__submenu">
                     <div class="tecni-sidebar__submenu-inner">
-                        <a href="{% url 'inventario:lista_piezas' %}" class="{% if seccion == 'inventario' and subseccion == 'piezas' %}is-active{% endif %}">Piezas</a>
-                        <a href="{% url 'inventario:lista_refacciones' %}" class="{% if seccion == 'inventario' and subseccion == 'refacciones' %}is-active{% endif %}">Refacciones</a>
+                        <a href="{% url 'inventario:index' %}" class="{% if seccion == 'inventario' %}active{% endif %}">Almacen General </a>
+                        <!--<a href="{% url 'inventario:lista_piezas' %}" class="{% if seccion == 'inventario' and subseccion == 'piezas' %}is-active{% endif %}">Piezas</a>
+                        <a href="{% url 'inventario:lista_refacciones' %}" class="{% if seccion == 'inventario' and subseccion == 'refacciones' %}is-active{% endif %}">Refacciones</a>-->
                         <a href="{% url 'inventario:lista_movimientos' %}" class="{% if seccion == 'inventario' and subseccion == 'movimientos' %}is-active{% endif %}">Movimientos</a>
                     </div>
                 </div>

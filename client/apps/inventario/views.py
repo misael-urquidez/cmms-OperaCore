@@ -1038,3 +1038,178 @@ class PiezaDepreciacionProxy(generic.View):
         except ValueError:
             data = {"detail": "Respuesta inválida del API."}
         return JsonResponse(data, status=respuesta.status_code, safe=False)
+
+
+
+
+
+
+import json
+
+class AlmacenInventarioView(generic.View):
+    template_name = "inventario/index.html"
+
+    def get(self, request):
+        usuario = request.session.get("usuario")
+        if not usuario:
+            messages.warning(request, "Inicia sesión para continuar.")
+            return redirect("usuarios:index")
+
+        # 1. Cargar diccionarios de catálogos
+        catalogos, ok = _cargar_catalogos()
+
+        # Diccionarios de Estados
+        edos_her_map = {(e.get("codigo") or e.get("id")): e.get("nombre") for e in catalogos.get("estados_herramienta", []) if isinstance(e, dict)}
+        edos_pie_map = {(e.get("codigo") or e.get("id")): e.get("nombre") for e in catalogos.get("estados_pieza", []) if isinstance(e, dict)}
+        edos_ref_map = {(e.get("codigo") or e.get("id")): e.get("nombre") for e in catalogos.get("estados_refaccion", []) if isinstance(e, dict)}
+
+        # Diccionarios de Tipos y Clasificaciones
+        clasif_map = {(c.get("codigo") or c.get("clave")): c.get("nombre") for c in catalogos.get("clasificaciones", []) if isinstance(c, dict)}
+        tipos_ref_map = {(t.get("numeroregistro") or t.get("id")): t.get("nombre") for t in catalogos.get("tipos_refaccion", []) if isinstance(t, dict)}
+        tipos_her_map = {(t.get("numeroregistro") or t.get("id")): t.get("nombre") for t in catalogos.get("tipos_herramienta", []) if isinstance(t, dict)}
+        tipos_pie_map = {(t.get("numeroregistro") or t.get("id")): t.get("nombre") for t in catalogos.get("tipos_pieza", []) if isinstance(t, dict)}
+
+        # Mapa de Proveedores detallado
+        prov_dict_full = {}
+        for p in catalogos.get("proveedores", []):
+            if isinstance(p, dict):
+                p_code = str(p.get("codigo") or p.get("id") or "")
+                if p_code:
+                    prov_dict_full[p_code] = p
+
+        # 2. Consumir APIs
+        try:
+            refacciones = SESSION.get(f"{API_URL}/v1/refacciones/list/", timeout=5).json()
+            herramientas = SESSION.get(f"{API_URL}/v1/herramientas/list/", timeout=5).json()
+            piezas = SESSION.get(f"{API_URL}/v1/piezas/list/", timeout=5).json()
+            proveedores = SESSION.get(f"{API_URL}/v1/proveedores/list/", timeout=5).json()
+            maquinas = SESSION.get(f"{settings.API_BASE_URL}/maquinaria/v1/maquina/list/", timeout=5).json()
+
+            res_ref_maq = SESSION.get(f"{API_URL}/v1/refacc-maqui/list/", timeout=5)
+            refacc_maqui_list = res_ref_maq.json() if res_ref_maq.status_code == 200 else []
+
+            res_edo_her = SESSION.get(f"{API_URL}/v1/existencia-herramienta/list/", timeout=5)
+            existencia_her_list = res_edo_her.json() if res_edo_her.status_code == 200 else []
+
+            res_edo_ref = SESSION.get(f"{API_URL}/v1/existencia-refaccion/list/", timeout=5)
+            existencia_ref_list = res_edo_ref.json() if res_edo_ref.status_code == 200 else []
+
+        except (requests.exceptions.RequestException, ValueError):
+            refacciones, herramientas, piezas, proveedores, maquinas = [], [], [], [], []
+            refacc_maqui_list, existencia_her_list, existencia_ref_list = [], [], []
+
+        for p in proveedores:
+            if isinstance(p, dict):
+                p_code = str(p.get("codigo") or p.get("id") or "")
+                if p_code and p_code not in prov_dict_full:
+                    prov_dict_full[p_code] = p
+
+        maq_map = {m.get("codigo"): m.get("nombre") or m.get("codigo") for m in maquinas if isinstance(m, dict)}
+
+        # Mapeo: Refacción -> Lista de Máquinas de REFACC_MAQUI
+        ref_maq_map = {}
+        for rm in refacc_maqui_list:
+            if isinstance(rm, dict):
+                ref_id = rm.get("refaccion") or rm.get("refaccion_id")
+                maq_id = rm.get("maquina") or rm.get("maquina_id")
+                nombre_m = maq_map.get(maq_id, maq_id)
+                if ref_id not in ref_maq_map:
+                    ref_maq_map[ref_id] = []
+                if nombre_m and nombre_m not in ref_maq_map[ref_id]:
+                    ref_maq_map[ref_id].append(nombre_m)
+
+        # Mapeo: Herramienta -> Estados
+        her_edo_map = {}
+        for eh in existencia_her_list:
+            if isinstance(eh, dict):
+                h_id = eh.get("herramienta") or eh.get("herramienta_id")
+                edo_id = eh.get("edo_herramienta") or eh.get("edo_herramienta_id")
+                cant = eh.get("cantidad", 0)
+                edo_nombre = edos_her_map.get(edo_id, str(edo_id))
+                if h_id not in her_edo_map:
+                    her_edo_map[h_id] = []
+                her_edo_map[h_id].append(f"{edo_nombre}: {cant}")
+
+        # Mapeo: Refacción -> Estados
+        ref_edo_map = {}
+        for er in existencia_ref_list:
+            if isinstance(er, dict):
+                r_id = er.get("refaccion") or er.get("refaccion_id")
+                edo_id = er.get("estado_refaccion") or er.get("estado_refaccion_id")
+                cant = er.get("cantidad", 0)
+                edo_nombre = edos_ref_map.get(edo_id, str(edo_id))
+                if r_id not in ref_edo_map:
+                    ref_edo_map[r_id] = []
+                ref_edo_map[r_id].append(f"{edo_nombre} ({cant})")
+
+        # 3. Enriquecer Refacciones
+        for r in refacciones:
+            if isinstance(r, dict):
+                r_id = r.get("numeroregistro") or r.get("id")
+
+                # Máquinas Aplicables desde REFACC_MAQUI
+                maqs = ref_maq_map.get(r_id, [])
+                r["maquinas_aplicables"] = ", ".join(maqs) if maqs else "Todas / General"
+
+                edos_list = ref_edo_map.get(r_id, [])
+                r["estado_detalle"] = ", ".join(edos_list) if edos_list else "Disponible"
+
+                k_clas = r.get("clasificacion")
+                if isinstance(k_clas, dict): k_clas = k_clas.get("codigo")
+                r["clasificacion_nombre"] = clasif_map.get(k_clas, str(k_clas or "N/A"))
+
+                val_tipo = r.get("tipo_refaccion_nombre") or r.get("tipo_refaccion") or r.get("tipo")
+                r["tipo_nombre"] = val_tipo.get("nombre") if isinstance(val_tipo, dict) else tipos_ref_map.get(val_tipo, str(val_tipo or "-"))
+
+                # Proveedor
+                k_prov = str(r.get("proveedor") or r.get("proveedor_id") or "")
+                if isinstance(r.get("proveedor"), dict):
+                    k_prov = str(r.get("proveedor").get("codigo") or "")
+
+                p_full = prov_dict_full.get(k_prov, {})
+                r["proveedor_nombre"] = p_full.get("nombrecomercial") or p_full.get("razonsocial") or "Sin Proveedor"
+                # Serializamos el objeto del proveedor para pasarlo limpio a HTML/JS
+                r["proveedor_json"] = json.dumps(p_full)
+
+        # 4. Enriquecer Herramientas
+        for h in herramientas:
+            if isinstance(h, dict):
+                h_id = h.get("numeroregistro") or h.get("id")
+                edos_list = her_edo_map.get(h_id, [])
+                h["estado_detalle"] = ", ".join(edos_list) if edos_list else "Disponible"
+
+                val_tipo = h.get("tipo_herramienta_nombre") or h.get("tipo_herramienta") or h.get("tipo")
+                h["tipo_nombre"] = val_tipo.get("nombre") if isinstance(val_tipo, dict) else tipos_her_map.get(val_tipo, str(val_tipo or "-"))
+
+        # 5. Enriquecer Piezas
+        for p in piezas:
+            if isinstance(p, dict):
+                k_edo = p.get("edo_pieza") or p.get("estado") or p.get("edo_pieza_id")
+                if isinstance(k_edo, dict):
+                    p["estado_nombre"] = k_edo.get("nombre") or k_edo.get("descripcion") or "En almacén"
+                else:
+                    p["estado_nombre"] = edos_pie_map.get(k_edo, str(k_edo or "En almacén"))
+
+                val_tipo = p.get("tipo_pieza_nombre") or p.get("tipo_pieza") or p.get("tipo")
+                p["tipo_nombre"] = val_tipo.get("nombre") if isinstance(val_tipo, dict) else tipos_pie_map.get(val_tipo, str(val_tipo or "-"))
+
+                k_maq = p.get("maquina")
+                if isinstance(k_maq, dict): k_maq = k_maq.get("codigo")
+                p["maquina_nombre"] = p.get("maquina_nombre") or maq_map.get(k_maq, str(k_maq or "Sin asignación"))
+
+        context = {
+            "catalogos": catalogos,
+            "refacciones": refacciones,
+            "herramientas": herramientas,
+            "piezas": piezas,
+            "maquinas": maquinas,
+            "alertas_stock": [r for r in refacciones if isinstance(r, dict) and r.get("stock", 0) <= r.get("stockminimo", 0)],
+            "kpi_herramientas_disp": 59,
+            "kpi_refacciones_disp": 50,
+            "kpi_piezas_disp": 67,
+            "seccion": "inventario",
+            "subseccion": "almacen",
+            "usuario": usuario,
+            "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
+        }
+        return render(request, self.template_name, context)

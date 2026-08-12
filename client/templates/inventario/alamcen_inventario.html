@@ -1,0 +1,337 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Almacén de Mantenimiento · OperaCore{% endblock %}
+{% block breadcrumb %}Inventario{% endblock %}
+{% block page_title %}Almacén de mantenimiento{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'inventario/css/almacen.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+  <!-- CABECERA DE LA PÁGINA Y PESTAÑAS (TABS) -->
+  <div class="panel-header-flex">
+    <div>
+      <span class="label-sub" style="color: var(--color-primary, #38bdf8);">INVENTARIO</span>
+      <h2 style="margin: 0; font-size: 1.6rem;">Almacén de mantenimiento</h2>
+    </div>
+
+    <!-- Pestañas de navegación superiores -->
+    <div class="tab-filters-pills">
+      <button type="button" class="tab-pill active" onclick="cambiarSeccion('refacciones', this)">Refacciones</button>
+      <button type="button" class="tab-pill" onclick="cambiarSeccion('herramientas', this)">Herramientas</button>
+      <button type="button" class="tab-pill" onclick="cambiarSeccion('piezas', this)">Piezas</button>
+      <button type="button" class="tab-pill" onclick="cambiarSeccion('proveedores', this)">Proveedores</button>
+    </div>
+  </div>
+
+  <div class="almacen-grid-layout">
+    
+    <!-- COLUMNA IZQUIERDA: CONTENIDO PRINCIPAL POR SECCIÓN -->
+    <main class="panel-main-content">
+
+      <!-- =================================================================== -->
+      <!-- SECCIÓN 1: REFACCIONES -->
+      <!-- =================================================================== -->
+      <div id="sec-refacciones" class="seccion-almacen active">
+        <div class="filter-bar-almacen">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" placeholder="Buscar en refacciones..." onkeyup="filtrarTabla('tabla-refacciones', this.value)">
+          </div>
+          <div class="dropdown-filters-inline">
+            <select class="select-dark" onchange="filtrarColumna('tabla-refacciones', 2, this.value)">
+              <option value="">Todas las Máquinas</option>
+              {% for m in maquinas %}<option value="{{ m.nombre }}">{{ m.nombre }}</option>{% endfor %}
+            </select>
+            <select class="select-dark" onchange="filtrarColumna('tabla-refacciones', 4, this.value)">
+              <option value="">Todos los Tipos</option>
+              {% for tr in catalogos.tipos_refaccion %}<option value="{{ tr.nombre }}">{{ tr.nombre }}</option>{% endfor %}
+            </select>
+            <select class="select-dark" onchange="filtrarColumna('tabla-refacciones', 3, this.value)">
+              <option value="">Todas las Clasificaciones</option>
+              {% for cl in catalogos.clasificaciones %}<option value="{{ cl.nombre }}">{{ cl.nombre }}</option>{% endfor %}
+            </select>
+            <select class="select-dark" onchange="filtrarColumna('tabla-refacciones', 5, this.value)">
+              <option value="">Todos los Proveedores</option>
+              {% for pr in catalogos.proveedores %}<option value="{{ pr.nombrecomercial }}">{{ pr.nombrecomercial }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive-custom">
+          <table class="table-almacen" id="tabla-refacciones">
+            <thead>
+              <tr>
+                <th>Refacción</th>
+                <th>SKU</th>
+                <th>Máquina</th>
+                <th>Clasificación</th>
+                <th>Tipo</th>
+                <th>Proveedor</th>
+                <th>Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in refacciones %}
+              <tr>
+                <td class="text-main">{{ r.nombre }}</td>
+                <td class="text-muted-custom">{{ r.codigosku }}</td>
+                <td class="text-muted-custom">{{ r.maquina_nombre|default:"General" }}</td>
+                <td><span class="badge-custom badge-clasif">{{ r.clasificacion_nombre }}</span></td>
+                <td class="text-muted-custom">{{ r.tipo_refaccion_nombre }}</td>
+                <td class="text-muted-custom">{{ r.proveedor_nombre }}</td>
+                <td>
+                  <strong class="{% if r.stock <= r.stockminimo %}text-abiertos{% else %}text-resueltos{% endif %}">
+                    {{ r.stock }}
+                  </strong>
+                  <span class="text-muted-custom">/ min {{ r.stockminimo }}</span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="7" class="text-center">No hay refacciones registradas.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- SECCIÓN 2: HERRAMIENTAS -->
+      <!-- =================================================================== -->
+      <div id="sec-herramientas" class="seccion-almacen">
+        <div class="filter-bar-almacen">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" placeholder="Buscar en herramientas..." onkeyup="filtrarTabla('tabla-herramientas', this.value)">
+          </div>
+          <div class="dropdown-filters-inline">
+            <select class="select-dark" onchange="filtrarColumna('tabla-herramientas', 2, this.value)">
+              <option value="">Todos los Tipos</option>
+              {% for th in catalogos.tipos_herramienta %}<option value="{{ th.nombre }}">{{ th.nombre }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive-custom">
+          <table class="table-almacen" id="tabla-herramientas">
+            <thead>
+              <tr>
+                <th>Herramienta</th>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Descripción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in herramientas %}
+              <tr>
+                <td class="text-main">{{ h.nombre }}</td>
+                <td class="text-muted-custom">HER-{{ h.numeroregistro|stringformat:"04d" }}</td>
+                <td class="text-muted-custom">{{ h.tipo_herramienta_nombre|default:"-" }}</td>
+                <td class="text-muted-custom">{{ h.descripcion|default:"Sin descripción" }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="text-center">No hay herramientas registradas.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- SECCIÓN 3: PIEZAS -->
+      <!-- =================================================================== -->
+      <div id="sec-piezas" class="seccion-almacen">
+        <div class="filter-bar-almacen">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" placeholder="Buscar en piezas..." onkeyup="filtrarTabla('tabla-piezas', this.value)">
+          </div>
+          <div class="dropdown-filters-inline">
+            <select class="select-dark" onchange="filtrarColumna('tabla-piezas', 3, this.value)">
+              <option value="">Todas las Máquinas</option>
+              {% for m in maquinas %}<option value="{{ m.nombre }}">{{ m.nombre }}</option>{% endfor %}
+            </select>
+            <select class="select-dark" onchange="filtrarColumna('tabla-piezas', 2, this.value)">
+              <option value="">Todos los Tipos</option>
+              {% for tp in catalogos.tipos_pieza %}<option value="{{ tp.nombre }}">{{ tp.nombre }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive-custom">
+          <table class="table-almacen" id="tabla-piezas">
+            <thead>
+              <tr>
+                <th>Pieza</th>
+                <th>No. Serie / Etiqueta</th>
+                <th>Tipo</th>
+                <th>Máquina</th>
+                <th>Horas Op.</th>
+                <th>Vida Útil</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in piezas %}
+              <tr>
+                <td class="text-main">{{ p.nombre }}</td>
+                <td class="text-muted-custom">{{ p.numeroserie }}</td>
+                <td class="text-muted-custom">{{ p.tipo_pieza_nombre }}</td>
+                <td class="text-muted-custom">{{ p.maquina_nombre|default:"-" }}</td>
+                <td>{{ p.horasoperacion }} hrs</td>
+                <td>{{ p.tiempovidautil }} hrs</td>
+                <td><span class="badge-custom badge-est-abierto">{{ p.edo_pieza_nombre|default:"Instalada" }}</span></td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="7" class="text-center">No hay piezas registradas.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- SECCIÓN 4: PROVEEDORES -->
+      <!-- =================================================================== -->
+      <div id="sec-proveedores" class="seccion-almacen">
+        <div class="filter-bar-almacen">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" placeholder="Buscar en proveedores..." onkeyup="filtrarTabla('tabla-proveedores', this.value)">
+          </div>
+        </div>
+
+        <div class="table-responsive-custom">
+          <table class="table-almacen" id="tabla-proveedores">
+            <thead>
+              <tr>
+                <th>Proveedor</th>
+                <th>RFC</th>
+                <th>Contacto</th>
+                <th>Correo</th>
+                <th>Teléfono</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pr in proveedores %}
+              <tr>
+                <td class="text-main">{{ pr.nombrecomercial }} <br><small class="text-muted-custom">{{ pr.razonsocial }}</small></td>
+                <td class="text-muted-custom">{{ pr.rfc }}</td>
+                <td class="text-muted-custom">{{ pr.contnombre }} {{ pr.contapellpat }}</td>
+                <td class="text-muted-custom">{{ pr.email }}</td>
+                <td class="text-muted-custom">{{ pr.telefono }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center">No hay proveedores registrados.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- COLUMNA DERECHA: WIDGETS LATERALES (DISPONIBILIDAD Y ALERTAS DE STOCK) -->
+    <aside class="almacen-sidebar">
+      
+      <!-- WIDGET 1: DISPONIBILIDAD -->
+      <div class="widget-card">
+        <div class="widget-title">
+          <h3>DISPONIBILIDAD</h3>
+        </div>
+        <div class="kpi-progress-list">
+          <div class="progress-item">
+            <div class="progress-labels">
+              <span>Herramientas</span>
+              <strong>{{ kpi_herramientas_disp }}% disponible</strong>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ kpi_herramientas_disp }}%;"></div></div>
+          </div>
+
+          <div class="progress-item">
+            <div class="progress-labels">
+              <span>Refacciones</span>
+              <strong>{{ kpi_refacciones_disp }}% disponible</strong>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ kpi_refacciones_disp }}%;"></div></div>
+          </div>
+
+          <div class="progress-item">
+            <div class="progress-labels">
+              <span>Piezas</span>
+              <strong>{{ kpi_piezas_disp }}% disponible</strong>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ kpi_piezas_disp }}%;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WIDGET 2: ALERTAS DE STOCK -->
+      <div class="widget-card">
+        <div class="widget-title">
+          <h3>ALERTAS DE STOCK</h3>
+        </div>
+        <div class="stock-alerts-list">
+          {% for alert in alertas_stock %}
+          <div class="alert-item">
+            <strong class="text-main">{{ alert.nombre }}</strong>
+            <span class="subtext">{{ alert.stock }} en stock &middot; mínimo {{ alert.stockminimo }} &middot; {{ alert.proveedor }}</span>
+          </div>
+          {% empty %}
+          <p class="subtext">No hay alertas de stock bajo actualmente.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Cambiar dinámicamente entre pestañas
+  function cambiarSeccion(seccionId, btn) {
+    document.querySelectorAll('.seccion-almacen').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-pill').forEach(el => el.classList.remove('active'));
+
+    document.getElementById('sec-' + seccionId).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // Filtrado general por texto en la tabla activa
+  function filtrarTabla(tablaId, busqueda) {
+    const filter = busqueda.toLowerCase();
+    const rows = document.querySelectorAll(`#${tablaId} tbody tr`);
+    
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(filter) ? '' : 'none';
+    });
+  }
+
+  // Filtrado específico por columna
+  function filtrarColumna(tablaId, colIndex, valor) {
+    const filter = valor.toLowerCase();
+    const rows = document.querySelectorAll(`#${tablaId} tbody tr`);
+
+    rows.forEach(row => {
+      const cell = row.children[colIndex];
+      if (!cell) return;
+      const text = cell.textContent.toLowerCase();
+      if (!filter || text.includes(filter)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+</script>
+{% endblock %}

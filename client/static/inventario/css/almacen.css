@@ -1,0 +1,223 @@
+/* ==========================================================================
+   ESTILOS GENERALES DEL ALMACÉN DE INVENTARIO
+   ========================================================================== */
+
+/* --- ESTRUCTURA PRINCIPAL (GRID CLIENTE - SIDEBAR) --- */
+.almacen-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 1.5rem;
+  align-items: start;
+  margin-top: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .almacen-grid-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- SECCIONES Y PESTAÑAS DÉBILMENTE ACOPLADAS (TABS) --- */
+.tab-filters-pills {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--color-bg, #0f172a);
+  padding: 0.3rem;
+  border-radius: 2rem;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+
+.tab-pill {
+  background: transparent;
+  border: none;
+  color: var(--color-muted, #94a3b8);
+  padding: 0.45rem 1.1rem;
+  font-size: 0.825rem;
+  font-weight: 600;
+  border-radius: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.tab-pill:hover {
+  color: var(--color-text, #f8fafc);
+}
+
+.tab-pill.active {
+  background: var(--color-primary, #38bdf8);
+  color: var(--color-bg, #0f172a);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+}
+
+/* Visibilidad de Secciones por pestaña */
+.seccion-almacen {
+  display: none;
+}
+
+.seccion-almacen.active {
+  display: block;
+}
+
+/* --- BARRA DE BÚSQUEDA Y FILTROS INLINE --- */
+.filter-bar-almacen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: var(--color-surface, #1e293b);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-radius: 0.85rem 0.85rem 0 0;
+  padding: 1.25rem 1.25rem 0.85rem 1.25rem;
+  border-bottom: none;
+}
+
+.dropdown-filters-inline {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.dropdown-filters-inline .select-dark {
+  flex: 1;
+  min-width: 140px;
+  background: var(--color-bg, #0f172a);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  color: var(--color-text, #f8fafc);
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+/* --- TABLA DEL ALMACÉN --- */
+.table-responsive-custom {
+  background: var(--color-surface, #1e293b);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-radius: 0 0 0.85rem 0.85rem;
+  overflow-x: auto;
+  padding: 0 1.25rem 1.25rem 1.25rem;
+}
+
+.table-almacen {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.table-almacen th {
+  padding: 0.85rem 0.75rem;
+  color: var(--color-muted, #94a3b8);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+}
+
+.table-almacen td {
+  padding: 0.85rem 0.75rem;
+  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.05));
+  vertical-align: middle;
+}
+
+.table-almacen tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.table-almacen tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Badges personalizados de clasificación */
+.badge-clasif {
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--color-primary, #38bdf8);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+/* --- SIDEBAR DERECHO: WIDGETS --- */
+.almacen-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.almacen-sidebar .widget-card {
+  background: var(--color-surface, #1e293b);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-radius: 0.85rem;
+  padding: 1.25rem;
+}
+
+.almacen-sidebar .widget-title h3 {
+  margin: 0 0 1rem 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-muted, #94a3b8);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Listado de progreso de disponibilidad */
+.kpi-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.progress-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--color-text, #f8fafc);
+}
+
+.progress-labels strong {
+  color: var(--color-primary, #38bdf8);
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: var(--color-bg, #0f172a);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--color-primary, #38bdf8);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+/* Alertas de Stock Bajo */
+.stock-alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.alert-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.05));
+}
+
+.alert-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.alert-item .subtext {
+  font-size: 0.75rem;
+  color: var(--color-muted, #94a3b8);
+}
