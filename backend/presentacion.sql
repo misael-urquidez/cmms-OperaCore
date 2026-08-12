@@ -503,7 +503,12 @@ INSERT INTO HISTORIAL_ESTADO_MAQUINA (maquina, estado_anterior, estado_nuevo, fe
 ('MAQ003', 'OPERA', 'MANTE', '2026-08-04 09:00:00', 'orden_mantenimiento', 'OM-2026-003'),
 ('MAQ006', 'OPERA', 'FALLO', '2026-07-10 14:20:00', 'reporte_falla', '5'),
 ('MAQ008', 'OPERA', 'FALLO', '2026-08-09 15:40:00', 'reporte_falla', '33'),
-('MAQ009', 'OPERA', 'MANTE', '2026-08-06 11:00:00', 'manual', NULL);
+('MAQ009', 'OPERA', 'MANTE', '2026-08-06 11:00:00', 'manual', NULL),
+('MAQ001', NULL, 'OPERA', '2026-08-01 00:00:00', 'manual', NULL),
+('MAQ002', NULL, 'OPERA', '2026-08-01 00:00:00', 'manual', NULL),
+('MAQ004', NULL, 'OPERA', '2026-08-01 00:00:00', 'manual', NULL),
+('MAQ005', NULL, 'OPERA', '2026-08-01 00:00:00', 'manual', NULL),
+('MAQ007', NULL, 'OPERA', '2026-08-01 00:00:00', 'manual', NULL);
 
 -- =====================================================================
 -- 9. HISTORIAL PROPIO PARA PERFILES "VACIOS" (NUEVO)

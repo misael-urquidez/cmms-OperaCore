@@ -32,3 +32,10 @@ python3 wiimote_sensor.py --url http://127.0.0.1:8000
 -- comando para el config.yaml
 set MISTRAL_API_KEY=tu_clave_real_de_mistral_aqui
 litellm --config config.yaml --port 4000
+
+
+Linux:  nmcli device wifi hotspot ifname wlp0s20f3 ssid "RBE-local" password "12345678"
+
+
+-- para abrir a movil
+python manage.py runserver 0.0.0.0:8000
