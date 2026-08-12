@@ -5,13 +5,14 @@
 {% block page_title %}Indicadores{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'indicadores/css/dashboard.css' %}">{% endblock %}
 {% block content %}
+
 <section class="kpi">
   <header class="kpi__head">
     <p class="kpi__eyebrow">Analítica general</p>
     <h1>Indicadores de la planta</h1>
     <p class="kpi__sub">Borrador de analítica · los valores mostrados son datos de ejemplo.</p>
   </header>
-
+{% comment %} 
   <div class="kpi__toolbar">
     <label class="kpi__filtro">Línea
       <select disabled>
@@ -30,7 +31,7 @@
     <button type="button" class="kpi__btn" title="Pendiente de implementar" disabled>Recalcular indicadores</button>
     <button type="button" class="kpi__btn" title="Pendiente de implementar" disabled>Cerrar periodos</button>
     <button type="button" class="kpi__btn" title="Pendiente de implementar" disabled>Reconciliar stock</button>
-  </div>
+  </div> {% endcomment %}
 
   <div class="kpi__cards">
     <article class="stat-card">
@@ -191,6 +192,7 @@
     </div>
   </article>
 </section>
+
 {% endblock %}
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>

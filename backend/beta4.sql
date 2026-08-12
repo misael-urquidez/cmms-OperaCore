@@ -738,6 +738,9 @@ INSERT INTO HERRAMIENTA (nombre, descripcion, imagen, tipo_herramienta) VALUES
 ('Multímetro digital', 'Multímetro digital Fluke 87V para medición eléctrica', '/img/herramientas/multimetro.jpg', 2),
 ('Juego de calibración', 'Juego de bloques patrón y medidores de alineación', '/img/herramientas/calibracion.jpg', 3);
 
+ALTER TABLE HERRAMIENTA
+ADD COLUMN stock INT NOT NULL DEFAULT 0;
+
 INSERT INTO LINEA (codigo, nombre, descripcion, area) VALUES
 ('LI001', 'Línea de Producción 1', 'Primera línea de ensamble SMT', 'ARR001'),
 ('LI002', 'Línea de Producción 2', 'Segunda línea de ensamble SMT', 'ARR001');
