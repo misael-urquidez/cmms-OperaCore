@@ -1,5 +1,8 @@
 $(function () {
 
+    // Ocultar modales explícitamente al cargar la página para evitar destellos
+    $(".fallas-modal").removeClass("is-open").css("display", "none");
+
     /* ---- abrir modal de detalle (solo lectura) ---- */
     function abrir_modal_detalle(pk) {
         var $modal = $("#detalle-falla");
@@ -29,26 +32,23 @@ $(function () {
 
     /* ---- abrir modal de exportación ---- */
     function abrir_modal_exportar(pk) {
-    // Asignar el ID al texto del modal
-    const exportPk = document.getElementById("export-pk");
-    if (exportPk) exportPk.textContent = pk;
+        const exportPk = document.getElementById("export-pk");
+        if (exportPk) exportPk.textContent = pk;
 
-    // Construir las URLs remplazando el placeholder (0) con el ID real
-    if (window.URL_EXPORTAR_CSV) {
-        document.getElementById("export-csv-link").href = window.URL_EXPORTAR_CSV.replace('/0/', `/${pk}/`);
-    }
-    if (window.URL_EXPORTAR_XLSX) {
-        document.getElementById("export-xlsx-link").href = window.URL_EXPORTAR_XLSX.replace('/0/', `/${pk}/`);
-    }
-    if (window.URL_EXPORTAR_PDF) {
-        document.getElementById("export-pdf-link").href = window.URL_EXPORTAR_PDF.replace('/0/', `/${pk}/`);
-    }
+        if (window.URL_EXPORTAR_CSV) {
+            document.getElementById("export-csv-link").href = window.URL_EXPORTAR_CSV.replace('/0/', `/${pk}/`);
+        }
+        if (window.URL_EXPORTAR_XLSX) {
+            document.getElementById("export-xlsx-link").href = window.URL_EXPORTAR_XLSX.replace('/0/', `/${pk}/`);
+        }
+        if (window.URL_EXPORTAR_PDF) {
+            document.getElementById("export-pdf-link").href = window.URL_EXPORTAR_PDF.replace('/0/', `/${pk}/`);
+        }
 
-    // Mostrar el modal agregando la clase activa (según la convención que uses en tu CSS)
-    const modalExport = document.getElementById("exportar-falla");
-    if (modalExport) {
-        modalExport.classList.add("is-open"); // O la clase que use tu CSS (ej: 'show', 'active')
-    }
+        const modalExport = $("#exportar-falla");
+        if (modalExport.length) {
+            modalExport.css("display", "flex").addClass("is-open");
+        }
     }
 
     /* ---- cerrar modales ---- */

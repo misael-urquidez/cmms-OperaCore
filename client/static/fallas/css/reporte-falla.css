@@ -436,6 +436,94 @@ textarea.form-control-custom {
   border-radius: 0.4rem;
 }
 
+/* ============================================================
+   RESPONSIVIDAD MÓVIL EXACTA ESTILO ALMACÉN (<= 900px)
+   ============================================================ */
+
+/* Ocultar botón móvil por defecto en PC */
+.col-mobile-toggle {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  /* Filtros y campos ajustados al 100% de ancho */
+  .filter-bar-top,
+  .dropdown-filters {
+    align-items: stretch !important;
+    gap: 0.6rem !important;
+  }
+
+  .search-box,
+  .select-dark,
+  .input-date-dark,
+  .date-range {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .date-range {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto 1fr;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  /* Transformación de la Tarjeta en Móvil */
+  .report-card-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+    padding: 0.85rem 1rem !important;
+  }
+
+  /* Celdas internas con formato Clave / Valor */
+  .report-card-item > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 0.35rem;
+  }
+
+  /* Columnas que se ocultan en móvil por defecto hasta pulsar "Ver más detalles" */
+  .mobile-hidden {
+    display: none !important;
+  }
+  .mobile-hidden.is-expanded {
+    display: flex !important;
+  }
+
+  /* Botón de expansión para Móvil */
+  .col-mobile-toggle {
+    display: flex !important;
+    justify-content: center !important;
+    border-bottom: none !important;
+    padding-top: 0.25rem;
+  }
+
+  .btn-toggle-details {
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: var(--color-primary, #38bdf8);
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+  }
+
+  .col-actions {
+    border-bottom: none !important;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+}
+
 /* Colores de Estado */
 .badge-est-en-espera { background: rgba(234, 179, 8, 0.15);  color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); }
 .badge-est-abierto   { background: rgba(239, 68, 68, 0.15);  color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }

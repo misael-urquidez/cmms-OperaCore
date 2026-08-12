@@ -9,7 +9,6 @@
 
   <!-- TOP WIDGETS -->
   <div class="top-widgets">
-   
     <!-- TARJETA IZQUIERDA: MÉTRICAS GENERALES -->
     <div class="widget-card">
       <div class="widget-header">
@@ -79,7 +78,6 @@
         <canvas id="chartTiempoAtencion"></canvas>
       </div>
     </div>
-
   </div>
 
   <!-- SECCIÓN PRINCIPAL DE REPORTES -->
@@ -97,40 +95,38 @@
       </div>
     </div>
 
-    <!-- BARRA DE BÚSQUEDA Y NUEVO REPORTE AL LADO -->
-    <div class="filter-bar-top" style="display: flex; gap: 0.8rem; align-items: center; margin-bottom: 1rem;">
-      <div class="search-box" style="flex: 1;">
+    <!-- BARRA DE BÚSQUEDA Y NUEVO REPORTE CON SVG -->
+    <div class="filter-bar-top" style="display: flex; gap: 0.8rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+      <div class="search-box" style="flex: 1; min-width: 220px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input type="text" id="inputBuscar" placeholder="Buscar por asunto, máquina o técnico...">
       </div>
 
-      <a class="btn-primary-sm" href="{% url 'fallas:reporte' %}" style="white-space: nowrap; height: 38px; display: inline-flex; align-items: center;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-right: 0.4rem;">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
+      <a class="btn-primary-sm" href="{% url 'fallas:reporte' %}" style="white-space: nowrap; height: 38px; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0 0.85rem; border-radius: 0.4rem; font-weight: 600;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
         Nuevo reporte
       </a>
     </div>
 
-    <!-- FILTROS DEBAJO: MÁQUINA, SEVERIDAD Y RANGO DE FECHAS -->
+    <!-- FILTROS: MÁQUINA (TODAS), SEVERIDAD Y RANGO DE FECHAS -->
     <div class="dropdown-filters" style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem;">
-    <select id="filterMaquina" class="select-dark" style="flex: 1; min-width: 180px;">
-      <option value="">Todas las máquinas</option>
-      {% for m in maquinas %}
-        <option value="{{ m.codigo }}">
-          {{ m.nombre }}
-        </option>
-      {% endfor %}
-    </select>
+      <select id="filterMaquina" class="select-dark" style="flex: 1; min-width: 150px;">
+        <option value="">Todas las máquinas</option>
+        {% for m in maquinas %}
+          <option value="{{ m.nombre|default:m.codigo }}">
+            {{ m.nombre|default:m.codigo }}
+          </option>
+        {% endfor %}
+      </select>
 
-      <select id="filterSeveridad" class="select-dark" style="flex: 1; min-width: 180px;">
+      <select id="filterSeveridad" class="select-dark" style="flex: 1; min-width: 150px;">
         <option value="">Todas las severidades</option>
         {% for s in severidades %}
           <option value="{{ s.nombre|default:s.codigo }}">{{ s.nombre|default:s.codigo }}</option>
         {% endfor %}
       </select>
 
-      <div class="date-range" style="display: flex; align-items: center; gap: 0.4rem;">
+      <div class="date-range" style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
         <label style="font-size: 0.75rem; color: var(--color-muted);">Desde</label>
         <input type="date" id="filterDesde" class="input-date-dark">
         <label style="font-size: 0.75rem; color: var(--color-muted);">Hasta</label>
@@ -141,59 +137,61 @@
     <!-- LISTA DE CARDS DE REPORTES -->
     <div class="report-cards-list" id="listaReportesCards">
       {% for r in reportes %}
-      <div class="report-card-item"
-          data-asunto="{{ r.asunto|default:'' }}"
-          data-maquina="{{ r.maquina|default:'' }} {{ r.maquina_codigo|default:'' }} {{ r.maquina_nombre|default:'' }}"
-          data-severidad="{{ r.severidad_evaluada|default:'' }}"
-          data-estado="{{ r.estado_evaluado|default:'' }}"
-          data-fecha="{{ r.fechaCreacion|default:'' }}">
-         
-          <div class="col-id">
-            <span class="label-sub">Reporte</span>
-            <strong>#{{ r.numeroRegistro|stringformat:"04d" }}</strong>
-          </div>
+<div class="report-card-item"
+    data-asunto="{{ r.asunto|default:'' }}"
+    data-maquina="{{ r.maquina|default:'' }} {{ r.maquina_codigo|default:'' }} {{ r.maquina_nombre|default:'' }}"
+    data-severidad="{{ r.severidad_evaluada|default:'' }}"
+    data-estado="{{ r.estado_evaluado|default:'' }}"
+    data-fecha="{{ r.fechaCreacion|default:'' }}">
+   
+    <div class="col-id">
+      <span class="label-sub">Reporte</span>
+      <strong>#{{ r.numeroRegistro|stringformat:"04d" }}</strong>
+    </div>
 
-          <div class="col-asunto">
-            <span class="label-sub">Asunto</span>
-            <span class="text-main">{{ r.asunto }}</span>
-          </div>
+    <div class="col-asunto">
+      <span class="label-sub">Asunto</span>
+      <span class="text-main">{{ r.asunto }}</span>
+    </div>
 
-          <div class="col-maquina">
-            <span class="label-sub">Máquina</span>
-            <span class="text-muted-custom">{{ r.maquina_nombre|default:"-" }}</span>
-          </div>
+    <div class="col-maquina">
+      <span class="label-sub">Máquina</span>
+      <span class="text-muted-custom">{{ r.maquina_nombre|default:"-" }}</span>
+    </div>
 
-          <div class="col-tipo-falla">
-            <span class="label-sub">Tipo de falla</span>
-            <span class="text-muted-custom">
-              {% if r.fallas_asociadas %}
-                {% for f in r.fallas_asociadas %}{{ f.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
-              {% else %}
-                {{ r.tipo_falla_nombre|default:"Mecánica" }}
-              {% endif %}
-            </span>
-          </div>
+    <!-- Ocultos en pantallas pequeñas -->
+    <div class="col-tipo-falla mobile-hidden">
+      <span class="label-sub">Tipo de falla</span>
+      <span class="text-muted-custom">
+        {% if r.fallas_asociadas %}
+          {% for f in r.fallas_asociadas %}{{ f.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        {% else %}
+          {{ r.tipo_falla_nombre|default:"Mecánica" }}
+        {% endif %}
+      </span>
+    </div>
 
-          <div class="col-badge">
-            <span class="label-sub">Severidad</span>
-            <span class="badge-custom badge-sev-{{ r.severidad_evaluada|slugify }}">
-              {{ r.severidad_evaluada }}
-            </span>
-          </div>
+    <div class="col-badge mobile-hidden">
+      <span class="label-sub">Severidad</span>
+      <span class="badge-custom badge-sev-{{ r.severidad_evaluada|slugify }}">
+        {{ r.severidad_evaluada }}
+      </span>
+    </div>
 
-          <div class="col-badge">
-            <span class="label-sub">Estado</span>
-            <span class="badge-custom badge-est-{{ r.estado_evaluado|slugify }}">
-              {{ r.estado_evaluado }}
-            </span>
-          </div>
+    <div class="col-badge">
+      <span class="label-sub">Estado</span>
+      <span class="badge-custom badge-est-{{ r.estado_evaluado|slugify }}">
+        {{ r.estado_evaluado }}
+      </span>
+    </div>
 
-          <div class="col-actions">
-            <button type="button" class="btn-ver-mas" onclick="abrir_modal_detalle({{ r.numeroRegistro }})">Ver más</button>
-            <a class="btn-actualizar" href="{% url 'fallas:actualizar_reporte' pk=r.numeroRegistro %}">Editar</a>
-            <button type="button" class="btn-ver-mas" onclick="abrir_modal_exportar({{ r.numeroRegistro }})">Exportar</button>
-          </div>
-        </div>
+    <!-- Acciones unificadas -->
+    <div class="col-actions">
+      <button type="button" class="btn-ver-mas" onclick="abrir_modal_detalle({{ r.numeroRegistro }})">Ver más</button>
+      <a class="btn-actualizar" href="{% url 'fallas:actualizar_reporte' pk=r.numeroRegistro %}">Editar</a>
+      <button type="button" class="btn-exportar" onclick="abrir_modal_exportar({{ r.numeroRegistro }})">Exportar</button>
+    </div>
+</div>
       {% empty %}
         <p class="panel__empty">No hay reportes de falla registrados todavía.</p>
       {% endfor %}
@@ -234,51 +232,9 @@
 <link rel="stylesheet" href="{% static 'fallas/css/reporte-falla.css' %}">
 <link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}">
 
-<style>
-  /* Estilos para el Navegador/Paginador de 10 en 10 */
-  .paginador-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 1.5rem;
-  }
-  .pagination-wrapper {
-    display: flex;
-    gap: 0.4rem;
-    align-items: center;
-    background: var(--color-bg);
-    padding: 0.4rem 0.6rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--line);
-  }
-  .pag-btn {
-    background: transparent;
-    border: 1px solid transparent;
-    color: var(--color-text);
-    padding: 0.35rem 0.7rem;
-    font-size: 0.8rem;
-    border-radius: 0.35rem;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  .pag-btn:hover:not([disabled]) {
-    background: var(--color-surface);
-    border-color: var(--line);
-  }
-  .pag-btn.active {
-    background: var(--color-primary);
-    color: var(--color-bg);
-    font-weight: 700;
-  }
-  .pag-btn[disabled] {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-</style>
-
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- DECLARACIÓN DE RUTAS DE EXPORTACIÓN EN RANGOS DE DJANGO -->
 <script>
   window.URL_EXPORTAR_CSV  = "{% url 'fallas:exportar_csv' pk=0 %}";
   window.URL_EXPORTAR_XLSX = "{% url 'fallas:exportar_xlsx' pk=0 %}";
@@ -327,23 +283,5 @@
       }
     });
   });
-</script>
-
-<!-- Script para levantar orden de trabajo si aplica -->
-<script>
-(function () {
-  var params = new URLSearchParams(window.location.search);
-  if (params.get("levantar_orden") !== "1") return;
-  var reporte = params.get("reporte");
-  var asunto = params.get("asunto") || "";
-  var maquina = params.get("maquina") || "";
-  window.history.replaceState({}, "", window.location.pathname);
-  if (!reporte) return;
-  var quiere = confirm("Reporte #" + reporte + " registrado.\n¿Deseas levantar la orden de mantenimiento correctiva ahora?");
-  if (quiere) {
-    window.location.href = "{% url 'mantenimiento:index' %}?maquina=" + encodeURIComponent(maquina) +
-      "&tipo=CORRE&reporte=" + encodeURIComponent(reporte) + "&asunto=" + encodeURIComponent(asunto);
-  }
-})();
 </script>
 {% endblock %}

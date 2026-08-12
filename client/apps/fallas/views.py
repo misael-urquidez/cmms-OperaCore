@@ -206,21 +206,7 @@ class ListaReportes(generic.View):
         from .views import _cargar_catalogos
         severidades, tipos_falla, maquinas, estados, trabajadores, _ = _cargar_catalogos()
 
-        # Extraer los códigos de máquina presentes en los reportes
-        codigos_maquinas_con_falla = set()
-        for r in reportes:
-            # Revisa la clave exacta que devuelve la API para la máquina
-            cod = r.get("maquina") or r.get("maquina_codigo")
-            if isinstance(cod, dict):
-                cod = cod.get("codigo")
-            if cod:
-                codigos_maquinas_con_falla.add(str(cod))
-
-        # Filtrar la lista de máquinas para incluir solo las que tienen al menos un reporte
-        maquinas_con_reportes = [
-            m for m in maquinas 
-            if str(m.get("codigo")) in codigos_maquinas_con_falla
-        ]
+        
 
         # Mapeo de estados sin ENATE ni CERRA
         MAPA_ESTADOS = {
@@ -321,7 +307,7 @@ class ListaReportes(generic.View):
         context = {
             "reportes": reportes,
             "severidades": severidades,
-            "maquinas": maquinas_con_reportes,
+            "maquinas": maquinas,  
             "estados": estados,
             "seccion": "fallas",
             "subseccion": "lista",
