@@ -278,6 +278,9 @@ class CreateOrdenMantenimientoSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         reporte = data.get("reporte_falla")
+        tipo = data.get("tipo_mantenimiento")
+        if tipo is not None and tipo.codigo == "CORRE" and reporte is None:
+            raise serializers.ValidationError({"reporte_falla": "Una orden correctiva debe asociar un reporte de falla."})
         if reporte is not None:
             maquina = data.get("maquina")
             if maquina and reporte.maquina_id != maquina.codigo:

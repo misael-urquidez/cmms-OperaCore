@@ -500,9 +500,15 @@
 
     form.addEventListener("submit", function (ev) {
       ev.preventDefault();
+      var tipoMantenimiento = document.getElementById("oTipo").value;
+      if (tipoMantenimiento === "CORRE" && !reporteSeleccionado) {
+        errorNuevaOrden("Para órdenes correctivas es obligatorio adjuntar un reporte de falla.");
+        if (window.mostrarToast) mostrarToast("Para órdenes correctivas es obligatorio adjuntar un reporte de falla.", "error");
+        return;
+      }
       var payload = {
         maquina: selectMaquina.value,
-        tipo_mantenimiento: document.getElementById("oTipo").value,
+        tipo_mantenimiento: tipoMantenimiento,
         trabajador: selectTrabajador.value || null,
         fechaprogramada: document.getElementById("oFecha").value || null,
         descripcion: document.getElementById("oDescripcion").value,
