@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
 from django.db import IntegrityError, transaction
@@ -47,11 +49,19 @@ class TrabajadorSerializer(serializers.ModelSerializer):
 
 
 class RegistroTrabajadorSerializer(serializers.ModelSerializer):
-    """Alta de un TRABAJADOR nuevo. numeroNomina se genera solo, la
+    """Alta de un TRABAJADOR nuevo. numeroNomina es opcional: si llega
+    (registro desde Gestión) se usa tal cual; si no, se genera solo. La
     contraseña se guarda hasheada con el hasher de Django."""
 
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, label="Confirmar contraseña")
+
+    # numeroNomina es opcional: si se manda (registro desde Gestión) se usa
+    # tal cual; si no se manda (registro público) se auto-genera.
+    numeroNomina = serializers.CharField(
+        write_only=True, required=False, allow_blank=True, allow_null=True,
+        max_length=10, label="Número de nómina",
+    )
 
     # "rol" ya NO se manda como select con el ID del rol: ahora es una
     # clave de seguridad de texto libre. Si coincide con el "codigo" de
@@ -67,9 +77,21 @@ class RegistroTrabajadorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Trabajador
         fields = [
-            "nombre", "apellidoPat", "apellidoMat", "telefono",
+            "numeroNomina", "nombre", "apellidoPat", "apellidoMat", "telefono",
             "correo", "usuario", "password", "password2", "rol", "especialidad",
         ]
+
+    def validate_numeroNomina(self, value):
+        if not value:
+            return None
+        value = value.strip()
+        if not re.fullmatch(r"[A-Za-z0-9.\-]{10}", value):
+            raise serializers.ValidationError(
+                "El número de nómina debe tener 10 caracteres (solo letras, dígitos, puntos o guiones)."
+            )
+        if Trabajador.objects.filter(numeroNomina__iexact=value).exists():
+            raise serializers.ValidationError("Ese número de nómina ya está registrado.")
+        return value
 
     def validate_rol(self, value):
         """value es la clave de seguridad escrita por el usuario (texto
@@ -106,6 +128,25 @@ class RegistroTrabajadorSerializer(serializers.ModelSerializer):
             validated_data.pop("password2")
             password = validated_data.pop("password")
             hashed = make_password(password)
+            numero_nomina = validated_data.pop("numeroNomina", None) or None
+
+            if numero_nomina:
+                # Registro manual desde Gestión: la nómina la escribe el admin.
+                trabajador = Trabajador(
+                    numeroNomina=numero_nomina,
+                    contrasena=hashed,
+                    **validated_data,
+                )
+                try:
+                    with transaction.atomic():
+                        trabajador.save(force_insert=True)
+                    return trabajador
+                except IntegrityError as exc:
+                    if "PRIMARY" not in str(exc):
+                        raise
+                    raise serializers.ValidationError(
+                        {"numeroNomina": "Ese número de nómina ya está registrado."}
+                    )
 
             for _ in range(5):
                 trabajador = Trabajador(

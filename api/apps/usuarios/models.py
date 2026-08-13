@@ -1,5 +1,3 @@
-import re
-
 from django.db import models
 
 
@@ -67,16 +65,15 @@ class Trabajador(models.Model):
 
 def generar_numero_nomina():
     """numeroNomina no es autoincremental (es VARCHAR), asi que generamos
-    uno tipo EMP0001, EMP0002... buscando el ultimo registrado."""
+    uno de 10 caracteres (0000000001, 0000000002...) buscando el ultimo
+    registrado con ese formato numerico."""
     ultimo = (
-        Trabajador.objects.filter(numeroNomina__startswith="EMP")
+        Trabajador.objects.filter(numeroNomina__regex=r"^\d{10}$")
         .order_by("-numeroNomina")
         .values_list("numeroNomina", flat=True)
         .first()
     )
     siguiente = 1
     if ultimo:
-        match = re.search(r"(\d+)$", ultimo)
-        if match:
-            siguiente = int(match.group(1)) + 1
-    return f"EMP{siguiente:04d}"
+        siguiente = int(ultimo) + 1
+    return f"{siguiente:010d}"

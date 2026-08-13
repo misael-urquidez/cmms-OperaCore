@@ -6,11 +6,11 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("id_numeroNomina"),
     {
       required: true,
-      maxLength: 15,
-      pattern: /^EMP\d{4}$/,
+      maxLength: 10,
+      pattern: /^[A-Za-z0-9.\-]{10}$/,
       customValidator: function (value) {
-        if (!/^EMP\d{4}$/.test(value)) {
-          return "Formato: EMP seguido de 4 dígitos (ej. EMP0001)";
+        if (!/^[A-Za-z0-9.\-]{10}$/.test(value)) {
+          return "Formato: 10 caracteres, solo letras, dígitos, puntos o guiones";
         }
         return true;
       },
@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function () {
   setupInputValidation(
     document.getElementById("id_apellidoMat"),
     {
-      required: false,
+      required: true,
       maxLength: 50,
       pattern: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/,
     },
