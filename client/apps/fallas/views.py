@@ -108,7 +108,6 @@ class ReporteFalla(generic.View):
             "maquina": request.POST.get("maquina"),
             "trabajador": request.POST.get("trabajador"),
             "tipo_severidad": request.POST.get("tipo_severidad"),
-            "estado_reporte": request.POST.get("estado_reporte"),
         }
 
         tipo_falla_ids = []

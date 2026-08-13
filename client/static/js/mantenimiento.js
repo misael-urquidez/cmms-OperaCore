@@ -577,15 +577,6 @@
     if (tripla[0]) tripla[0].addEventListener("change", function () { contarMultiSelect(tripla[0], tripla[2]); });
   });
 
-  var edTrabajadorSelect = document.getElementById("edTrabajador");
-  if (edTrabajadorSelect) {
-    trabajadores.forEach(function (t) {
-      var opt = document.createElement("option");
-      opt.value = t.numeroNomina; opt.textContent = etiquetaTrabajador(t);
-      edTrabajadorSelect.appendChild(opt);
-    });
-  }
-
   function cargarAsociaciones(folio) {
     if (!DETALLE_TPL) return Promise.resolve(null);
     return fetch(urlPara(DETALLE_TPL, folio))
@@ -715,19 +706,15 @@
 
     // Pre-fill edit inputs
     var edDesc = document.getElementById("edDescripcion");
-    var edTipo = document.getElementById("edTipo");
     var edFecha = document.getElementById("edFecha");
     var edNotas = document.getElementById("edNotas");
     var edDiag = document.getElementById("edDiagnostico");
-    var edTrabajador = document.getElementById("edTrabajador");
     var edHoras = document.getElementById("edHoras");
     var edFechaWrap = document.getElementById("edFechaWrap");
     if (edDesc) edDesc.value = orden.descripcion || "";
-    if (edTipo) edTipo.value = orden.tipo_mantenimiento || "";
     if (edFecha) edFecha.value = orden.fechaprogramada || "";
     if (edNotas) edNotas.value = orden.notas || "";
     if (edDiag) edDiag.value = orden.diagnostico || "";
-    if (edTrabajador) edTrabajador.value = orden.trabajador || "";
     if (edHoras) edHoras.value = orden.horasintervenidas != null ? orden.horasintervenidas : "";
     if (edFechaWrap) edFechaWrap.hidden = (orden.tipo_mantenimiento || "") !== "PREVE";
 
@@ -811,11 +798,9 @@
       renderAsociacionesEdicion(det);
       if (!det) return;
       if (edDesc) edDesc.value = det.descripcion || "";
-      if (edTipo) edTipo.value = det.tipo_mantenimiento || "";
       if (edFecha) edFecha.value = det.fechaprogramada || "";
       if (edNotas) edNotas.value = det.notas || "";
       if (edDiag) edDiag.value = det.diagnostico || "";
-      if (edTrabajador) edTrabajador.value = det.trabajador || "";
       if (edHoras) edHoras.value = det.horasintervenidas != null ? det.horasintervenidas : "";
       if (edFechaWrap) edFechaWrap.hidden = (det.tipo_mantenimiento || "") !== "PREVE";
     });
@@ -895,14 +880,6 @@
   var guardarBtn = document.getElementById("ordenGuardarBtn");
   var cancelarEditBtn = document.getElementById("ordenCancelarEditBtn");
 
-  var edTipoSelect = document.getElementById("edTipo");
-  if (edTipoSelect) {
-    edTipoSelect.addEventListener("change", function () {
-      var wrap = document.getElementById("edFechaWrap");
-      if (wrap) wrap.hidden = edTipoSelect.value !== "PREVE";
-    });
-  }
-
   if (editarBtn && editDiv) {
     editarBtn.addEventListener("click", function () {
       editDiv.hidden = false;
@@ -913,13 +890,13 @@
   if (guardarBtn && editDiv) {
     guardarBtn.addEventListener("click", function () {
       if (!estado.seleccionada) return;
+      var editForm = document.getElementById("ordenEditForm");
+      if (editForm && !editForm.checkValidity()) return;
       var payload = {
         descripcion: document.getElementById("edDescripcion").value,
-        tipo_mantenimiento: document.getElementById("edTipo").value,
         fechaprogramada: document.getElementById("edFecha").value || null,
         notas: document.getElementById("edNotas").value,
         diagnostico: document.getElementById("edDiagnostico").value,
-        trabajador: document.getElementById("edTrabajador").value || null,
         horasintervenidas: document.getElementById("edHoras").value,
         trabajadores: leerMultiSelect(edEquipoSelect),
         herramientas: leerMultiSelect(edHerramientasSelect),

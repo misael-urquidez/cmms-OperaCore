@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     });
 
-    var requiredIds = ["numeroserie", "linea", "marca", "modelo", "estado_maquina", "tipo_maquina"];
+    var requiredIds = ["numeroserie", "linea", "marca", "modelo", "tipo_maquina"];
     requiredIds.forEach(function (id) {
         var el = document.getElementById("id_" + id);
         if (el) el.required = true;

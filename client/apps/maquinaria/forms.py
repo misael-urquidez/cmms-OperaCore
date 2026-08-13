@@ -105,17 +105,17 @@ class MaquinaForm(forms.Form):
         label="Fecha de Instalación",
     )
 
-    # Los choices de estos 5 campos se llenan en __init__ jalando los
+    # Los choices de estos 4 campos se llenan en __init__ jalando los
     # catálogos reales del API (igual que hace apps/gestion/views.py con
     # _fetch_fk_choices). Así nunca se desincronizan de lo que hay en BD.
+    # Nota: no existe campo estado_maquina: toda máquina nueva se crea
+    # Operativa (OPERA), lo fuerza CrearMaquina.post en views.py.
     linea = forms.ChoiceField(label="Línea de Producción", required=False,
                               widget=forms.Select(attrs={"placeholder": "Selecciona línea"}))
     marca = forms.ChoiceField(label="Marca del Fabricante", required=False,
                               widget=forms.Select(attrs={"placeholder": "Selecciona marca"}))
     modelo = forms.ChoiceField(label="Modelo", required=False,
                                widget=forms.Select(attrs={"placeholder": "Selecciona modelo"}))
-    estado_maquina = forms.ChoiceField(label="Estado Operativo", required=False,
-                                       widget=forms.Select(attrs={"placeholder": "Selecciona estado"}))
     tipo_maquina = forms.ChoiceField(label="Tipo de Máquina", required=False,
                                      widget=forms.Select(attrs={"placeholder": "Selecciona tipo"}))
 
@@ -125,7 +125,6 @@ class MaquinaForm(forms.Form):
         lineas = _fetch_catalogo("v1/linea/list/", "maquinaria_lineas_list")
         marcas = _fetch_catalogo("v1/marca/list/", "maquinaria_marcas_list")
         modelos = _fetch_catalogo("v1/modelo/list/", "maquinaria_modelos_list")
-        estados = _fetch_catalogo("v1/edo_maquina/list/", "maquinaria_edos_list")
         tipos = _fetch_catalogo("v1/tipo_maquina/list/", "maquinaria_tipos_list")
 
         self.fields["linea"].choices = [("", "Seleccione")] + [
@@ -136,9 +135,6 @@ class MaquinaForm(forms.Form):
         ]
         self.fields["modelo"].choices = [("", "Seleccione")] + [
             (m["codigo"], m["nombre"]) for m in modelos if "codigo" in m
-        ]
-        self.fields["estado_maquina"].choices = [("", "Seleccione")] + [
-            (e["codigo"], e["nombre"]) for e in estados if "codigo" in e
         ]
         self.fields["tipo_maquina"].choices = [("", "Seleccione")] + [
             (t.get("numeroregistro"), t["nombre"]) for t in tipos if "nombre" in t

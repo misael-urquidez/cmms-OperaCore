@@ -319,6 +319,15 @@ class CreateMaquinaSerializer(ValidarTipoMaquinaAreaMixin, serializers.ModelSeri
     # normal del modelo (la ruta ya procesada) y NO se expone como file aquí,
     # para no chocar con el nombre.
     modelo_3d_archivo = serializers.FileField(write_only=True, required=False, allow_null=True)
+    # Toda máquina nueva inicia Operativa. El cliente ya la manda explícito
+    # ('OPERA'), pero este default protege a cualquier otro consumidor del
+    # API: si el campo no llega, nunca se crea una máquina sin estado.
+    estado_maquina = serializers.PrimaryKeyRelatedField(
+        queryset=EdoMaquina.objects.all(),
+        required=False,
+        allow_null=False,
+        default=lambda: EdoMaquina.objects.filter(codigo="OPERA").first(),
+    )
 
     class Meta:
         model = Maquina

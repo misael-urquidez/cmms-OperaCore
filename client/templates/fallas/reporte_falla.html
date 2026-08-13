@@ -98,15 +98,6 @@
             <button onclick="anadirFalla()">+ Añadir</button>
         </div>
 
-
-        <label for="estado_reporte">Estado del reporte</label>
-        <select name="estado_reporte" id="estado_reporte" required>
-          <option value="">Seleccione...</option>
-          {% for e in estados %}
-            <option value="{{ e.codigo }}" {% if datos.estado_reporte == e.codigo %}selected{% endif %}>{{ e.nombre }}</option>
-          {% endfor %}
-        </select>
-
         <label for="trabajador">Selecciona el trabajador</label>
         <select name="trabajador" id="trabajador" required>
           <option value="">Seleccione...</option>

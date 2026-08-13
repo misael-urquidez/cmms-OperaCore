@@ -98,7 +98,6 @@
     asunto: "Asunto", descripcion: "Descripción", causaRaiz: "Causa raíz",
     tiempoParo: "Tiempo de paro", fecha: "Fecha", maquina: "Máquina",
     tipo_severidad: "Severidad", tipo_falla: "Tipo de falla",
-    estado_reporte: "Estado del reporte",
   };
 
   function resumenCamposTexto() {
@@ -133,7 +132,7 @@
   // ── marca visualmente los selects que Elipse no pudo llenar, para que
   //    no pasen desapercibidos (sobre todo al importar un documento) ─────
   function resaltarCamposFaltantes(campos) {
-    ["maquina", "tipo_severidad", "tipo_falla", "estado_reporte"].forEach(function (id) {
+    ["maquina", "tipo_severidad", "tipo_falla"].forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
       if (!campos[id]) {
@@ -158,13 +157,11 @@
     if (campos.tiempoParo !== null && campos.tiempoParo !== undefined && campos.tiempoParo !== "") {
       if (set("tiempoParo", campos.tiempoParo)) aplicados.push("Tiempo de paro");
     }
-    if (set("fechaSolucion", campos.fecha)) aplicados.push("Fecha");
     if (campos.maquina && set("maquina", String(campos.maquina))) aplicados.push("Máquina");
     if (campos.tipo_severidad && set("tipo_severidad", String(campos.tipo_severidad))) aplicados.push("Severidad");
     if (campos.tipo_falla !== null && campos.tipo_falla !== undefined && campos.tipo_falla !== "") {
       if (set("tipo_falla", String(campos.tipo_falla))) aplicados.push("Tipo de falla");
     }
-    if (campos.estado_reporte && set("estado_reporte", String(campos.estado_reporte))) aplicados.push("Estado del reporte");
     resaltarCamposFaltantes(campos);
     return aplicados;
   }
@@ -287,7 +284,7 @@
         aplicarCampos(res.data.campos);
         fusionarCampos(res.data.campos);
 
-        var faltantes = ["asunto", "fecha", "maquina", "tipo_severidad", "tipo_falla", "estado_reporte"]
+        var faltantes = ["asunto", "maquina", "tipo_severidad", "tipo_falla"]
           .filter(function (k) { return !camposAcumulados[k]; });
 
         var nota = Object.keys(camposAcumulados).length

@@ -324,13 +324,18 @@ class CrearMaquina(generic.View):
         # mandar "" en dos altas distintas choca contra ese unique).
         payload = {}
         for campo in ("numeroserie", "nombre", "descripcion", "linea",
-                      "marca", "modelo", "estado_maquina", "tipo_maquina"):
+                      "marca", "modelo", "tipo_maquina"):
             valor = cleaned.get(campo)
             if valor:
                 payload[campo] = valor
 
         payload["codigo"] = cleaned.get("codigo") or _siguiente_codigo()
         payload["fechainstalacion"] = cleaned["fechainstalacion"].isoformat()
+        # Toda máquina nueva inicia en estado Operativa (OPERA). El catálogo
+        # EDO_MAQUINA usa códigos ('OPERA', 'MANTE', 'FALLO', ...) no nombres,
+        # y el API deja este campo opcional: si no se manda explícito, la
+        # máquina quedaría con estado NULL.
+        payload["estado_maquina"] = "OPERA"
 
         files_payload = {}
         imagen = cleaned.get("imagen_url")

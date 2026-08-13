@@ -154,6 +154,9 @@ class ReporteFallaCreateSerializer(serializers.ModelSerializer):
         validated_data["fechaCreacion"] = date.today()
         validated_data["horaCreacion"] = datetime.now().time()
 
+        if not validated_data.get("estado_reporte"):
+            validated_data["estado_reporte"] = models.EstadoReporte.objects.get(codigo="ABIER")
+
         if not validated_data.get("trabajador"):
             trabajador = self.context["request"].session.get("usuario")
             if trabajador:
