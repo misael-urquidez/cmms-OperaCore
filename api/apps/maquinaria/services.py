@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .models import HistorialEstadoMaquina, Maquina
+from .models import EdoMaquina, HistorialEstadoMaquina, Maquina
 
 # Transiciones permitidas — coincide con tu diagrama:
 # OPERA -> FALLO (se reporta falla) / DESHA (se deshabilita manualmente)
@@ -45,7 +45,10 @@ def cambiar_estado_maquina(maquina_codigo, nuevo_estado, referencia_tipo=None, r
     if not forzar:
         permitidos = TRANSICIONES_VALIDAS.get(estado_anterior, set())
         if nuevo_estado not in permitidos:
-            raise ValidationError(f"Transición no permitida: {estado_anterior} -> {nuevo_estado}.")
+            nombres = dict(EdoMaquina.objects.values_list("codigo", "nombre"))
+            nombre_anterior = nombres.get(estado_anterior, estado_anterior)
+            nombre_nuevo = nombres.get(nuevo_estado, nuevo_estado)
+            raise ValidationError(f"Transición no permitida: {nombre_anterior} -> {nombre_nuevo}.")
 
     ahora = timezone.localtime()
 

@@ -60,6 +60,24 @@ def _cargar_catalogos():
     return severidades, tipos_falla, maquinas, estados, trabajadores, True
 
 
+def _detalle_error_api(response):
+    """Convierte el JSON de error de DRF ({'campo': ['msg']}) en un texto
+    legible (solo los mensajes, sin etiquetas de campo) para el toast."""
+    try:
+        cuerpo = response.json()
+    except ValueError:
+        return f"El API respondió {response.status_code}."
+    if isinstance(cuerpo, dict):
+        partes = []
+        for errores in cuerpo.values():
+            if isinstance(errores, list):
+                partes.extend(str(e) for e in errores)
+            else:
+                partes.append(str(errores))
+        return " ".join(partes)
+    return str(cuerpo)
+
+
 class ReporteFalla(generic.View):
     template_name = "fallas/reporte_falla.html"
     context = {}
@@ -148,11 +166,7 @@ class ReporteFalla(generic.View):
                 )
             )
         else:
-            try:
-                detalle = self.response.json()
-            except ValueError:
-                detalle = self.response.text
-            messages.warning(request, f"Error al registrar el reporte: {detalle}")
+            messages.warning(request, f"No se pudo registrar el reporte: {_detalle_error_api(self.response)}")
             return self._render_error(request)
 
     def _render_error(self, request):
