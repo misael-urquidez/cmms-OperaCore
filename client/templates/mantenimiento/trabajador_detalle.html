@@ -83,9 +83,9 @@
 <div class="perfil-stats">
     <div class="perfil-stat" data-target="substat-asignadas" onclick="toggleSubstat(this)"><b>{{ total_ordenes }}</b><span>Órdenes asignadas</span></div>
     <div class="perfil-stat" data-target="substat-cerradas" onclick="toggleSubstat(this)"><b>{{ total_cerradas }}</b><span>Órdenes cerradas</span></div>
-    <div class="perfil-stat" data-target="substat-pendientes" onclick="toggleSubstat(this)"><b>{{ ordenes_pendientes|length }}</b><span>Órdenes pendientes</span></div>
+    <div class="perfil-stat" data-target="substat-pendientes" onclick="toggleSubstat(this)"><b>{{ total_pendientes }}</b><span>Órdenes pendientes</span></div>
     <div class="perfil-stat" data-target="substat-fallas" onclick="toggleSubstat(this)"><b>{{ total_reportes }}</b><span>Fallas reportadas</span></div>
-    <div class="perfil-stat" data-target="substat-maquinas" onclick="toggleSubstat(this)"><b>{{ maquinas_atendidas|length }}</b><span>Máquinas atendidas</span></div>
+    <div class="perfil-stat" data-target="substat-maquinas" onclick="toggleSubstat(this)"><b>{{ total_maquinas }}</b><span>Máquinas atendidas</span></div>
 </div>
 
 <div id="substat-asignadas" class="perfil-substat-panel">

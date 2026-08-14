@@ -164,7 +164,8 @@ function setupInputValidation(
 }
 
 function actualizarEstado(estadoElement) {
-  const inputs = document.querySelectorAll(
+  const form = estadoElement.closest("form");
+  const inputs = (form || document).querySelectorAll(
     'input[type="text"], textarea, input[type="number"], input[type="password"], input[type="email"], input[type="date"], input[type="time"], select',
   );
   let todosValidos = true;
@@ -182,7 +183,6 @@ function actualizarEstado(estadoElement) {
 
   estadoElement.textContent = todosValidos ? "" : "Hay errores en el formulario, corrígelos antes de enviar.";
 
-  const form = estadoElement.closest("form");
   const boton = form
     ? form.querySelector('button[type="submit"]')
     : document.getElementById("boton-registrar");
@@ -220,7 +220,7 @@ document.addEventListener("DOMContentLoaded", function () {
     asuntoEl,
     {
       required: true,
-      minLength: 2,
+      minLength: 5,
       maxLength: 50,
       pattern: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/,
     },
@@ -267,7 +267,7 @@ document.addEventListener("DOMContentLoaded", function () {
       required: true,
       minLength: 10,
       maxLength: 500,
-      minWords: 3,
+      minWords: 1,
     },
     document.getElementById("causaRaiz-error"),
     estadoElement,

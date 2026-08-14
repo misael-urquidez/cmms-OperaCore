@@ -73,7 +73,7 @@ class DocumentoOrden(View):
             "puede_modificar": (not es_tecnico) or (not orden_cerrada),
             # Estas dos controlan si se muestra el bloque "Completar orden"
             # (tecnico + orden abierta) y en que paso: iniciar o cerrar.
-            "puede_iniciar": es_tecnico and orden.get("estado_orden") == "PROGR",
+            "puede_iniciar": es_tecnico and orden.get("estado_orden") in ("PROGR", "SOLIC"),
             "puede_cerrar": es_tecnico and orden.get("estado_orden") == "ENPRO",
             "piezas": [p for p in todas_piezas if p.get("maquina") == orden.get("maquina")],
             "refacciones": _obtener_lista(f"{settings.API_BASE_URL}/inventario/v1/refacciones/list/"),
@@ -328,6 +328,11 @@ class TrabajadorDetalleView(View):
             f"{settings.API_BASE_URL}/fallas/v1/reportes/list/?trabajador={numeroNomina}"
         )
 
+        # Contadores del encabezado via sp_perfil_trabajador (SP 8)
+        contadores = _obtener_lista(
+            f"{settings.API_BASE_URL}/usuarios/v1/trabajadores/{numeroNomina}/perfil/"
+        ) or {}
+
         ESTADOS_CERRADOS = ("CERRA", "CANCE")
         ordenes_pendientes = [o for o in ordenes if o.get("estado_orden") not in ESTADOS_CERRADOS]
         ordenes_cerradas = [o for o in ordenes if o.get("estado_orden") == "CERRA"]
@@ -381,9 +386,11 @@ class TrabajadorDetalleView(View):
             "ordenes_cerradas": ordenes_cerradas,    # NUEVO
             "ordenes_pendientes": ordenes_pendientes,
             "reportes": reportes,                    # NUEVO
-            "total_ordenes": len(ordenes),
-            "total_cerradas": len(ordenes_cerradas),
-            "total_reportes": len(reportes),
+            "total_ordenes": contadores.get("ordenes_asignadas") or 0,
+            "total_cerradas": contadores.get("ordenes_cerradas") or 0,
+            "total_pendientes": contadores.get("ordenes_pendientes") or 0,
+            "total_reportes": contadores.get("fallas_reportadas") or 0,
+            "total_maquinas": contadores.get("maquinas_atendidas") or 0,
             "maquinas_atendidas": maquinas_atendidas,
             "actividad": actividad,
         })

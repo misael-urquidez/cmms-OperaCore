@@ -8,7 +8,7 @@ from rest_framework import serializers
 from apps.fallas.models import EstadoMaquina, Linea, Maquina, Marca, Modelo, TipoMaquina, TipoMaquinaArea
 
 from . import services
-from .models import LecturaSensor
+from .models import LecturaSensor, RegistroOps
 
 
 class LecturaSensorSerializer(serializers.ModelSerializer):
@@ -138,12 +138,49 @@ class ReparacionManualSerializer(serializers.Serializer):
 
 class RegistroOpsSerializer(serializers.Serializer):
     """Registra un periodo de horas de operación de la máquina.
-    No expone mtbf/mttr/disponibilidad: esos los calculan los triggers."""
+    No expone mtbf/mttr/disponibilidad: esos los calculan los triggers.
+    Valida fechas para evitar errores lógicos: rango ordenado, horas
+    coherentes con el rango y sin solapamiento con otros periodos de la
+    misma máquina (un solapamiento infla el SUM de horas -> MTBF falso)."""
     fechaInicio = serializers.DateField()
     fechaFin = serializers.DateField()
     horasOperacion = serializers.IntegerField(min_value=0)
 
     def validate(self, datos):
-        if datos["fechaFin"] < datos["fechaInicio"]:
+        fecha_inicio = datos.get("fechaInicio", getattr(self.instance, "fechaInicio", None))
+        fecha_fin = datos.get("fechaFin", getattr(self.instance, "fechaFin", None))
+        horas = datos.get("horasOperacion", getattr(self.instance, "horasOperacion", None))
+
+        if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
             raise serializers.ValidationError("fechaFin no puede ser anterior a fechaInicio.")
+
+        # Las horas de operación no pueden exceder las horas calendario
+        # del rango (24 h por día, rango inclusivo).
+        if fecha_inicio and fecha_fin and horas is not None:
+            dias = (fecha_fin - fecha_inicio).days + 1
+            max_horas = dias * 24
+            if horas > max_horas:
+                raise serializers.ValidationError(
+                    f"horasOperacion ({horas}) excede el máximo del rango "
+                    f"({dias} día(s) = {max_horas} h)."
+                )
+
+        # Sin solapamiento con otros periodos de la misma máquina. En el
+        # POST la máquina viaja por context (la pone la vista); en el PATCH
+        # se toma del registro que se está editando.
+        if fecha_inicio and fecha_fin:
+            maquina = self.context.get("maquina") or getattr(self.instance, "maquina", None)
+            if maquina is not None:
+                qs = RegistroOps.objects.filter(maquina=maquina)
+                if self.instance is not None:
+                    qs = qs.exclude(numeroRegistro=self.instance.numeroRegistro)
+                solapados = qs.filter(
+                    fechaInicio__lte=fecha_fin,
+                    fechaFin__gte=fecha_inicio,
+                ).exists()
+                if solapados:
+                    raise serializers.ValidationError(
+                        "El rango de fechas se solapa con otro registro de horas de operación de la misma máquina."
+                    )
+
         return datos

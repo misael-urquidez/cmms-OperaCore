@@ -249,16 +249,18 @@ class ResumenMaquinaAPIView(APIView):
     def get(self, request, codigo):
         try:
             with connection.cursor() as cur:
-                cur.callproc("sp_resumen_maquina_maquinaria", [codigo, "", "", 0, 0, 0, 0, 0, 0])
+                cur.callproc("sp_resumen_maquina", [codigo, "", "", 0, 0, 0, 0, 0, 0, 0, 0])
                 cur.execute(
-                    "SELECT @_sp_resumen_maquina_maquinaria_1, @_sp_resumen_maquina_maquinaria_2, "
-                    "@_sp_resumen_maquina_maquinaria_3, @_sp_resumen_maquina_maquinaria_4, "
-                    "@_sp_resumen_maquina_maquinaria_5, @_sp_resumen_maquina_maquinaria_6, "
-                    "@_sp_resumen_maquina_maquinaria_7, @_sp_resumen_maquina_maquinaria_8"
+                    "SELECT @_sp_resumen_maquina_1, @_sp_resumen_maquina_2, "
+                    "@_sp_resumen_maquina_3, @_sp_resumen_maquina_4, "
+                    "@_sp_resumen_maquina_5, @_sp_resumen_maquina_6, "
+                    "@_sp_resumen_maquina_7, @_sp_resumen_maquina_8, "
+                    "@_sp_resumen_maquina_9, @_sp_resumen_maquina_10"
                 )
                 (
                     nombre, estado, total_fallas, total_ordenes,
                     horas_operacion, mtbf, mttr, disponibilidad,
+                    tiempo_inactividad, numero_reparaciones,
                 ) = cur.fetchone()
         except OperationalError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -280,6 +282,8 @@ class ResumenMaquinaAPIView(APIView):
                 "mtbf": mtbf,
                 "mttr": mttr,
                 "disponibilidad": disponibilidad,
+                "tiempo_inactividad": tiempo_inactividad,
+                "numero_reparaciones": numero_reparaciones,
             },
             status=status.HTTP_200_OK,
         )

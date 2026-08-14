@@ -30,7 +30,7 @@ LIMIT 5; -- Nota: El límite es dinámico en código (default 5, configurable po
 -- -----------------------------------------------------------------------------
 SELECT 
     t.numeroNomina,
-    CONCAT(t.nombre, ' ', t.apellidoPat, ' ', COALESCE(t.apellidoMat, '')) AS Nombre,
+    CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, '')) AS Nombre,
     COUNT(o.folio) AS OrdenesCerradas
 FROM TRABAJADOR t
 JOIN ORDEN_MANTENIMIENTO o ON o.trabajador = t.numeroNomina
@@ -47,7 +47,7 @@ LIMIT 5; -- Límite dinámico configurable en el backend
 -- JOINs / Agregación: TRABAJADOR LEFT JOIN ROL + GROUP BY + ORDER BY
 -- -----------------------------------------------------------------------------
 SELECT 
-    COALESCE(r.nombre, 'Sin Rol') AS Rol,
+    IFNULL(r.nombre, 'Sin Rol') AS Rol,
     COUNT(t.numeroNomina) AS Total
 FROM TRABAJADOR t
 LEFT JOIN ROL r ON t.rol = r.codigo

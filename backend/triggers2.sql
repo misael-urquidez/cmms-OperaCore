@@ -275,3 +275,211 @@ BEGIN
     END IF;
 END$$
 DELIMITER ;
+
+-- =====================================================================
+-- INVENTARIO: ESTADO_REFACCION como desglose del stock (M:M).
+-- REFACCION.stock es el TOTAL en almacen = SUMA de las cantidades por
+-- estado en ESTADO_REFACCION (ej. stock 10 = DISPO 5 + ENREP 3 + INMAQ 2).
+-- Estos triggers mantienen esa invariante automaticamente:
+--   * Al insertar una REFACCION se pre-crea su fila DISPO = stock, para
+--     que el CRUD de refacciones (que solo escribe REFACCION.stock)
+--     quede poblado en la M:M y sp_registrar_salida_refaccion funcione.
+--   * Cualquier INSERT/UPDATE/DELETE sobre ESTADO_REFACCION (el SP3 o el
+--     CRUD "Estados de refacción") recalcula REFACCION.stock.
+-- =====================================================================
+
+DROP TRIGGER IF EXISTS tg_seed_estado_dispo;
+DELIMITER $$
+CREATE TRIGGER tg_seed_estado_dispo
+AFTER INSERT ON REFACCION
+FOR EACH ROW
+BEGIN
+    INSERT INTO ESTADO_REFACCION (estado_refaccion, refaccion, cantidad)
+    VALUES ('DISPO', NEW.numeroRegistro, IFNULL(NEW.stock, 0))
+    ON DUPLICATE KEY UPDATE cantidad = VALUES(cantidad);
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_sync_refaccion_stock_insert;
+DELIMITER $$
+CREATE TRIGGER tg_sync_refaccion_stock_insert
+AFTER INSERT ON ESTADO_REFACCION
+FOR EACH ROW
+BEGIN
+    UPDATE REFACCION r
+    SET r.stock = (SELECT IFNULL(SUM(e.cantidad), 0)
+                   FROM ESTADO_REFACCION e
+                   WHERE e.refaccion = NEW.refaccion)
+    WHERE r.numeroRegistro = NEW.refaccion;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_sync_refaccion_stock_update;
+DELIMITER $$
+CREATE TRIGGER tg_sync_refaccion_stock_update
+AFTER UPDATE ON ESTADO_REFACCION
+FOR EACH ROW
+BEGIN
+    UPDATE REFACCION r
+    SET r.stock = (SELECT IFNULL(SUM(e.cantidad), 0)
+                   FROM ESTADO_REFACCION e
+                   WHERE e.refaccion = NEW.refaccion)
+    WHERE r.numeroRegistro = NEW.refaccion;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_sync_refaccion_stock_delete;
+DELIMITER $$
+CREATE TRIGGER tg_sync_refaccion_stock_delete
+AFTER DELETE ON ESTADO_REFACCION
+FOR EACH ROW
+BEGIN
+    UPDATE REFACCION r
+    SET r.stock = (SELECT IFNULL(SUM(e.cantidad), 0)
+                   FROM ESTADO_REFACCION e
+                   WHERE e.refaccion = OLD.refaccion)
+    WHERE r.numeroRegistro = OLD.refaccion;
+END$$
+DELIMITER ;
+
+-- =====================================================================
+-- REPORTE_FALLA: FECHA DE RESOLUCIÓN AUTOMÁTICA AL CERRAR.
+-- La fecha de resolución ya no se captura en el formulario: se carga
+-- sola cuando el estado del reporte pasa a 'CERRA' (Cerrado).
+--   * INSERT: si un reporte se da de alta directamente como cerrado, se
+--     le pone la fecha de hoy.
+--   * UPDATE: solo actúa cuando el estado ACABA de pasar a CERRA (antes
+--     no estaba en CERRA, ahora sí); si el reporte ya estaba cerrado y
+--     solo se edita otra cosa, la fecha se conserva intacta.
+-- Son BEFORE porque modifican NEW.fechaResolucion antes de escribirse.
+-- =====================================================================
+
+DROP TRIGGER IF EXISTS tg_fecharesolucion_cerrado_insert;
+DELIMITER $$
+CREATE TRIGGER tg_fecharesolucion_cerrado_insert
+BEFORE INSERT ON REPORTE_FALLA
+FOR EACH ROW
+BEGIN
+    IF NEW.estado_reporte = 'CERRA' THEN
+        SET NEW.fechaResolucion = CURRENT_DATE();
+    END IF;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_fecharesolucion_cerrado_update;
+DELIMITER $$
+CREATE TRIGGER tg_fecharesolucion_cerrado_update
+BEFORE UPDATE ON REPORTE_FALLA
+FOR EACH ROW
+BEGIN
+    IF NEW.estado_reporte = 'CERRA' AND (OLD.estado_reporte IS NULL OR OLD.estado_reporte <> 'CERRA') THEN
+        SET NEW.fechaResolucion = CURRENT_DATE();
+    END IF;
+END$$
+DELIMITER ;
+
+-- =====================================================================
+-- VALIDACIONES DE FECHAS / INTEGRIDAD DE PERIODOS
+-- Evitan errores lógicos de fechas a nivel BD (los Serializers de Django
+-- dan el mismo mensaje con mejor UX; estos triggers son la red de
+-- seguridad para INSERT/UPDATE directos por SQL):
+--   * REGISTRO_OPS: un periodo de horas no puede solaparse con otro de
+--     la misma máquina (un solapamiento duplica horas en el SUM y el
+--     MTBF sale inflado).
+--   * INDICADOR: una máquina solo puede tener UN periodo abierto
+--     (fechaFin IS NULL); evita periodos huérfanos si alguien inserta
+--     por fuera del SP o hay una carrera entre triggers.
+--   * INDICADOR: al cerrar un periodo (UPDATE fechaFin) la fecha de fin
+--     no puede ser anterior a la de inicio.
+-- =====================================================================
+
+DROP TRIGGER IF EXISTS tg_regops_sin_solapamiento_insert;
+DELIMITER $$
+CREATE TRIGGER tg_regops_sin_solapamiento_insert
+BEFORE INSERT ON REGISTRO_OPS
+FOR EACH ROW
+BEGIN
+    DECLARE solapados INT;
+
+    IF NEW.fechaFin < NEW.fechaInicio THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La fecha de fin no puede ser anterior al inicio del periodo';
+    END IF;
+
+    SELECT COUNT(*)
+    INTO solapados
+    FROM REGISTRO_OPS AS ro
+    WHERE ro.maquina = NEW.maquina
+      AND NEW.fechaInicio <= ro.fechaFin
+      AND ro.fechaInicio <= NEW.fechaFin;
+
+    IF solapados > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El rango de fechas se solapa con otro registro de horas de operacion de la misma maquina';
+    END IF;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_regops_sin_solapamiento_update;
+DELIMITER $$
+CREATE TRIGGER tg_regops_sin_solapamiento_update
+BEFORE UPDATE ON REGISTRO_OPS
+FOR EACH ROW
+BEGIN
+    DECLARE solapados INT;
+
+    IF NEW.fechaFin < NEW.fechaInicio THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La fecha de fin no puede ser anterior al inicio del periodo';
+    END IF;
+
+    SELECT COUNT(*)
+    INTO solapados
+    FROM REGISTRO_OPS AS ro
+    WHERE ro.maquina = NEW.maquina
+      AND ro.numeroRegistro <> NEW.numeroRegistro
+      AND NEW.fechaInicio <= ro.fechaFin
+      AND ro.fechaInicio <= NEW.fechaFin;
+
+    IF solapados > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El rango de fechas se solapa con otro registro de horas de operacion de la misma maquina';
+    END IF;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_indicador_unico_periodo_abierto;
+DELIMITER $$
+CREATE TRIGGER tg_indicador_unico_periodo_abierto
+BEFORE INSERT ON INDICADOR
+FOR EACH ROW
+BEGIN
+    DECLARE abiertos INT;
+
+    IF NEW.fechaFin IS NULL THEN
+        SELECT COUNT(*)
+        INTO abiertos
+        FROM INDICADOR AS i
+        WHERE i.maquina = NEW.maquina
+          AND i.fechaFin IS NULL;
+
+        IF abiertos > 0 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'La maquina ya tiene un periodo de indicador abierto';
+        END IF;
+    END IF;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS tg_indicador_fecha_cierre_valida;
+DELIMITER $$
+CREATE TRIGGER tg_indicador_fecha_cierre_valida
+BEFORE UPDATE ON INDICADOR
+FOR EACH ROW
+BEGIN
+    IF NEW.fechaFin IS NOT NULL AND NEW.fechaFin < NEW.fechaInicio THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La fecha de fin no puede ser anterior al inicio del periodo';
+    END IF;
+END$$
+DELIMITER ;

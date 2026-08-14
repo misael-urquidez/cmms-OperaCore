@@ -72,6 +72,9 @@
             {% if necesita_modal %}
               <button type="button" class="btn-detalles" onclick="abrir_modal_detalles(this)">Detalles</button>
             {% endif %}
+            {% if config.slug == "herramienta" %}
+              <button type="button" class="btn-primary-sm" onclick="abrirModalExistenciaHerramienta({{ pk_val }})">Existencia</button>
+            {% endif %}
             {% if config.detail_path %}
               <a href="{% url 'gestion:editar' config.slug pk_val %}">Editar</a>
             {% endif %}
@@ -345,4 +348,19 @@
 </script>
 {% endif %}
 <script src="{% static 'js/buscador.js' %}"></script>
+{% if config.slug == "herramienta" %}
+<div class="fallas-modal" id="modal-existencia" role="dialog"></div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+{% if config.slug == "herramienta" %}
+<link rel="stylesheet" href="{% static 'fallas/css/modal.css' %}">
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if config.slug == "herramienta" %}
+<script src="{% static 'inventario/js/modal.js' %}"></script>
+{% endif %}
 {% endblock %}

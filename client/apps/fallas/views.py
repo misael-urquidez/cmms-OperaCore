@@ -354,9 +354,6 @@ class DetailReporte(generic.View):
             except (requests.exceptions.RequestException, ValueError):
                 reporte = None
 
-
-        self._enriquecer_fallas(reporte)
-
         if es_ajax:
             self.context = {"reporte": reporte}
             return render(request, self.template_name, self.context)
@@ -372,7 +369,6 @@ class DetailReporte(generic.View):
             "base_template": "base_tecni.html" if usuario.get("rol") == "TECNI" else "base_admin.html",
         }
         return render(request, self.template_pagina, self.context)
-
 
     def _enriquecer_fallas(self, reporte):
         """Garantiza que el detalle liste TODAS las fallas adjuntadas al

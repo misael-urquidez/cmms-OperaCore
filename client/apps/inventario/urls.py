@@ -14,11 +14,11 @@ urlpatterns = [
     # ------------ PIEZAS -------------------------------------------------------
     path("piezas/", views.ListaPiezas.as_view(), name="lista_piezas"),
     path("piezas/crear/", views.CrearPieza.as_view(), name="crear_pieza"),
-    path("piezas/<str:numeroserie>/depreciacion/", views.PiezaDepreciacionProxy.as_view(), name="piezas_depreciacion"),
 
     # ------------ HERRAMIENTAS --------------------------------------------------
     path("herramientas/", views.ListaHerramientas.as_view(), name="lista_herramientas"),
     path("herramientas/crear/", views.CrearHerramienta.as_view(), name="crear_herramienta"),
+    path("herramientas/<int:pk>/editar/", views.EditarHerramienta.as_view(), name="editar_herramienta"),
 
     # ------------ MOVIMIENTOS --------------------------------------------------
     path("movimientos/", views.ListaMovimientos.as_view(), name="lista_movimientos"),
@@ -56,6 +56,6 @@ urlpatterns = [
     path("modal/proveedor/<str:pk>/", views.ProveedorModalView.as_view(), name="modal_proveedor"),
     path("modal/existencia/<int:refaccion_id>/", views.ExistenciaModalView.as_view(), name="modal_existencia"),
 
-
     path("almacen/", views.AlmacenInventarioView.as_view(), name="almacen"),
+    path("modal/existencia-herramienta/<int:herramienta_id>/", views.ExistenciaHerramientaModalView.as_view(), name="modal_existencia_herramienta"),
 ]

@@ -42,6 +42,8 @@
   #ordenTrabajoMsg.ok { color:#22c55e; }
   #ordenTrabajoMsg.error { color:#fca5a5; }
   #ordenTrabajoMsg:empty { display:none; }
+  .doc-orden__link-btn { display:inline-block; padding:.35rem .75rem; background:rgba(255,255,255,.08); color:var(--color-text); border:1px solid rgba(255,255,255,.12); border-radius:.375rem; font-size:.78rem; font-weight:600; text-decoration:none; transition:border-color .15s ease, color .15s ease; white-space:nowrap; margin-top:.35rem; }
+  .doc-orden__link-btn:hover { color:var(--color-primary); border-color:var(--color-primary); }
 </style>
 {% endblock %}
 {% block content %}
@@ -76,10 +78,11 @@
 
     {% if puede_cerrar %}
     <form id="ordenTrabajoForm">
+      <div id="estadoCerrarOrden" style="font-family: monospace; font-size: 14px;"></div>
       <div class="doc-orden__grid">
-        <div class="doc-orden__field"><label>Diagnóstico</label><textarea id="twDiagnostico"></textarea></div>
-        <div class="doc-orden__field"><label>Notas</label><textarea id="twNotas"></textarea></div>
-        <div class="doc-orden__field doc-orden__field--horas"><label>Horas</label><input id="twHoras" type="number" min="0" step=".1" required></div>
+        <div class="doc-orden__field"><label>Diagnóstico <span id="twDiagnostico-error"></span></label><textarea id="twDiagnostico" data-error-id="twDiagnostico-error"></textarea></div>
+        <div class="doc-orden__field"><label>Notas <span id="twNotas-error"></span></label><textarea id="twNotas" data-error-id="twNotas-error"></textarea></div>
+        <div class="doc-orden__field doc-orden__field--horas"><label>Horas <span id="twHoras-error"></span></label><input id="twHoras" type="number" min="0" step=".1" required data-error-id="twHoras-error"></div>
       </div>
       <div class="orden-mov" id="ordenMovSection">
         <p class="orden-mov__label">Refacciones / piezas usadas</p>
@@ -134,25 +137,30 @@
 
     {% if orden.trabajadores %}
     <h4>Trabajadores</h4>
+    <p class="doc-orden__hint">Listado de trabajadores</p>
     <ul>
       {% for w in orden.trabajadores %}
       <li>{{ w.nombre }} {{ w.apellidoPat }}</li>
       {% endfor %}
     </ul>
+    <a class="doc-orden__link-btn" href="{% url 'mantenimiento:trabajadores-lista' %}">Ir a Trabajadores para más detalles →</a>
     {% endif %}
 
     {% if movimientos %}
     <h4>Movimientos de inventario</h4>
-    <ul>
+    <p class="doc-orden__hint">Listado de movimientos de inventario</p>
+        <ul>
       {% for m in movimientos %}
       <li>{% if m.tipo == "INSTA" %}Instalación{% elif m.tipo == "DESMO" %}Desmontaje{% else %}{{ m.tipo }}{% endif %} — {{ m.fecha }} {{ m.hora|default:"" }}{% if m.refaccion_nombre %} · {{ m.refaccion_nombre }}{% endif %}{% if m.pieza_nombre %} · reemplaza {{ m.pieza_nombre }}{% endif %}</li>
       {% endfor %}
     </ul>
+    <a class="doc-orden__link-btn" href="{% url 'inventario:lista_movimientos' %}">Ir a Movimientos para más detalles →</a>
+
     {% endif %}
   </div>
   {% endif %}
 
-  {% if orden.reporte_falla %}<div class="doc-orden__section"><h3>Reporte de falla asociado</h3><p>#{{ orden.reporte_falla }} {% if orden.reporte_falla_asunto %}· {{ orden.reporte_falla_asunto }}{% endif %}</p></div>{% endif %}
+  {% if orden.reporte_falla %}<div class="doc-orden__section"><h3>Reporte de falla asociado</h3><p class="doc-orden__hint">Falla asociada: #{{ orden.reporte_falla }}{% if orden.reporte_falla_asunto %} · {{ orden.reporte_falla_asunto }}{% endif %}</p><a class="doc-orden__link-btn" href="{% url 'fallas:lista' %}">Ir a Reporte de falla  para más detalles →</a></div>{% endif %}
   <div class="doc-orden__actions">
     {% if puede_modificar %}<a class="doc-orden__btn doc-orden__btn--editar" href="{% url 'mantenimiento:index' %}?orden={{ orden.folio }}&editar=1">Editar</a>{% endif %}
     <a class="doc-orden__btn doc-orden__btn--csv" href="{% url 'mantenimiento:exportar_csv' folio=orden.folio %}">Descargar CSV</a>
@@ -193,4 +201,5 @@
 {% endblock %}
 {% block extra_js %}
 {% if puede_iniciar or puede_cerrar %}<script src="{% static 'mantenimiento/js/orden-trabajo.js' %}"></script>{% endif %}
+{% if puede_cerrar %}<script src="{% static 'js/validaciones-inputs.js' %}"></script><script src="{% static 'mantenimiento/js/validaciones-orden-trabajo.js' %}"></script>{% endif %}
 {% endblock %}

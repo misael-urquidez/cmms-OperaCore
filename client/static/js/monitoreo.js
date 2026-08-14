@@ -6,6 +6,7 @@
  
   var DATOS_URL = root.dataset.datosUrl;
   var INDICADORES_TPL = root.dataset.indicadoresUrlBase;
+  var MAQUINARIA_TPL = root.dataset.maquinariaUrlBase;
   var HISTORIAL_TPL = root.dataset.historialUrlBase;
   var ESTADO_TPL = root.dataset.estadoUrlBase;
   var ESTADO_ACCION_TPL = root.dataset.estadoAccionUrlBase;
@@ -399,6 +400,7 @@ refrescar();
     if (!m) return;
     drawerLinea.textContent = m.linea || "Sin línea";
     drawerTitle.textContent = m.nombre + " · " + m.codigo;
+    drawerTitle.href = urlPara(MAQUINARIA_TPL, m.codigo);
     var estadoClase = estadoValido(m.estado_maquina);
     var etiquetas = { OPERA: "Operativa", MANTE: "En mantenimiento", FALLO: "En falla", ESPER: "En espera de validación", DESHA: "Deshabilitada", sin: "Sin estado" };
     drawerEstado.textContent = etiquetas[estadoClase];

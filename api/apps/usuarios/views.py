@@ -198,3 +198,40 @@ class RendimientoTrabajadorAPIView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class PerfilTrabajadorAPIView(APIView):
+    """Contadores del perfil de un trabajador via sp_perfil_trabajador
+    (SP 8): ordenes asignadas, cerradas, pendientes, fallas reportadas y
+    maquinas atendidas, todos parametros OUT del SP. Las listas (detalle
+    de ordenes/reportes) NO pasan por aqui: siguen en sus endpoints.
+    GET /usuarios/v1/trabajadores/<numeroNomina>/perfil/"""
+
+    def get(self, request, numeroNomina):
+        try:
+            with connection.cursor() as cur:
+                cur.execute(
+                    "CALL sp_perfil_trabajador(%s, @o_asignadas, @o_cerradas, "
+                    "@o_pendientes, @f_reportadas, @m_atendidas)",
+                    [numeroNomina],
+                )
+                cur.execute(
+                    "SELECT @o_asignadas, @o_cerradas, @o_pendientes, "
+                    "@f_reportadas, @m_atendidas"
+                )
+                (asignadas, cerradas, pendientes, fallas, maquinas) = cur.fetchone()
+        except OperationalError as e:
+            detalle = str(e.args[1]) if e.args and len(e.args) >= 2 else str(e)
+            return Response({"detail": detalle}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "numero_nomina": numeroNomina,
+                "ordenes_asignadas": asignadas or 0,
+                "ordenes_cerradas": cerradas or 0,
+                "ordenes_pendientes": pendientes or 0,
+                "fallas_reportadas": fallas or 0,
+                "maquinas_atendidas": maquinas or 0,
+            },
+            status=status.HTTP_200_OK,
+        )

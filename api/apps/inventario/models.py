@@ -90,6 +90,7 @@ class Herramienta(models.Model):
     nombre = models.CharField(unique=True, max_length=100)
     descripcion = models.CharField(max_length=255, blank=True, null=True)
     imagen = models.CharField(max_length=255, blank=True, null=True)
+    stock = models.IntegerField()
     tipo_herramienta = models.ForeignKey(TipoHerramienta, models.DO_NOTHING, db_column='tipo_herramienta', blank=True, null=True)
 
     class Meta:
@@ -121,8 +122,8 @@ class Refaccion(models.Model):
     nombre = models.CharField(unique=True, max_length=30)
     codigosku = models.CharField(db_column='codigoSku', unique=True, max_length=30)  # Field name made lowercase.
     puntoreorden = models.IntegerField(db_column='puntoReorden', blank=True, null=True)  # Field name made lowercase.
-    codigoinventario = models.CharField(db_column='codigoInventario', unique=True, max_length=30)  # Field name made lowercase.
-    numeroorden = models.CharField(db_column='numeroOrden', unique=True, max_length=20)  # Field name made lowercase.
+    codigoinventario = models.CharField(db_column='codigoInventario', unique=True, max_length=30, blank=True, null=True)  # Field name made lowercase.
+    numeroorden = models.CharField(db_column='numeroOrden', unique=True, max_length=20, blank=True, null=True)  # Field name made lowercase.
     costo = models.FloatField()
     tiempoentregaapr = models.IntegerField(db_column='tiempoEntregaApr', blank=True, null=True)  # Field name made lowercase.
     stock = models.IntegerField()

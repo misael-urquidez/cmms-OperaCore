@@ -65,5 +65,4 @@
 .inv-drawer__progress { flex:1; height:.45rem; border-radius:.3rem; background:var(--hover-soft); overflow:hidden; }
 .inv-drawer__progress-bar { height:100%; border-radius:.3rem; background:linear-gradient(90deg, #22c55e, #f59e0b, #ef4444); transition:width .3s ease; }
 .inv-drawer__pieza-pct { font-size:.75rem; font-weight:600; min-width:3rem; text-align:right; }
-.inv-drawer__pieza-dep { font-size:.72rem; color:var(--color-muted); white-space:nowrap; }
 .inv-drawer__piezas-vacia { font-size:.8rem; color:var(--color-muted); margin:0; }

@@ -168,3 +168,13 @@
 .feedback-msg.is-error { color:#fca5a5; }
 .manual-form input[type="date"] { background:var(--input-bg); border:1px solid var(--line); border-radius:.45rem; padding:.5rem .6rem; color:var(--color-text); font-size:.88rem; font-family:inherit; }
 .section-hint { text-transform:none; letter-spacing:normal; font-weight:400; color:var(--color-muted); opacity:.8; }
+
+/* -------- enlace del título en el drawer -------- */
+.machine-drawer__title-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.machine-drawer__title-link:hover {
+  text-decoration: underline;
+}

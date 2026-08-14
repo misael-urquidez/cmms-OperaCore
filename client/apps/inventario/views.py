@@ -1,11 +1,12 @@
-import json
+from datetime import date
+
 import requests
 from collections import defaultdict
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
-from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views import generic
 
 from apps.gestion.registry import get_tabla
@@ -49,7 +50,6 @@ def _columnas_config(nombres):
         "puntoreorden": "Punto de reorden",
         "tiempoentregaapr": "Tiempo entrega",
         "porcentaje_desgaste": "% Desgaste",
-        "depresacionanual": "Dep. anual",
         "costoinicial": "Costo inicial",
         "valorresidual": "Valor residual",
         "horasoperacion": "Horas operación",
@@ -218,6 +218,15 @@ class ListaPiezas(generic.View):
         for pieza in piezas:
             maquinas_con_piezas[pieza["maquina"]].append(pieza)
 
+        _hoy = date.today().isoformat()
+        kpi_activas = sum(1 for p in piezas if p.get("edo_pieza") == "OPERA")
+        kpi_desgaste_alto = sum(1 for p in piezas if (p.get("porcentaje_desgaste") or 0) > 85)
+        kpi_garantia = sum(
+            1 for p in piezas
+            if p.get("fechagarantia") and p["fechagarantia"] >= _hoy
+        )
+        kpi_rehabilitacion = sum(1 for p in piezas if p.get("edo_pieza") == "ENREH")
+
         try:
             res = SESSION.get(f"{settings.API_BASE_URL}/fallas/v1/maquinas/", timeout=5)
             maquinas = res.json() if res.status_code == 200 else []
@@ -241,6 +250,10 @@ class ListaPiezas(generic.View):
             "base_template": _base_template(request),
             "estados_pieza": estados_pieza,
             "tipos_pieza": tipos_pieza,
+            "kpi_activas": kpi_activas,
+            "kpi_desgaste_alto": kpi_desgaste_alto,
+            "kpi_garantia": kpi_garantia,
+            "kpi_rehabilitacion": kpi_rehabilitacion,
         }
         return render(request, self.template_name, context)
 
@@ -298,8 +311,8 @@ class ListaHerramientas(generic.View):
 
     def get(self, request):
         config = request.session.get("config_inventario_herramientas", {})
-        visibles = config.get("columnas", ["nombre", "codigo", "estado", "tipo", "ubicacion"])
-        todas_las = ["nombre", "codigo", "estado", "tipo", "ubicacion", "descripcion"]
+        visibles = config.get("columnas", ["nombre", "tipo", "stock", "disponibles"])
+        todas_las = ["nombre", "tipo", "stock", "disponibles", "descripcion", "numeroregistro"]
 
         try:
             res = SESSION.get(f"{API_URL}/v1/herramientas/list/", timeout=8)
@@ -338,6 +351,7 @@ class CrearHerramienta(generic.View):
 
         context = {
             "catalogos": catalogos,
+            "action_url": reverse("inventario:crear_herramienta"),
             "seccion": "inventario",
             "subseccion": "crear_herramienta",
             "base_template": _base_template(request),
@@ -347,11 +361,9 @@ class CrearHerramienta(generic.View):
     def post(self, request):
         payload = {
             "nombre": request.POST.get("nombre"),
-            "codigo": request.POST.get("codigo"),
-            "estado": request.POST.get("estado"),
-            "tipo": request.POST.get("tipo"),
-            "ubicacion": request.POST.get("ubicacion"),
             "descripcion": request.POST.get("descripcion"),
+            "tipo_herramienta": request.POST.get("tipo_herramienta") or None,
+            "stock": request.POST.get("stock") or 0,
         }
         try:
             res = SESSION.post(f"{API_URL}/v2/herramientas/create/", json=payload, timeout=10)
@@ -359,10 +371,74 @@ class CrearHerramienta(generic.View):
                 messages.success(request, "Herramienta creada correctamente.")
                 return redirect("inventario:lista_herramientas")
             else:
-                messages.error(request, f"Error: {res.json().get('detail', 'No se pudo crear la herramienta.')}")
+                mensaje = res.json().get("detail", "No se pudo crear la herramienta.")
+                if isinstance(mensaje, dict):
+                    mensaje = "; ".join(str(v) for v in mensaje.values())
+                messages.error(request, f"Error: {mensaje}")
         except requests.exceptions.RequestException:
             messages.error(request, "No se pudo conectar con el API.")
         return redirect("inventario:crear_herramienta")
+
+
+class EditarHerramienta(generic.View):
+    template_name = "inventario/crear_herramienta.html"
+
+    def _cargar_herramienta(self, request, pk):
+        try:
+            res = SESSION.get(f"{API_URL}/v1/herramientas/{pk}/", timeout=8)
+            if res.status_code == 200:
+                return res.json(), None
+            return None, "No se encontró la herramienta solicitada."
+        except requests.exceptions.RequestException:
+            return None, "No se pudo conectar con el API."
+
+    def get(self, request, pk):
+        herramienta, error = self._cargar_herramienta(request, pk)
+        if error:
+            messages.error(request, error)
+            return redirect("inventario:lista_herramientas")
+
+        catalogos, ok = _cargar_catalogos()
+        if not ok:
+            messages.warning(request, "No se pudo conectar con la API para cargar catálogos.")
+
+        context = {
+            "catalogos": catalogos,
+            "datos": {
+                "numeroregistro": herramienta.get("numeroregistro"),
+                "nombre": herramienta.get("nombre"),
+                "descripcion": herramienta.get("descripcion"),
+                "tipo_herramienta": herramienta.get("tipo_herramienta"),
+                "stock": herramienta.get("stock", 0),
+            },
+            "editar": True,
+            "action_url": reverse("inventario:editar_herramienta", args=[pk]),
+            "seccion": "inventario",
+            "subseccion": "editar_herramienta",
+            "base_template": _base_template(request),
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, pk):
+        payload = {
+            "nombre": request.POST.get("nombre"),
+            "descripcion": request.POST.get("descripcion"),
+            "tipo_herramienta": request.POST.get("tipo_herramienta") or None,
+            "stock": request.POST.get("stock") or 0,
+        }
+        try:
+            res = SESSION.patch(f"{API_URL}/v1/herramientas/{pk}/", json=payload, timeout=10)
+            if res.status_code in (200, 202):
+                messages.success(request, "Herramienta actualizada correctamente.")
+                return redirect("inventario:lista_herramientas")
+            else:
+                mensaje = res.json().get("detail", "No se pudo actualizar la herramienta.")
+                if isinstance(mensaje, dict):
+                    mensaje = "; ".join(str(v) for v in mensaje.values())
+                messages.error(request, f"Error: {mensaje}")
+        except requests.exceptions.RequestException:
+            messages.error(request, "No se pudo conectar con el API.")
+        return redirect("inventario:editar_herramienta", pk=pk)
 
 
 class ListaMovimientos(generic.View):
@@ -429,6 +505,13 @@ class CrearMovimiento(generic.View):
         }
         if pieza_data:
             payload["pieza_data"] = pieza_data
+        refaccion_data = {
+            k[len("refaccion_"):]: v
+            for k, v in request.POST.items()
+            if k.startswith("refaccion_") and v
+        }
+        if refaccion_data:
+            payload["refaccion_data"] = refaccion_data
 
         try:
             res = SESSION.post(
@@ -437,14 +520,7 @@ class CrearMovimiento(generic.View):
                 timeout=10,
             )
             if res.status_code == 201:
-                data = res.json()
-                mensaje = "Movimiento registrado correctamente."
-                if data.get("requiere_reabastecimiento"):
-                    mensaje += (
-                        " La refacción quedó en o por debajo del stock mínimo"
-                        f" ({data.get('stock_minimo')}): considera reabastecerla."
-                    )
-                messages.success(request, mensaje)
+                messages.success(request, "Movimiento registrado correctamente.")
                 return redirect("inventario:lista_movimientos")
             else:
                 try:
@@ -474,6 +550,8 @@ class CrearMovimiento(generic.View):
             datos["pieza"] = [pieza_value]
         for k, v in pieza_data.items():
             datos[f"pieza_{k}"] = [v]
+        for k, v in refaccion_data.items():
+            datos[f"refaccion_{k}"] = [v]
         return render(request, self.template_name, _contexto_movimiento(request, datos))
 
 
@@ -491,15 +569,23 @@ def _contexto_movimiento(request, datos):
         except requests.exceptions.RequestException:
             return []
 
+    estados_pieza = catalogos.get("estados_pieza", [])
+    nombre_estado = {e.get("codigo"): e.get("nombre") for e in estados_pieza}
+    piezas = _get(f"{API_URL}/v1/piezas/list/")
+    for p in piezas:
+        p["edo_pieza_nombre"] = nombre_estado.get(p.get("edo_pieza"), p.get("edo_pieza"))
+
     return {
         "datos": datos,
         "catalogos": catalogos,
         "refacciones": _get(f"{API_URL}/v1/refacciones/list/"),
-        "piezas": _get(f"{API_URL}/v1/piezas/list/"),
+        "piezas": piezas,
         "ordenes": _get(f"{MANTENIMIENTO_API_URL}/v1/ordenes/list/"),
         "maquinas": _get(f"{settings.API_BASE_URL}/fallas/v1/maquinas/"),
         "tipos_pieza": catalogos.get("tipos_pieza", []),
-        "estados_pieza": catalogos.get("estados_pieza", []),
+        "estados_pieza": estados_pieza,
+        "estados_refaccion": catalogos.get("estados_refaccion", []),
+        "tipos_refaccion": catalogos.get("tipos_refaccion", []),
         "seccion": "inventario",
         "subseccion": "crear_movimiento",
         "base_template": _base_template(request),
@@ -1013,25 +1099,20 @@ class ExistenciaModalView(generic.View):
         return render(request, "inventario/modal-existencia.html", {"existencias": existencias})
 
 
-class PiezaDepreciacionProxy(generic.View):
-    """Reenvia POST /inventario/piezas/<numeroSerie>/depreciacion/ al api/
-    (SP 5: sp_calcular_depreciacion_pieza). El drawer de piezas la llama
-    por fetch() para calcular y guardar la depreciacion anual."""
+class ExistenciaHerramientaModalView(generic.View):
+    """Devuelve fragmento HTML con la existencia de una herramienta por estado."""
 
-    def post(self, request, numeroserie):
+    def get(self, request, herramienta_id):
+        existencias = []
         try:
-            payload = json.loads(request.body or "{}")
-        except json.JSONDecodeError:
-            return JsonResponse({"detail": "JSON inválido."}, status=400)
-
-        try:
-            respuesta = SESSION.post(
-                f"{API_URL}/v2/piezas/{numeroserie}/depreciacion/",
-                json=payload,
-                timeout=10,
-            )
+            res = SESSION.get(f"{API_URL}/v1/existencia-herramienta/list/", timeout=5)
+            if res.status_code == 200:
+                existencias = [
+                    e for e in res.json()
+                    if e.get("herramienta") == herramienta_id
+                ]
         except requests.exceptions.RequestException:
-            return JsonResponse({"detail": "No fue posible conectar con el API."}, status=502)
+            pass
 
         try:
             data = respuesta.json()

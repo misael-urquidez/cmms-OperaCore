@@ -49,6 +49,31 @@
       });
   };
 
+  /* ---- abrir modal de existencia de herramienta ---- */
+  window.abrirModalExistenciaHerramienta = function (herramientaId) {
+    var container = document.getElementById("modal-existencia");
+    container.innerHTML = "";
+    fetch("/inventario/modal/existencia-herramienta/" + herramientaId + "/")
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        container.innerHTML = html;
+        container.classList.add("is-open");
+      })
+      .catch(function () {
+        container.innerHTML =
+          '<div class="fallas-modal__dialog" role="document">' +
+          '<div class="fallas-modal__content">' +
+          '<div class="fallas-modal__header">' +
+          '<h2 class="fallas-modal__title">Error</h2>' +
+          '</div>' +
+          '<div class="fallas-modal__body">' +
+          '<p>No se pudo cargar la existencia de la herramienta.</p>' +
+          '</div>' +
+          '</div></div>';
+        container.classList.add("is-open");
+      });
+  };
+
 
   /* ---- cerrar modal ---- */
   function cerrarModal(container) {

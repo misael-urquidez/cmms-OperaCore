@@ -200,8 +200,8 @@ CREATE TABLE REFACCION (
     nombre           VARCHAR(30) NOT NULL UNIQUE,
     codigoSku        VARCHAR(30) NOT NULL UNIQUE,
     puntoReorden     INT NULL,
-    codigoInventario VARCHAR(30) NOT NULL UNIQUE,
-    numeroOrden      VARCHAR(20) NOT NULL UNIQUE,
+    codigoInventario VARCHAR(30) NULL UNIQUE,
+    numeroOrden      VARCHAR(20) NULL UNIQUE,
     costo            float NOT NULL,
     tiempoEntregaApr INT NULL,
     stock            INT NOT NULL DEFAULT 0,
@@ -463,6 +463,9 @@ CREATE TABLE ORDEN_MANTENIMIENTO (
     CONSTRAINT fk_orden_estado FOREIGN KEY (estado_orden) REFERENCES ESTADO_ORDEN(codigo)
 ) ENGINE=InnoDB;
 
+ALTER TABLE ORDEN_MANTENIMIENTO
+ADD titulo VARCHAR(100) AFTER folio; 
+
 CREATE TABLE MOVIMIENTO (
     numeroRegistro      INT AUTO_INCREMENT PRIMARY KEY,
     descripcion         VARCHAR(255) NULL,
@@ -548,7 +551,11 @@ INSERT INTO EDO_REFACCION (codigo, nombre, descripcion) VALUES
 ('DISPO', 'Disponible', 'Refacción disponible en almacén'),
 ('ENREP', 'En Reparacion', 'El repuesto esta dañado o averiado, se encuentra siendo evaluado para volver a estar operando'),
 ('BAJA', 'Baja', 'El repuesto sufrió daños irreparables o quedó obsoleta'),
-('CANIB', 'Canibalizada', 'La pieza que fue extraida de un equipo para ser utilizada temporalmente en otro equipo');
+('CANIB', 'Canibalizada', 'La pieza que fue extraida de un equipo para ser utilizada temporalmente en otro equipo'),
+('INMAQ', 'Instalada en maquina', 'Refaccion instalada en una maquina, pendiente de desmontaje o baja');
+
+
+
 
 INSERT INTO TIPO_REFACCION (nombre, descripcion) VALUES
 ('Rodamiento', 'Rodamiento para ejes y motores'),
@@ -735,11 +742,20 @@ INSERT INTO LINEA (codigo, nombre, descripcion, area) VALUES
 ('LI001', 'Línea de Producción 1', 'Primera línea de ensamble SMT', 'ARR001'),
 ('LI002', 'Línea de Producción 2', 'Segunda línea de ensamble SMT', 'ARR001');
 
+-- Las cantidades por estado deben sumar REFACCION.stock (el total).
+-- Se usa ON DUPLICATE KEY UPDATE porque el trigger tg_seed_estado_dispo
+-- (triggers2.sql) ya pre-crea una fila DISPO = stock al insertar cada
+-- REFACCION; aqui se confirma/ajusta y se agregan los estados extra.
+-- ref 1 = 15 (DISPO 15) · ref 2 = 30 (DISPO 30) · ref 3 = 6 (DISPO 5 + ENREP 1)
+-- ref 4 = 10 (DISPO 10) · ref 5 = 4 (DISPO 4)
 INSERT INTO ESTADO_REFACCION (estado_refaccion, refaccion, cantidad) VALUES
 ('DISPO', 1, 15),
 ('DISPO', 2, 30),
+('DISPO', 3, 5),
 ('ENREP', 3, 1),
-('DISPO', 4, 10);
+('DISPO', 4, 10),
+('DISPO', 5, 4)
+ON DUPLICATE KEY UPDATE cantidad = VALUES(cantidad);
 
 INSERT INTO ESTADO_HERRAMIENTA (herramienta, edo_herramienta, cantidad) VALUES
 (1, 'DISPO', 5),

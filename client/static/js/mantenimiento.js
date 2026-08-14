@@ -47,13 +47,19 @@
   // equipo/trabajadores, herramientas y tareas, tanto en el modal de "Nueva
   // orden" como en el editor del drawer. La seleccion se lee directo del
   // <select> (selectedOptions); no hace falta estado paralelo.
-  function llenarMultiSelect(selectEl, items, valueKey, labelFn) {
+  function llenarMultiSelect(selectEl, items, valueKey, labelFn, disponibleFn) {
     if (!selectEl) return;
     selectEl.innerHTML = "";
     items.forEach(function (item) {
       var opt = document.createElement("option");
       opt.value = String(item[valueKey]);
-      opt.textContent = labelFn(item);
+      var etiqueta = labelFn(item);
+      var disp = disponibleFn ? disponibleFn(item) : null;
+      if (disp !== null) {
+        etiqueta += " (" + disp + " disponibles)";
+        if (disp <= 0) opt.disabled = true;
+      }
+      opt.textContent = etiqueta;
       selectEl.appendChild(opt);
     });
   }
@@ -67,7 +73,14 @@
     if (!selectEl) return;
     var set = {};
     (valores || []).forEach(function (v) { set[String(v)] = true; });
-    Array.prototype.forEach.call(selectEl.options, function (o) { o.selected = !!set[o.value]; });
+    Array.prototype.forEach.call(selectEl.options, function (o) {
+      var seleccionado = !!set[o.value];
+      o.selected = seleccionado;
+      // Al editar, una herramienta ya asignada a esta orden puede haber
+      // quedado deshabilitada por no tener disponibles; se rehabilita para
+      // que la seleccion previa se conserve en pantalla.
+      if (seleccionado && o.disabled) o.disabled = false;
+    });
   }
 
   function contarMultiSelect(selectEl, contadorEl) {
@@ -163,11 +176,14 @@
   }
 
   var oFechaWrap = document.getElementById("oFechaWrap");
+  var oFecha = document.getElementById("oFecha");
   if (oTipo) {
     oTipo.addEventListener("change", function () {
-      if (oFechaWrap) oFechaWrap.hidden = oTipo.value !== "PREVE";
+      var esPreventivo = oTipo.value === "PREVE";
+      if (oFechaWrap) oFechaWrap.hidden = !esPreventivo;
       if (oReporteFallaWrap) oReporteFallaWrap.hidden = oTipo.value !== "CORRE";
       if (oTipo.value !== "CORRE") limpiarReporteSeleccionado();
+      if (oFecha) oFecha.required = esPreventivo;
     });
   }
 
@@ -361,7 +377,7 @@
     var oTareasContador = document.getElementById("oTareasContador");
 
     llenarMultiSelect(oEquipoSelect, trabajadores, "numeroNomina", etiquetaTrabajador);
-    llenarMultiSelect(oHerramientasSelect, herramientas, "numeroregistro", function (h) { return h.nombre; });
+    llenarMultiSelect(oHerramientasSelect, herramientas, "numeroregistro", function (h) { return h.nombre; }, function (h) { return (h.disponibles !== undefined) ? h.disponibles : null; });
     llenarMultiSelect(oTareasSelect, tareas, "numeroregistro", function (t) { return t.instruccion; });
     [
       [oEquipoSelect, oEquipoBuscar, oEquipoContador],
@@ -432,6 +448,7 @@
       limpiarReporteSeleccionado();
       if (oReporteFallaWrap) oReporteFallaWrap.hidden = true;
       if (oFechaWrap) oFechaWrap.hidden = false;
+      if (oFecha) oFecha.required = true;
       [oEquipoSelect, oHerramientasSelect, oTareasSelect].forEach(function (sel) {
         if (!sel) return;
         Array.prototype.forEach.call(sel.options, function (o) { o.selected = false; o.hidden = false; });
@@ -663,7 +680,7 @@
 
   function renderAsociacionesEdicion(det) {
     llenarMultiSelect(edEquipoSelect, trabajadores, "numeroNomina", etiquetaTrabajador);
-    llenarMultiSelect(edHerramientasSelect, herramientas, "numeroregistro", function (h) { return h.nombre; });
+    llenarMultiSelect(edHerramientasSelect, herramientas, "numeroregistro", function (h) { return h.nombre; }, function (h) { return (h.disponibles !== undefined) ? h.disponibles : null; });
     llenarMultiSelect(edTareasSelect, tareas, "numeroregistro", function (t) { return t.instruccion; });
     if (det) {
       seleccionarMultiSelect(edEquipoSelect, (det.trabajadores || []).map(function (t) { return t.numeroNomina; }));
@@ -751,7 +768,7 @@
       if (btnAsignarTexto) btnAsignarTexto.textContent = yaAsignada ? "Reasignar" : "Asignar";
     }
 
-    if (btnIniciar) btnIniciar.hidden = cerrada || orden.estado_orden !== "PROGR";
+    if (btnIniciar) btnIniciar.hidden = cerrada || (orden.estado_orden !== "PROGR" && orden.estado_orden !== "SOLIC");
 
     // El formulario de cierre (diagnostico/notas/horas/piezas) solo debe
     // verse cuando la orden YA esta en progreso: mientras esta "PROGR" el
@@ -763,7 +780,7 @@
     // hacer con su propia orden abierta (programada o ya en progreso), no
     // solo cuando ya esta en progreso: es la salida hacia el formulario
     // completo y validado de documento_orden.html.
-    var puedeVerCompleta = ES_TECNICO && !cerrada && (orden.estado_orden === "PROGR" || orden.estado_orden === "ENPRO");
+    var puedeVerCompleta = ES_TECNICO && !cerrada && (orden.estado_orden === "PROGR" || orden.estado_orden === "SOLIC" || orden.estado_orden === "ENPRO");
     if (btnVistaCompleta) btnVistaCompleta.hidden = !puedeVerCompleta;
 
     // El tecnico solo puede exportar una orden ya cerrada (mientras sigue

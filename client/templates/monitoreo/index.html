@@ -8,6 +8,7 @@
 <section class="monitoring"
          data-datos-url="{% url 'monitoreo:datos' %}"
          data-indicadores-url-base="{% url 'monitoreo:indicadores' codigo='__CODIGO__' %}"
+         data-maquinaria-url-base="{% url 'maquinaria:detail' codigo='__CODIGO__' %}"
          data-historial-url-base="{% url 'monitoreo:historial' codigo='__CODIGO__' %}"
          data-estado-url-base="{% url 'monitoreo:estado' codigo='__CODIGO__' %}"
          data-estado-accion-url-base="{% url 'monitoreo:estado-accion' codigo='__CODIGO__' %}"
@@ -73,7 +74,7 @@
     <div class="machine-drawer__head">
       <div>
         <p class="machine-drawer__kicker" id="drawerLinea">—</p>
-        <h2 id="drawerTitle">—</h2>
+        <h2><a id="drawerTitle" class="machine-drawer__title-link" href="#">—</a></h2>
         <span class="machine-drawer__badge" id="drawerEstado">—</span>
       </div>
       <button type="button" class="machine-drawer__close" id="drawerClose" aria-label="Cerrar">
@@ -128,6 +129,7 @@
         <label>Fecha fin<input type="date" id="opsFechaFin" required></label>
         <label>Horas operadas<input type="number" step="1" min="0" id="opsHoras" required></label>
         <button type="submit" class="btn-plant-secondary">Registrar horas</button>
+        <a href="{% url 'maquinaria:registro-ops'%}" class="btn-plant-secondary">Ver más detale de las horas de operacion </a>
       </form>
       <p class="feedback-msg" id="drawerOpsMsg" hidden></p>
       <p class="section-hint">El MTTR y la disponibilidad se calculan solos: MTTR al cerrar una orden de mantenimiento, disponibilidad a partir de MTBF y MTTR.</p>
