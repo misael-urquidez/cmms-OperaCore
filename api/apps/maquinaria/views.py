@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import connection
 from django.db.utils import OperationalError
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -210,8 +211,16 @@ class ValidarMaquinaAPIView(APIView):
 
 
 class DeshabilitarMaquinaAPIView(APIView):
-    """OPERA -> DESHA."""
+    """OPERA/FALLO/MANTE/ESPER -> DESHA. Se puede dar de baja desde
+    cualquier estado del ciclo de vida de la máquina, excepto si ya
+    está deshabilitada (para no dejarlo pasar como no-op silencioso)."""
     def patch(self, request, codigo):
+        maquina = get_object_or_404(Maquina, codigo=codigo)
+        if maquina.estado_maquina_id == "DESHA":
+            return Response(
+                {"detail": "La máquina ya se encuentra deshabilitada."},
+                status=400,
+            )
         try:
             maquina = cambiar_estado_maquina(codigo, "DESHA", "manual", None)
         except ValidationError as e:

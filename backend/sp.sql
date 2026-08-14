@@ -42,6 +42,21 @@ USE operacore;
 
 -- DOCUMENTADO
 
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_cerrar_periodo_indicador)
+-- Backend (llamada al SP):
+--   Archivo: api/apps/indicadores/views.py
+--   Clase:   CerrarPeriodoIndicadorAPIView (línea 570)
+--   Llamada: cur.callproc("sp_cerrar_periodo_indicador", [maquina, fecha_fin])
+--            -> línea 587
+--   Endpoint (urls.py): api/apps/indicadores/urls.py
+--            POST /indicadores/v2/cerrar-periodo/  (name="cerrar_periodo")
+-- Frontend (formulario / botón):
+--   Archivo: client/client/templates/indicadores/kpis.html
+--   Modal:   "Cerrar periodo de indicador" (línea 69, botón línea 82)
+--   JS:      client/client/static/indicadores/js/kpis-acciones.js (línea 28)
+-- =====================================================================
+
 DROP PROCEDURE IF EXISTS sp_cerrar_periodo_indicador;
 
 DELIMITER $$
@@ -149,6 +164,26 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS sp_reporte_disponibilidad_linea;
 -- Migracion: elimina el procedimiento con el nombre anterior (se renombro
 -- de sp_reporte_disponibilidad_planta a sp_reporte_disponibilidad_linea).
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_reporte_disponibilidad_planta)
+-- Backend (llamadas al SP, hay DOS puntos de uso):
+--   Archivo: api/apps/indicadores/views.py
+--   1) Clase: ReporteDisponibilidadPlantaAPIView (línea 601)
+--      Llamada: cur.callproc("sp_reporte_disponibilidad_planta",
+--               [fecha_inicio, fecha_fin]) -> línea 614
+--      Endpoint (urls.py): GET /indicadores/v1/reporte-disponibilidad/
+--               ?fecha_inicio=...&fecha_fin=...  (name="reporte_disponibilidad")
+--   2) Reutilizado dentro de ReporteKPIExportAPIView (exportación
+--      CSV/XLSX/PDF), sección "reporte por rango" -> línea 551
+--      Endpoint (urls.py): GET /indicadores/v1/reporte/export/<formato>/
+-- Frontend (formulario / tabla):
+--   Archivo: client/client/templates/indicadores/kpis.html
+--   Panel:   "Reporte de disponibilidad por línea" (línea 43, inputs
+--            DESDE/HASTA + botón "Generar")
+--   JS:      client/client/static/indicadores/js/kpis-acciones.js
+--            (línea 133, fetch a v1/reporte-disponibilidad/ en línea 180)
+-- =====================================================================
+
 DROP PROCEDURE IF EXISTS sp_reporte_disponibilidad_planta;
 
 DELIMITER $$
@@ -274,6 +309,23 @@ DELIMITER ;
 
 -- DOCUMENTADO
 
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_registrar_salida_refaccion)
+-- Backend (llamadas al SP, hay DOS puntos de uso):
+--   1) Archivo: api/apps/inventario/views.py
+--      Clase:   RegistrarSalidaRefaccionAPIView (línea 477)
+--      Llamada: cur.callproc("sp_registrar_salida_refaccion", [...]) -> línea 503
+--      Endpoint (urls.py): POST /inventario/v2/movimientos/salida-refaccion/
+--   2) Archivo: api/apps/mantenimiento/views.py
+--      Método:  _call_sp_salida_refaccion (línea 192)
+--      Llamada: cur.callproc("sp_registrar_salida_refaccion", [...]) -> línea 199
+--      (se usa al instalar una refacción/pieza directo desde una orden
+--       de mantenimiento)
+-- Frontend (formulario):
+--   Módulo Inventario -> "Dar salida" de una refacción, o
+--   Módulo Mantenimiento -> detalle de orden -> "Instalar refacción"
+-- =====================================================================
+
 DROP PROCEDURE IF EXISTS sp_registrar_salida_refaccion;
 
 DELIMITER $$
@@ -383,6 +435,88 @@ END $$
 DELIMITER ;
 
 -- Llamada (igual que el ejemplo):
+-- call sp_registrar_salida_refaccion(1, 'OMP260807080459', 'Descripcion de prueba', '2026-08-08', '10:30:00', 'SN123456');
+-- select * from REFACCION;
+-- Líneas de prueba eliminadas:
+-- select * from REFACCION
+-- call  sregistrar_salida_refaccion(1, "OMP260807080459", "Descripcoion de prueba")
+-- HORAS 
+
+-- SELECT * FROM  ORDEN_MANTENIMIENTO  -- Consulta de prueba temporal (eliminada)
+
+-- =====================================================================
+-- Procedimiento 4: srendimiento_trabajador
+-- =====================================================================
+-- Objetivo: devolver el rendimiento de un trabajador (modulo de
+--           trabajadores) mediante parametros de SALIDA (OUT).
+--           Mismo patron que sventasXVend: un SELECT con CONCAT + COUNT
+--           ... INTO <variables OUT> ... GROUP BY.
+-- Parámetros:
+--   nomina            -> TRABAJADOR.numeroNomina (IN)
+--   nombre            -> OUT: nombre completo del trabajador
+--   ordenes_asignadas -> OUT: total de ordenes asignadas al trabajador
+--   ordenes_cerradas  -> OUT: total de ordenes cerradas (estado CERRA)
+-- Lógica:
+--   1) Cruza TRABAJADOR con ORDEN_MANTENIMIENTO por numeroNomina.
+--   2) Concatena nombre + apellidoPat + apellidoMat (con IFNULL por si
+--      el segundo apellido no existe).
+--   3) Cuenta el total de ordenes asignadas (COUNT) y las cerradas (una
+--      subconsulta con COUNT(*)... estado_orden = 'CERRA').
+--   4) Agrupa por trabajador y devuelve los tres valores por OUT.
+-- =====================================================================
+
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_rendimiento_trabajador)
+-- Backend (llamadas al SP, hay TRES puntos de uso):
+--   1) Archivo: api/apps/usuarios/views.py
+--      Clase:   RendimientoTrabajadorAPIView (línea 166)
+--      Llamada: cur.execute("CALL sp_rendimiento_trabajador(%s, @nombre, "
+--               "@asignadas, @cerradas)", ...) -> línea 175
+--      Endpoint (urls.py): GET /usuarios/v1/trabajadores/<numeroNomina>/rendimiento/
+--   2) Archivo: api/apps/indicadores/views.py
+--      Clase:   RendimientoTrabajadoresAPIView (línea 677) — recorre TODOS
+--               los trabajadores llamando al SP uno por uno (loop)
+--      Llamada: cur.callproc("sp_rendimiento_trabajador", [...]) -> línea 695
+--      Endpoint (urls.py): GET /indicadores/v1/rendimiento-trabajadores/
+--   3) Archivo: api/apps/indicadores/views.py
+--      Clase:   RendimientoTrabajadorDetailAPIView (línea 725)
+--      Llamada: cur.callproc("sp_rendimiento_trabajador", [...]) -> línea 734
+--      Endpoint (urls.py): GET /indicadores/v1/rendimiento-trabajador/<nomina>/
+-- Frontend (tabla / pestaña):
+--   Archivo: client/client/templates/indicadores/rendimiento.html
+--   Pestaña: "Rendimiento" del módulo Indicadores (sidebar,
+--            client/client/templates/base_admin.html línea 78)
+--   JS:      client/client/static/indicadores/js/rendimiento.js
+-- =====================================================================
+
+DROP PROCEDURE IF EXISTS sp_rendimiento_trabajador;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_rendimiento_trabajador(
+    IN  nomina            VARCHAR(15),
+    OUT nombre            VARCHAR(250),
+    OUT ordenes_asignadas INT,
+    OUT ordenes_cerradas  INT
+)
+BEGIN
+    SELECT
+        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', ifnull(t.apellidoMat, '')),
+        COUNT(o.folio),
+        (SELECT COUNT(*)
+         FROM ORDEN_MANTENIMIENTO o2
+         WHERE o2.trabajador = t.numeroNomina
+           AND o2.estado_orden = 'CERRA')
+    INTO nombre, ordenes_asignadas, ordenes_cerradas
+    FROM TRABAJADOR t
+    INNER JOIN ORDEN_MANTENIMIENTO o ON o.trabajador = t.numeroNomina
+    WHERE t.numeroNomina = nomina
+    GROUP BY t.numeroNomina;
+END $$
+
+DELIMITER ;
+
+-- Llamada (igual que el ejemplo):
 -- call srendimiento_trabajador('NOM-001', @nombre, @asignadas, @cerradas);
 -- select @nombre as Nombre, @asignadas as Ordenes_Asignadas, @cerradas as Ordenes_Cerradas;
 -- Llamada (igual que el ejemplo):
@@ -437,6 +571,23 @@ DELIMITER ;
 
 -- DOCUMENTADO
 
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_resumen_maquina)
+-- Backend (llamadas al SP, hay DOS puntos de uso):
+--   1) Archivo: api/apps/maquinaria/views.py
+--      Clase:   ResumenMaquinaAPIView (línea 250)
+--      Llamada: cur.callproc("sp_resumen_maquina", [...]) -> línea 261
+--      Endpoint (urls.py): GET /maquinaria/v1/maquina/<codigo>/resumen/
+--   2) Archivo: api/apps/monitoreo/views.py
+--      Clase:   IndicadoresMaquinaAPIView (línea 59)
+--      Llamada: cur.callproc("sp_resumen_maquina", [...]) -> línea 73
+--      Endpoint (urls.py): GET /api/monitoreo/maquinas/<codigo>/indicadores/
+-- Frontend (pantalla mostrada, capturas ya revisadas):
+--   Módulo Maquinaria -> detalle de máquina -> "Resumen de Mantenimiento"
+--   + "Indicadores Actuales" (MTBF, MTTR, Disponibilidad, etc.)
+--   Módulo Monitoreo -> drawer/panel lateral de una máquina (indicadores)
+-- =====================================================================
+
 DROP PROCEDURE IF EXISTS sp_resumen_maquina_maquinaria;
 
 DELIMITER $$
@@ -484,6 +635,143 @@ END $$
 DELIMITER ;
 
 -- Llamada:
+-- call sp_resumen_maquina('MAQ001', @nombre, @estado, @fallas, @ordenes, @horas,
+S--                         @mtbf, @mttr, @dispo, @inactividad, @reparaciones);
+-- select @nombre, @estado, @fallas, @ordenes, @horas,
+--        @mtbf, @mttr, @dispo, @inactividad, @reparaciones;
+
+/* =====================================================================
+   FRAGMENTOS PREVIOS DE sp_resumen_maquina (solo referencia, no se usan)
+   ---------------------------------------------------------------------
+   Version A - ficha del drawer de Monitoreo (1 IN + 9 OUT), leia la vista:
+   ---------------------------------------------------------------------
+   CREATE PROCEDURE sp_resumen_maquina(
+       IN  maquina             VARCHAR(10),
+       OUT nombre              VARCHAR(100),
+       OUT estado              VARCHAR(50),
+       OUT mtbf                FLOAT,
+       OUT mttr                FLOAT,
+       OUT disponibilidad      INT,
+       OUT total_horas         INT,
+       OUT numero_fallas       INT,
+       OUT tiempo_inactividad  INT,
+       OUT numero_reparaciones INT
+   )
+   BEGIN
+       SELECT Maquina, Estado, MTTR, MTBF, Disponibilidad,
+              TotalHorasOperacion, TotalFallas, TiempoTotalParo, NumReparaciones
+       INTO nombre, estado, mttr, mtbf, disponibilidad,
+            total_horas, numero_fallas, tiempo_inactividad, numero_reparaciones
+       FROM v_kpi_indicadores_actuales
+       WHERE Codigo = maquina;
+   END $$
+   ---------------------------------------------------------------------
+   Version B - resumen de Maquinaria (1 IN + 8 OUT), consultas inline:
+   ---------------------------------------------------------------------
+   CREATE PROCEDURE sp_resumen_maquina(
+       IN  p_maquina           VARCHAR(10),
+       OUT p_nombre            VARCHAR(100),
+       OUT p_estado            VARCHAR(5),
+       OUT p_total_fallas      INT,
+       OUT p_total_ordenes     INT,
+       OUT p_horas_operacion   INT,
+       OUT p_mtbf              FLOAT,
+       OUT p_mttr              FLOAT,
+       OUT p_disponibilidad    INT
+   )
+   BEGIN
+       SELECT m.nombre, m.estado_maquina,
+              COUNT(DISTINCT rf.numeroRegistro),
+              COUNT(DISTINCT om.folio),
+              ( SELECT IFNULL(SUM(ro.horasOperacion), 0)
+                FROM REGISTRO_OPS ro WHERE ro.maquina = m.codigo )
+       INTO p_nombre, p_estado, p_total_fallas, p_total_ordenes, p_horas_operacion
+       FROM MAQUINA m
+       LEFT JOIN REPORTE_FALLA rf ON rf.maquina = m.codigo
+       LEFT JOIN ORDEN_MANTENIMIENTO om ON om.maquina = m.codigo
+       WHERE m.codigo = p_maquina
+       GROUP BY m.codigo, m.nombre, m.estado_maquina;
+
+       -- Indicadores vigentes: prioriza el periodo abierto (fechaFin IS NULL);
+       -- si no hay uno abierto, cae al ultimo periodo cerrado como respaldo.
+       SELECT i.mtbf, i.mttr, i.porcentajeDispo
+       INTO p_mtbf, p_mttr, p_disponibilidad
+       FROM INDICADOR i
+       WHERE i.maquina = p_maquina
+       ORDER BY (i.fechaFin IS NULL) DESC, i.numeroRegistro DESC
+       LIMIT 1;
+   END $$
+   ===================================================================== */
+
+-- =====================================================================
+-- Procedimiento 7: sp_historial_maquina
+-- =====================================================================
+-- Objetivo: devolver, en un solo result set, todas las ordenes de
+--           mantenimiento y todos los reportes de falla de una maquina,
+--           con el trabajador que atendio cada uno. Va como result set
+--           (no OUT) porque es una lista de N filas, no un escalar.
+-- Parámetros:
+--   maquina -> MAQUINA.codigo
+-- Lógica:
+--   1) UNION ALL entre ORDEN_MANTENIMIENTO y REPORTE_FALLA, marcando el
+--      tipo de cada fila ('ORDEN' / 'FALLA').
+--   2) LEFT JOIN con TRABAJADOR para traer el nombre completo de quien
+--      la atendio (LEFT porque trabajador puede ser NULL en ordenes).
+--   3) Ordena todo por fecha descendente (mas reciente primero).
+-- =====================================================================
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_historial_maquina)
+-- Backend:
+--   Archivo: api/apps/maquinaria/views.py
+--   Clase:   HistorialMaquinaAPIView (línea 300)
+--   Llamada: cur.callproc("sp_historial_maquina", [codigo]) -> línea 310
+--   Endpoint (urls.py): GET /maquinaria/v1/maquina/<codigo>/historial/
+-- Frontend (pantalla mostrada, captura ya revisada):
+--   Módulo Maquinaria -> detalle de máquina -> tabla "Historial de
+--   Órdenes y Fallas" (columnas Tipo, Folio, Fecha, Detalle, Estado,
+--   Trabajador)
+-- =====================================================================
+
+DROP PROCEDURE IF EXISTS sp_historial_maquina;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_historial_maquina(
+    IN maquina VARCHAR(10)
+)
+BEGIN
+    SELECT
+        'ORDEN' AS tipo,
+        om.folio AS identificador,
+        om.fechaCreacion AS fecha,
+        om.descripcion AS detalle,
+        om.estado_orden AS estado,
+        om.trabajador AS trabajador_nomina,
+        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, '')) AS trabajador_nombre
+    FROM ORDEN_MANTENIMIENTO om
+    LEFT JOIN TRABAJADOR t ON t.numeroNomina = om.trabajador
+    WHERE om.maquina = maquina
+
+    UNION ALL
+
+    SELECT
+        'FALLA' AS tipo,
+        CAST(rf.numeroRegistro AS CHAR) AS identificador,
+        rf.fechaCreacion AS fecha,
+        rf.asunto AS detalle,
+        rf.estado_reporte AS estado,
+        rf.trabajador AS trabajador_nomina,
+        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, '')) AS trabajador_nombre
+    FROM REPORTE_FALLA rf
+    LEFT JOIN TRABAJADOR t ON t.numeroNomina = rf.trabajador
+    WHERE rf.maquina = maquina
+
+    ORDER BY fecha DESC;
+END $$
+
+DELIMITER ;
+
+-- Llamada:
 -- call sp_historial_maquina('MAQ001');
 
 -- =====================================================================
@@ -519,6 +807,24 @@ DELIMITER ;
 -- =====================================================================
 
 -- DOCUMENTADO
+
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_perfil_trabajador)
+-- Backend:
+--   Archivo: api/apps/usuarios/views.py
+--   Clase:   PerfilTrabajadorAPIView (línea 201)
+--   Llamada: cur.execute("CALL sp_perfil_trabajador(%s, @o_asignadas, "
+--            "@o_cerradas, @o_pendientes, @f_reportadas, @m_atendidas)",
+--            ...) -> línea 214
+--   Endpoint (urls.py): GET /usuarios/v1/trabajadores/<numeroNomina>/perfil/
+-- Frontend (pantalla mostrada, captura ya revisada):
+--   Archivo: client/client/templates/mantenimiento/trabajador_detalle.html
+--   Encabezado del perfil del trabajador -> los 5 contadores (Órdenes
+--   asignadas, cerradas, pendientes, Fallas reportadas, Máquinas
+--   atendidas). La lista de "Órdenes asignadas" que aparece debajo NO
+--   sale de este SP, sale de otro endpoint normal (ver comentario del
+--   objetivo del SP más abajo).
+-- =====================================================================
 
 DROP PROCEDURE IF EXISTS sp_perfil_trabajador;
 
@@ -772,3 +1078,4 @@ END $$
 
 DELIMITER ;
 
+-- select @asignadas, @cerradas, @pendientes, @fallas, @maquinas;

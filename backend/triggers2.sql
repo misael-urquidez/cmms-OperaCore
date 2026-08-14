@@ -21,6 +21,21 @@ Si la máquina aún no tiene un registro en INDICADOR, lo crea automáticamente.
 
 DROP TRIGGER IF EXISTS tg_actualizar_mtbf_registroops;
 
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (tg_actualizar_mtbf_registroops)
+-- Se dispara cuando el backend hace INSERT en REGISTRO_OPS. Eso ocurre en:
+--   Archivo: api/apps/monitoreo/views.py
+--   Clase:   RegistroOpsAPIView.post (línea 308)
+--   Llamada: services.registrar_horas_operacion(...) -> línea 314
+--   Archivo: api/apps/monitoreo/services.py
+--   Función: registrar_horas_operacion -> RegistroOps.objects.create(...) (línea 120)
+--   Endpoint (urls.py): POST /monitoreo/maquinas/<codigo>/registro-ops/
+--            (api/apps/monitoreo/urls.py, name="registro-ops")
+-- Frontend (formulario, captura ya revisada):
+--   Módulo Indicadores -> "Horas de Operación" (Fecha inicio, Fecha fin,
+--   Horas operadas, botón "Registrar horas")
+-- =====================================================================
+
 DELIMITER $$
 
 CREATE TRIGGER tg_actualizar_mtbf_registroops
@@ -85,6 +100,26 @@ DELIMITER ;
 */
 
 DROP TRIGGER IF EXISTS tg_actualizar_mttr_orden;
+
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (tg_actualizar_mttr_orden)
+-- Se dispara cuando el backend hace UPDATE en ORDEN_MANTENIMIENTO
+-- poniéndole fechaCierre por primera vez. Eso ocurre en:
+--   Archivo: api/apps/mantenimiento/views.py
+--   Clase:   OrdenMantenimientoCerrarAPIView.patch (línea 522)
+--   Líneas clave: 546-547
+--     orden.fechacierre, orden.horacierre, orden.estado_orden_id = ...
+--     orden.save(update_fields=[..., "fechacierre", ...])
+--   Endpoint (urls.py): PATCH /mantenimiento/v2/ordenes/<folio>/cerrar/
+--            (api/apps/mantenimiento/urls.py, name="ordenes-cerrar")
+-- Frontend:
+--   Módulo Mantenimiento -> detalle de una orden -> acción "Cerrar orden"
+-- Nota (visto en la conversación): el propio comentario del código en
+-- mantenimiento/views.py (línea 534) explica que el reporte de falla se
+-- cierra ANTES de guardar fechaCierre en la orden, para que este trigger
+-- lea el tiempoParo ya actualizado -- ambos saves van en la misma
+-- transacción (@transaction.atomic).
+-- =====================================================================
 
 DELIMITER $$
 
@@ -156,6 +191,24 @@ Tercer trigger para calcular la disponibilidad
 
 DROP TRIGGER IF EXISTS tg_actualizar_disponibilidad_indicador;
 
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO
+-- (tg_actualizar_disponibilidad_indicador y tg_disponibilidad_indicador_insert)
+-- No los dispara un formulario directo: se disparan EN CADENA cada vez
+-- que algo hace UPDATE/INSERT sobre INDICADOR, es decir, cada vez que:
+--   - tg_actualizar_mtbf_registroops actualiza/inserta INDICADOR
+--     (ver arriba: formulario "Horas de Operación")
+--   - tg_actualizar_mttr_orden actualiza/inserta INDICADOR
+--     (ver arriba: "Cerrar orden")
+--   - sp_cerrar_periodo_indicador hace el INSERT del periodo nuevo
+--     (backend/sp.sql, Procedimiento 1) -> disparado desde
+--     api/apps/indicadores/views.py, clase CerrarPeriodoIndicadorAPIView
+--     (línea 587), botón "Cerrar periodo" del módulo Indicadores
+-- Por eso NO tienen una sola pantalla de origen: son la "última milla"
+-- que recalcula porcentajeDispo cada vez que cambian mtbf/mttr, sin
+-- importar qué proceso los cambió.
+-- =====================================================================
+
 DELIMITER $$
 
 CREATE TRIGGER tg_actualizar_disponibilidad_indicador
@@ -217,6 +270,29 @@ Validan que el tipo_maquina asignado a una MAQUINA sea compatible con el
 */
 
 DROP TRIGGER IF EXISTS tg_validar_tipo_maquina_area_insert;
+
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO
+-- (tg_validar_tipo_maquina_area_insert y ..._update)
+-- INSERT se dispara al crear una máquina:
+--   Archivo: api/apps/maquinaria/serializers.py
+--   Clase:   CreateMaquinaSerializer (línea 315), método create (línea 340)
+--   Endpoint (urls.py): POST /maquinaria/v1/maquina/create/
+--            (views.CrearMaquinaAPIView, name="create_maquina")
+-- UPDATE se dispara al editar una máquina:
+--   Archivo: api/apps/maquinaria/serializers.py
+--   Clase:   UpdateMaquinaSerializer (línea 358)
+--   Endpoint (urls.py): PATCH/PUT /maquinaria/v1/maquina/update/<codigo>/
+--            (views.UpdateMaquinaAPIView, name="update_maquina")
+-- Nota: ambos serializers usan ValidarTipoMaquinaAreaMixin, que duplica
+-- esta misma regla en Django (mismo criterio que documenta el propio
+-- comentario del trigger) solo para dar un 400 legible antes de que
+-- llegue a tronar el INSERT/UPDATE con el SIGNAL de MySQL.
+-- Frontend:
+--   Módulo Maquinaria -> "Registrar máquina" / editar máquina (selects
+--   de Línea y Tipo de máquina)
+-- =====================================================================
+
 DELIMITER $$
 CREATE TRIGGER tg_validar_tipo_maquina_area_insert
 BEFORE INSERT ON MAQUINA
@@ -289,6 +365,36 @@ DELIMITER ;
 -- =====================================================================
 
 DROP TRIGGER IF EXISTS tg_seed_estado_dispo;
+
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO
+-- (tg_seed_estado_dispo, tg_sync_refaccion_stock_insert/update/delete)
+--
+-- tg_seed_estado_dispo se dispara al crear una refacción:
+--   Archivo: api/apps/inventario/views.py
+--   Clase:   RefaccionCreateAPIView (línea 334)
+--   Endpoint (urls.py): POST /inventario/v2/refacciones/create/
+--            (name="refacciones-create")
+--   Frontend: módulo Inventario -> "Registrar refacción"
+--
+-- tg_sync_refaccion_stock_insert/update/delete se disparan cada vez que
+-- se toca ESTADO_REFACCION (la tabla M:M), lo cual pasa en DOS lugares:
+--   1) sp_registrar_salida_refaccion (backend/sp.sql, Procedimiento 3)
+--      -> UPDATE + INSERT sobre ESTADO_REFACCION (líneas 337-341 de ese SP)
+--      Disparado desde:
+--        api/apps/inventario/views.py, RegistrarSalidaRefaccionAPIView
+--          (línea 477), POST /inventario/v2/movimientos/salida-refaccion/
+--        api/apps/mantenimiento/views.py, _call_sp_salida_refaccion
+--          (línea 192), al instalar una refacción desde una orden
+--   2) CRUD manual "Estados de refacción" (create/update/delete directo
+--      sobre la tabla M:M):
+--      Archivo: api/apps/inventario/views.py
+--      Clases:  EstadoRefaccionCreateAPIView (línea 424),
+--               EstadoRefaccionDetailAPIView (línea 428, PUT/PATCH/DELETE)
+--      Endpoint (urls.py): /inventario/v1/existencia-refaccion/...
+--               (name="existencia-refaccion-create"/"-detail")
+-- =====================================================================
+
 DELIMITER $$
 CREATE TRIGGER tg_seed_estado_dispo
 AFTER INSERT ON REFACCION
@@ -355,6 +461,32 @@ DELIMITER ;
 -- =====================================================================
 
 DROP TRIGGER IF EXISTS tg_fecharesolucion_cerrado_insert;
+
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO
+-- (tg_fecharesolucion_cerrado_insert y tg_fecharesolucion_cerrado_update)
+-- INSERT se dispara si un reporte se crea directo como 'CERRA':
+--   Archivo: api/apps/fallas/views.py
+--   Clase:   ReporteFallaCreateAPIView (línea 127)
+--   Endpoint (urls.py): POST /fallas/v2/reportes/create/
+--            (name="reportes-create")
+-- UPDATE se dispara cuando un reporte pasa a 'CERRA' (desde otro estado):
+--   Archivo: api/apps/fallas/views.py
+--   Clase:   ReporteFallaUpdateAPIView (línea 147)
+--   Endpoint (urls.py): PATCH/PUT /fallas/v2/reportes/update/<pk>/
+--            (name="reportes-update")
+--   También se dispara indirectamente al cerrar una orden de
+--   mantenimiento con reporte de falla asociado: ver arriba
+--   OrdenMantenimientoCerrarAPIView (mantenimiento/views.py línea 542,
+--   reporte.estado_reporte_id = "RESUE" -- OJO: ese caso usa el estado
+--   'RESUE', no 'CERRA', así que ESE guardado en particular NO dispara
+--   este trigger; el reporte llega a 'CERRA' en un paso posterior/manual
+--   vía fallas/views.py.
+-- Frontend:
+--   Módulo Fallas -> crear/editar reporte de falla -> cambiar estado a
+--   "Cerrado"
+-- =====================================================================
+
 DELIMITER $$
 CREATE TRIGGER tg_fecharesolucion_cerrado_insert
 BEFORE INSERT ON REPORTE_FALLA
@@ -394,6 +526,38 @@ DELIMITER ;
 -- =====================================================================
 
 DROP TRIGGER IF EXISTS tg_regops_sin_solapamiento_insert;
+
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO
+-- (tg_regops_sin_solapamiento_insert / _update,
+--  tg_indicador_unico_periodo_abierto, tg_indicador_fecha_cierre_valida)
+--
+-- tg_regops_sin_solapamiento_insert -> mismo INSERT del Trigger 1:
+--   api/apps/monitoreo/views.py, RegistroOpsAPIView.post (línea 308)
+--   POST /monitoreo/maquinas/<codigo>/registro-ops/
+--   Frontend: módulo Indicadores -> "Horas de Operación"
+--
+-- tg_regops_sin_solapamiento_update -> al editar un periodo existente:
+--   Archivo: api/apps/monitoreo/views.py
+--   Clase:   RegistroOpsUpdateAPIView.patch (línea 324)
+--   Endpoint (urls.py): PATCH /monitoreo/registro-ops/<pk>/
+--            (name="registro-ops-update")
+--
+-- tg_indicador_unico_periodo_abierto -> se dispara en cualquier INSERT a
+-- INDICADOR, por lo tanto en los mismos puntos que los Triggers 3-4:
+--   tg_actualizar_mtbf_registroops / tg_actualizar_mttr_orden (cuando
+--   crean un periodo nuevo) y sp_cerrar_periodo_indicador (backend/sp.sql,
+--   Procedimiento 1, línea 99: INSERT INTO INDICADOR ...), disparado
+--   desde api/apps/indicadores/views.py, CerrarPeriodoIndicadorAPIView
+--   (línea 587) -- botón "Cerrar periodo" del módulo Indicadores.
+--
+-- tg_indicador_fecha_cierre_valida -> se dispara en cualquier UPDATE a
+-- INDICADOR que ponga fechaFin, es decir:
+--   sp_cerrar_periodo_indicador (backend/sp.sql, línea 95: UPDATE
+--   INDICADOR SET fechaFin = fecha_fin ...), mismo botón "Cerrar
+--   periodo" mencionado arriba.
+-- =====================================================================
+
 DELIMITER $$
 CREATE TRIGGER tg_regops_sin_solapamiento_insert
 BEFORE INSERT ON REGISTRO_OPS
