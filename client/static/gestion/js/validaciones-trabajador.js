@@ -41,10 +41,10 @@ document.addEventListener("DOMContentLoaded", function () {
     estadoElement,
   );
 
-  setupInputValidation(
+setupInputValidation(
     document.getElementById("id_apellidoMat"),
     {
-      required: true,
+      required: false,
       maxLength: 50,
       pattern: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/,
     },

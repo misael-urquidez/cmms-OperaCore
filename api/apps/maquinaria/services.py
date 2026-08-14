@@ -6,15 +6,18 @@ from .models import EdoMaquina, HistorialEstadoMaquina, Maquina
 
 # Transiciones permitidas — coincide con tu diagrama:
 # OPERA -> FALLO (se reporta falla) / DESHA (se deshabilita manualmente)
-# FALLO -> MANTE (técnico inicia la orden)
-# MANTE -> ESPER (técnico cierra la orden, reparada, falta validar)
-# ESPER -> OPERA (admin valida) / FALLO (se detecta que en realidad sigue fallando)
+# FALLO -> MANTE (técnico inicia la orden) / DESHA (se da de baja aunque siga fallando)
+# MANTE -> ESPER (técnico cierra la orden, reparada, falta validar) / DESHA (se da de baja a media reparación)
+# ESPER -> OPERA (admin valida) / FALLO (se detecta que en realidad sigue fallando) / DESHA (se da de baja en vez de validar)
 # DESHA -> OPERA (admin reactiva)
+# "Deshabilitar" es una decisión administrativa (baja, venta, obsolescencia,
+# accidente, etc.) que puede tomarse en cualquier momento del ciclo de vida
+# de la máquina, sin importar en qué estado se encuentre en ese momento.
 TRANSICIONES_VALIDAS = {
     "OPERA": {"FALLO", "DESHA"},
-    "FALLO": {"MANTE"},
-    "MANTE": {"ESPER"},
-    "ESPER": {"OPERA", "FALLO"},
+    "FALLO": {"MANTE", "DESHA"},
+    "MANTE": {"ESPER", "DESHA"},
+    "ESPER": {"OPERA", "FALLO", "DESHA"},
     "DESHA": {"OPERA"},
 }
 
