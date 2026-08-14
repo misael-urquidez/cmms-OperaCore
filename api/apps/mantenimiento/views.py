@@ -177,6 +177,8 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
                 pieza_campos.setdefault("costoinicial", ref.costo)
         if not pieza_campos.get("fechainstalacion") and data.get("fecha"):
             pieza_campos["fechainstalacion"] = data["fecha"]
+        if not pieza_campos.get("edo_pieza"):
+            pieza_campos["edo_pieza"] = "OPERA"
         if not pieza_campos.get("maquina") and data.get("orden_mantenimiento"):
             orden = models.OrdenMantenimiento.objects.filter(
                 pk=data["orden_mantenimiento"]

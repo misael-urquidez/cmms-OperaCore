@@ -130,7 +130,7 @@
   }
 
   // ============================================================
-  // Reporte de disponibilidad por rango (sp_reporte_disponibilidad_planta)
+  // Reporte de disponibilidad por rango (sp_reporte_disponibilidad_linea)
   // ============================================================
 
   function etiquetaColumna(clave) {

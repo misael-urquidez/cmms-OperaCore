@@ -235,7 +235,6 @@ function limpiarRefaccion() {
         ['pieza_costoinicial', 'Costo inicial'],
         ['pieza_tiempovidautil', 'Vida útil estimada'],
         ['pieza_tipo_pieza', 'Tipo de pieza'],
-        ['pieza_edo_pieza', 'Estado físico/operativo'],
       ];
       for (var i = 0; i < requeridos.length; i++) {
         var f = document.getElementById(requeridos[i][0]);
@@ -343,7 +342,7 @@ function limpiarRefaccion() {
       var strong = document.createElement('strong');
       strong.textContent = r.nombre || 'Refacción';
       var span = document.createElement('span');
-      span.textContent = (r.codigosku || '') + ' · Stock: ' + (r.stock != null ? r.stock : '—');
+      span.textContent = (r.codigosku || '') + ' · Disponibles: ' + (r.disponible != null ? r.disponible : '—');
       btn.appendChild(strong);
       btn.appendChild(span);
       btn.addEventListener('click', function() { seleccionarRefaccionExistente(r); });

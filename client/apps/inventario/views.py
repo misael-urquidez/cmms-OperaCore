@@ -575,10 +575,19 @@ def _contexto_movimiento(request, datos):
     for p in piezas:
         p["edo_pieza_nombre"] = nombre_estado.get(p.get("edo_pieza"), p.get("edo_pieza"))
 
+    # Cantidad disponible (DISPO) por refaccion, desde la M:M ESTADO_REFACCION.
+    dispo_por_refaccion = {}
+    for e in _get(f"{API_URL}/v1/existencia-refaccion/list/"):
+        if e.get("estado_refaccion") == "DISPO":
+            dispo_por_refaccion[str(e.get("refaccion"))] = e.get("cantidad", 0)
+    refacciones = _get(f"{API_URL}/v1/refacciones/list/")
+    for r in refacciones:
+        r["disponible"] = dispo_por_refaccion.get(str(r.get("numeroregistro")), 0)
+
     return {
         "datos": datos,
         "catalogos": catalogos,
-        "refacciones": _get(f"{API_URL}/v1/refacciones/list/"),
+        "refacciones": refacciones,
         "piezas": piezas,
         "ordenes": _get(f"{MANTENIMIENTO_API_URL}/v1/ordenes/list/"),
         "maquinas": _get(f"{settings.API_BASE_URL}/fallas/v1/maquinas/"),

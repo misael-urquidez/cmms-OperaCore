@@ -23,6 +23,120 @@
 
 USE operacore;
 
+
+-- =====================================================================
+-- RESPALDO: VERSION INNER JOIN 
+-- =====================================================================
+
+-- 1. v_kpi_stock  (Consecuencia: desaparecen refacciones sin clasificacion)
+CREATE VIEW v_kpi_stock as
+select r.nombre as Refaccion, r.codigoSku as SKU,
+       r.stock as Stock, r.stockMinimo as StockMinimo,
+       (r.stockMinimo - r.stock) as Faltantes,
+       c.nombre as Criticidad
+from REFACCION as r
+inner join CLASIFICACION as c on c.codigo = r.clasificacion
+where r.stock <= r.stockMinimo
+order by Faltantes desc;
+
+-- 2. v_kpi_fallas_por_maquina  (Consecuencia: solo maquinas con >= 1 falla)
+CREATE VIEW v_kpi_fallas_por_maquina as
+select m.codigo as Codigo, m.nombre as Maquina, count(*) as TotalFallas
+from MAQUINA as m
+inner join REPORTE_FALLA as r on r.maquina = m.codigo
+group by m.codigo, m.nombre
+order by TotalFallas desc;
+
+-- 3. v_kpi_top_fallas  (Consecuencia: solo tipos de falla en uso)
+CREATE VIEW v_kpi_top_fallas as
+select tf.nombre as TipoFalla, count(*) as Total
+from TIPO_FALLA as tf
+inner join TIPO_REPORTE as tr on tr.tipo_falla = tf.numeroRegistro
+group by tf.numeroRegistro, tf.nombre
+order by Total desc;
+
+-- 4. v_kpi_horas_operacion  (Consecuencia: solo maquinas con horas registradas)
+CREATE VIEW v_kpi_horas_operacion as
+select m.codigo as Codigo, m.nombre as Maquina, sum(ro.horasOperacion) as HorasOperacion
+from MAQUINA as m
+inner join REGISTRO_OPS as ro on ro.maquina = m.codigo
+group by m.codigo, m.nombre
+order by HorasOperacion desc;
+
+-- 5. v_kpi_mantenimiento_por_maquina  (Consecuencia: solo ordenes con maquina y con linea)
+CREATE VIEW v_kpi_mantenimiento_por_maquina as
+select l.nombre as Linea,
+       sum(case when o.tipo_mantenimiento = 'PREVE' then 1 else 0 end) as Preventivos,
+       sum(case when o.tipo_mantenimiento in ('CORRE','EMER') then 1 else 0 end) as Correctivos,
+       count(o.folio) as Total
+from ORDEN_MANTENIMIENTO as o
+inner join MAQUINA as m on m.codigo = o.maquina
+inner join LINEA as l on l.codigo = m.linea
+group by l.codigo, l.nombre
+order by l.nombre;
+
+-- 6. v_kpi_indicadores_actuales  (from plano con inner joins; agregadas
+--    como subconsultas escalares en SELECT para evitar la multiplicacion
+--    de filas; indicador mas reciente via WHERE correlacionado con MAX).
+--    Consecuencia: solo maquinas con al menos un indicador.
+CREATE VIEW v_kpi_indicadores_actuales as
+select m.codigo as Codigo,
+ m.nombre as Maquina, 
+ em.nombre as Estado,
+       m.estado_maquina as EstadoCodigo,
+        l.nombre as Linea,
+       i.mttr as MTTR, i.mtbf as MTBF,
+        i.porcentajeDispo as Disponibilidad, 
+        i.fechaFin as Periodo,
+       (select IFNULL(sum(ro.horasOperacion), 0) from REGISTRO_OPS as ro where ro.maquina = m.codigo) as TotalHorasOperacion,
+       (select IFNULL(count(*), 0) from REPORTE_FALLA as rf where rf.maquina = m.codigo) as TotalFallas,
+       (select IFNULL(count(*), 0) from ORDEN_MANTENIMIENTO as om where om.maquina = m.codigo) as TotalOrdenes,
+       (select IFNULL(sum(rf2.tiempoParo), 0) from ORDEN_MANTENIMIENTO as om
+                inner join REPORTE_FALLA as rf2 on rf2.numeroRegistro = om.reporte_falla
+                where om.maquina = m.codigo and om.fechaCierre is not null) as TiempoTotalParo,
+       (select IFNULL(count(*), 0) from ORDEN_MANTENIMIENTO as om
+                inner join REPORTE_FALLA as rf2 on rf2.numeroRegistro = om.reporte_falla
+                where om.maquina = m.codigo and om.fechaCierre is not null) as NumReparaciones
+from INDICADOR as i
+inner join MAQUINA as m on m.codigo = i.maquina
+inner join EDO_MAQUINA as em on em.codigo = m.estado_maquina
+inner join LINEA as l on l.codigo = m.linea
+where i.numeroRegistro = (select max(i2.numeroRegistro) from INDICADOR as i2 where i2.maquina = i.maquina);
+
+
+
+
+
+-- 7. v_refaccion_inventario  (Consecuencia: desaparecen refacciones sin clasificacion)
+CREATE VIEW v_refaccion_inventario as
+select r.numeroRegistro, r.nombre, r.codigoSku, r.stock, r.stockMinimo,
+       r.costo, r.puntoReorden, c.nombre as clasificacion
+from REFACCION as r
+inner join CLASIFICACION as c on c.codigo = r.clasificacion;
+
+-- =====================================================================
+-- FIN DE VISTAS KPI (INNER JOIN - respaldo)
+-- =====================================================================
+
+-- =====================================================================
+-- DROP DE VISTAS (para reemplazar las versiones de subconsulta escalar
+-- por las de INNER JOIN del respaldo).
+-- Ejecutar esta seccion ANTES de cargar las vistas del respaldo.
+-- =====================================================================
+DROP VIEW IF EXISTS v_refaccion_inventario;
+DROP VIEW IF EXISTS v_kpi_indicadores_actuales;
+DROP VIEW IF EXISTS v_kpi_mantenimiento_por_maquina;
+DROP VIEW IF EXISTS v_kpi_horas_operacion;
+DROP VIEW IF EXISTS v_kpi_top_fallas;
+DROP VIEW IF EXISTS v_kpi_fallas_por_maquina;
+DROP VIEW IF EXISTS v_kpi_stock;
+
+-- =====================================================================
+-- FIN (DROP DE VISTAS)
+-- =====================================================================
+
+
+
 -- =====================================================================
 -- 1. v_kpi_estado_flota: distribucion actual de la flota por estado
 -- =====================================================================
@@ -55,9 +169,8 @@ CREATE VIEW v_kpi_stock as
 select r.nombre as Refaccion, r.codigoSku as SKU,
        r.stock as Stock, r.stockMinimo as StockMinimo,
        (r.stockMinimo - r.stock) as Faltantes,
-       c.nombre as Criticidad
+       (select c.nombre from CLASIFICACION c where c.codigo = r.clasificacion) as Criticidad
 from REFACCION r
-left join CLASIFICACION c on c.codigo = r.clasificacion
 where r.stock <= r.stockMinimo
 order by Faltantes desc;
 
@@ -67,10 +180,9 @@ order by Faltantes desc;
 DROP VIEW IF EXISTS v_kpi_fallas_por_maquina;
 
 CREATE VIEW v_kpi_fallas_por_maquina as
-select m.codigo as Codigo, m.nombre as Maquina, count(r.numeroRegistro) as TotalFallas
+select m.codigo as Codigo, m.nombre as Maquina,
+       (select count(*) from REPORTE_FALLA r where r.maquina = m.codigo) as TotalFallas
 from MAQUINA m
-left join REPORTE_FALLA r on r.maquina = m.codigo
-group by m.codigo, m.nombre
 order by TotalFallas desc;
 
 -- =====================================================================
@@ -79,10 +191,9 @@ order by TotalFallas desc;
 DROP VIEW IF EXISTS v_kpi_top_fallas;
 
 CREATE VIEW v_kpi_top_fallas as
-select tf.nombre as TipoFalla, count(tr.reporte_falla) as Total
+select tf.nombre as TipoFalla,
+       (select count(*) from TIPO_REPORTE tr where tr.tipo_falla = tf.numeroRegistro) as Total
 from TIPO_FALLA tf
-left join TIPO_REPORTE tr on tr.tipo_falla = tf.numeroRegistro
-group by tf.numeroRegistro, tf.nombre
 order by Total desc;
 
 -- =====================================================================
@@ -91,10 +202,9 @@ order by Total desc;
 DROP VIEW IF EXISTS v_kpi_horas_operacion;
 
 CREATE VIEW v_kpi_horas_operacion as
-select m.codigo as Codigo, m.nombre as Maquina, sum(ro.horasOperacion) as HorasOperacion
+select m.codigo as Codigo, m.nombre as Maquina,
+       (select sum(ro.horasOperacion) from REGISTRO_OPS ro where ro.maquina = m.codigo) as HorasOperacion
 from MAQUINA m
-left join REGISTRO_OPS ro on ro.maquina = m.codigo
-group by m.codigo, m.nombre
 order by HorasOperacion desc;
 
 -- =====================================================================
@@ -103,20 +213,36 @@ order by HorasOperacion desc;
 DROP VIEW IF EXISTS v_kpi_mantenimiento_por_maquina;
 
 CREATE VIEW v_kpi_mantenimiento_por_maquina as
-select l.nombre as Linea,
+select (select l.nombre from MAQUINA m inner join LINEA l on l.codigo = m.linea where m.codigo = o.maquina) as Linea,
        sum(case when o.tipo_mantenimiento = 'PREVE' then 1 else 0 end) as Preventivos,
        sum(case when o.tipo_mantenimiento in ('CORRE','EMER') then 1 else 0 end) as Correctivos,
        count(o.folio) as Total
 from ORDEN_MANTENIMIENTO o
-left join MAQUINA m on m.codigo = o.maquina
-left join LINEA l on l.codigo = m.linea
-group by l.codigo, l.nombre
-order by l.nombre;
+group by (select l.nombre from MAQUINA m inner join LINEA l on l.codigo = m.linea where m.codigo = o.maquina)
+order by Linea;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 -- =====================================================================
 -- 8. v_kpi_indicadores_actuales: ficha KPI por maquina (MAQUINA-céntrica).
---    Base: MAQUINA con LEFT JOINs para que aparezcan TODAS las maquinas,
---    incluso sin indicadores registrados. Incluye los datos de origen de
+--    Base: MAQUINA con subconsultas escalares correlacionadas para que
+--    aparezcan TODAS las maquinas, incluso sin indicadores registrados
+--    (sustituyeron los LEFT JOINs). Incluye los datos de origen de
 --    las fórmulas, calculados en vivo (misma lógica que los triggers de
 --    triggers2.sql) mas el total de ordenes:
 --      EstadoCodigo        -> MAQUINA.estado_maquina (codigo, ej. OPERA)
@@ -156,50 +282,26 @@ order by l.nombre;
 DROP VIEW IF EXISTS v_kpi_indicadores_actuales;
 
 CREATE VIEW v_kpi_indicadores_actuales as
-select m.codigo as Codigo, m.nombre as Maquina, em.nombre as Estado,
-       m.estado_maquina as EstadoCodigo, l.nombre as Linea,
-       i.mttr as MTTR, i.mtbf as MTBF, i.porcentajeDispo as Disponibilidad, i.fechaFin as Periodo,
-       IFNULL(ro.TotalHoras, 0)       as TotalHorasOperacion,
-       IFNULL(rf.TotalFallas, 0)      as TotalFallas,
-       IFNULL(om_tot.TotalOrdenes, 0) as TotalOrdenes,
-       IFNULL(om.TiempoParo, 0)       as TiempoTotalParo,
-       IFNULL(om.NumReparaciones, 0)  as NumReparaciones
-from MAQUINA m
-left join EDO_MAQUINA em on em.codigo = m.estado_maquina
-left join LINEA l on l.codigo = m.linea
-left join (
-    select i2.maquina, i2.mttr, i2.mtbf, i2.porcentajeDispo, i2.fechaFin
-    from INDICADOR i2
-    inner join (
-        select maquina, MAX(numeroRegistro) as maxreg
-        from INDICADOR
-        group by maquina
-    ) ult on ult.maquina = i2.maquina and ult.maxreg = i2.numeroRegistro
-) i on i.maquina = m.codigo
-left join (
-    select maquina, SUM(horasOperacion) as TotalHoras
-    from REGISTRO_OPS
-    group by maquina
-) ro on ro.maquina = m.codigo
-left join (
-    select maquina, COUNT(*) as TotalFallas
-    from REPORTE_FALLA
-    group by maquina
-) rf on rf.maquina = m.codigo
-left join (
-    select maquina, COUNT(*) as TotalOrdenes
-    from ORDEN_MANTENIMIENTO
-    group by maquina
-) om_tot on om_tot.maquina = m.codigo
-left join (
-    select om.maquina,
-           SUM(rf2.tiempoParo) as TiempoParo,
-           COUNT(*)            as NumReparaciones
-    from ORDEN_MANTENIMIENTO om
-    inner join REPORTE_FALLA rf2 on rf2.numeroRegistro = om.reporte_falla
-    where om.fechaCierre is not null
-    group by om.maquina
-) om on om.maquina = m.codigo;
+select m.codigo as Codigo, m.nombre as Maquina,
+       (select em.nombre from EDO_MAQUINA em where em.codigo = m.estado_maquina) as Estado,
+       m.estado_maquina as EstadoCodigo,
+       (select l.nombre from LINEA l where l.codigo = m.linea) as Linea,
+       -- Indicadores del periodo mas reciente de la maquina (igual que el
+       -- antiguo left join con MAX(numeroRegistro) por maquina).
+       (select i.mttr from INDICADOR i where i.maquina = m.codigo order by i.numeroRegistro desc limit 1) as MTTR,
+       (select i.mtbf from INDICADOR i where i.maquina = m.codigo order by i.numeroRegistro desc limit 1) as MTBF,
+       (select i.porcentajeDispo from INDICADOR i where i.maquina = m.codigo order by i.numeroRegistro desc limit 1) as Disponibilidad,
+       (select i.fechaFin from INDICADOR i where i.maquina = m.codigo order by i.numeroRegistro desc limit 1) as Periodo,
+       IFNULL((select sum(ro.horasOperacion) from REGISTRO_OPS ro where ro.maquina = m.codigo), 0) as TotalHorasOperacion,
+       IFNULL((select count(*) from REPORTE_FALLA rf where rf.maquina = m.codigo), 0) as TotalFallas,
+       IFNULL((select count(*) from ORDEN_MANTENIMIENTO om where om.maquina = m.codigo), 0) as TotalOrdenes,
+       IFNULL((select sum(rf2.tiempoParo) from ORDEN_MANTENIMIENTO om
+               inner join REPORTE_FALLA rf2 on rf2.numeroRegistro = om.reporte_falla
+               where om.maquina = m.codigo and om.fechaCierre is not null), 0) as TiempoTotalParo,
+       IFNULL((select count(*) from ORDEN_MANTENIMIENTO om
+               inner join REPORTE_FALLA rf2 on rf2.numeroRegistro = om.reporte_falla
+               where om.maquina = m.codigo and om.fechaCierre is not null), 0) as NumReparaciones
+from MAQUINA m;
 
 -- =====================================================================
 -- 9. v_kpi_disponibilidad_linea: disponibilidad promedio por linea y periodo
@@ -252,12 +354,10 @@ DROP VIEW IF EXISTS v_refaccion_inventario;
 
 CREATE VIEW v_refaccion_inventario as
 select r.numeroRegistro, r.nombre, r.codigoSku, r.stock, r.stockMinimo,
-       r.costo, r.puntoReorden, c.nombre as clasificacion
-from REFACCION r
-left join CLASIFICACION c on c.codigo = r.clasificacion;
+       r.costo, r.puntoReorden,
+       (select c.nombre from CLASIFICACION c where c.codigo = r.clasificacion) as clasificacion
+from REFACCION r;
 
 -- =====================================================================
 -- FIN DE VISTAS KPI
 -- =====================================================================
-
-

@@ -206,15 +206,6 @@
                   {% endfor %}
                 </select>
               </div>
-              <div class="mov-pieza__campo">
-                <label for="pieza_edo_pieza">Estado físico/operativo *</label>
-                <select id="pieza_edo_pieza" name="pieza_edo_pieza">
-                  <option value="">Seleccione...</option>
-                  {% for ep in estados_pieza %}
-                    <option value="{{ ep.codigo }}" {% if datos.pieza_edo_pieza.0 == ep.codigo %}selected{% endif %}>{{ ep.nombre }}</option>
-                  {% endfor %}
-                </select>
-              </div>
               <div class="mov-pieza__campo" style="grid-column:1 / -1;">
                 <label for="pieza_maquina">Máquina</label>
                 <select id="pieza_maquina" name="pieza_maquina">

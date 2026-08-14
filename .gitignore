@@ -22,6 +22,8 @@ client/cache/
 client/usuarios-cache/
 *.djcache
 
+*.claude/
+
 # Migraciones (opcional, normalmente SÍ se versionan)
 # Solo descomenta si decides no versionarlas
 # */migrations/*.py

@@ -122,7 +122,7 @@ DELIMITER ;
 --     values( "MAQ001","2027-01-31" , 0, 0);
 
 -- =====================================================================
--- Procedimiento 2: sp_reporte_disponibilidad_planta
+-- Procedimiento 2: sp_reporte_disponibilidad_linea
 -- =====================================================================
 -- Objetivo: generar el reporte de disponibilidad/MTBF/MTTR/fallas por
 --           LINEA para un rango de fechas arbitrario, elegido por el
@@ -146,11 +146,14 @@ DELIMITER ;
 
 -- DOCUMENTADO
 
+DROP PROCEDURE IF EXISTS sp_reporte_disponibilidad_linea;
+-- Migracion: elimina el procedimiento con el nombre anterior (se renombro
+-- de sp_reporte_disponibilidad_planta a sp_reporte_disponibilidad_linea).
 DROP PROCEDURE IF EXISTS sp_reporte_disponibilidad_planta;
 
 DELIMITER $$
 
-CREATE PROCEDURE sp_reporte_disponibilidad_planta(
+CREATE PROCEDURE sp_reporte_disponibilidad_linea(
     IN fecha_inicio DATE,
     IN fecha_fin DATE
 )
@@ -172,14 +175,11 @@ BEGIN
         l.CODIGO AS linea,
         l.NOMBRE AS nombrelinea,
 
-        -- Los promedios van como subconsultas escalares correlacionadas por
-        -- linea (con INNER JOIN indicador/maquina dentro): asi aparece UNA
-        -- fila por linea y una linea sin indicadores en el rango devuelve
-        -- NULL, igual que con el LEFT JOIN + AVG original.
+
         (
             SELECT ROUND(AVG(i.porcentajeDispo), 1)
-            FROM indicador AS i
-            INNER JOIN maquina AS m ON m.codigo = i.maquina
+            FROM INDICADOR AS i
+            INNER JOIN MAQUINA AS m ON m.codigo = i.maquina
             WHERE m.linea = l.CODIGO
               AND i.fechaInicio <= fecha_fin
               AND (i.fechaFin IS NULL OR i.fechaFin >= fecha_inicio)
@@ -187,8 +187,8 @@ BEGIN
 
         (
             SELECT ROUND(AVG(i.mtbf), 1)
-            FROM indicador AS i
-            INNER JOIN maquina AS m ON m.codigo = i.maquina
+            FROM INDICADOR AS i
+            INNER JOIN MAQUINA AS m ON m.codigo = i.maquina
             WHERE m.linea = l.CODIGO
               AND i.fechaInicio <= fecha_fin
               AND (i.fechaFin IS NULL OR i.fechaFin >= fecha_inicio)
@@ -196,18 +196,14 @@ BEGIN
 
         (
             SELECT ROUND(AVG(i.mttr), 1)
-            FROM indicador AS i
-            INNER JOIN maquina AS m ON m.codigo = i.maquina
+            FROM INDICADOR AS i
+            INNER JOIN MAQUINA AS m ON m.codigo = i.maquina
             WHERE m.linea = l.CODIGO
               AND i.fechaInicio <= fecha_fin
               AND (i.fechaFin IS NULL OR i.fechaFin >= fecha_inicio)
         ) AS mttr_promedio,
 
-        -- ---------------------------------------------------------------------
-        -- SUBCONSULTA 1: Conteo de Fallas
-        -- Cuenta cuántas fallas ocurrieron en las máquinas de ESTA línea (l.CODIGO)
-        -- dentro del rango de fechas solicitado.
-        -- ---------------------------------------------------------------------
+
         (
             SELECT COUNT(*)
             FROM REPORTE_FALLA AS rf
@@ -217,11 +213,7 @@ BEGIN
               AND rf.fechaCreacion BETWEEN fecha_inicio AND fecha_fin
         ) AS TotalFallas,
 
-        -- ---------------------------------------------------------------------
-        -- SUBCONSULTA 2: Conteo de Órdenes de Mantenimiento Cerradas
-        -- Cuenta cuántas órdenes se completaron/cerraron en esta línea
-        -- dentro del rango de fechas solicitado.
-        -- ---------------------------------------------------------------------
+
         (
             SELECT COUNT(*)
             FROM ORDEN_MANTENIMIENTO AS om
@@ -243,7 +235,7 @@ END $$
 DELIMITER ;
 
 -- Llamada (igual que el ejemplo):
--- call sp_reporte_disponibilidad_planta('2026-01-01', '2026-06-30');
+-- call sp_reporte_disponibilidad_linea('2026-01-01', '2026-06-30');
 
 -- call sp  -- Línea huérfana eliminada
 -- =====================================================================
@@ -311,7 +303,7 @@ BEGIN
     --     "sin stock DISPO").
     SELECT COUNT(*) INTO existe_refaccion
     FROM REFACCION
-    WHERE numeroRegistro = (SELECT refaccion);
+    WHERE numeroRegistro =  refaccion;
 
     IF existe_refaccion = 0 THEN
         SIGNAL SQLSTATE '45000'
@@ -330,7 +322,7 @@ BEGIN
     INNER JOIN ESTADO_REFACCION AS e
            ON e.refaccion = r.numeroRegistro
           AND e.estado_refaccion = 'DISPO'
-    WHERE r.numeroRegistro = (SELECT refaccion);
+    WHERE r.numeroRegistro =  refaccion;
 
     -- 2) validar que haya al menos una unidad disponible (DISPO)
     IF disponible < 1 THEN
@@ -386,64 +378,6 @@ BEGIN
     --    hay SELECT final, cur.description viene en None y falla).
     SELECT (disponible - 1) AS stock_resultante,
            LAST_INSERT_ID() AS numero_movimiento;
-END $$
-
-DELIMITER ;
-
--- Llamada (igual que el ejemplo):
--- call sp_registrar_salida_refaccion(1, 'OMP260807080459', 'Descripcion de prueba', '2026-08-08', '10:30:00', 'SN123456');
--- select * from REFACCION;
--- Líneas de prueba eliminadas:
--- select * from REFACCION
--- call  sregistrar_salida_refaccion(1, "OMP260807080459", "Descripcoion de prueba")
--- HORAS 
-
--- SELECT * FROM  ORDEN_MANTENIMIENTO  -- Consulta de prueba temporal (eliminada)
-
--- =====================================================================
--- Procedimiento 4: srendimiento_trabajador
--- =====================================================================
--- Objetivo: devolver el rendimiento de un trabajador (modulo de
---           trabajadores) mediante parametros de SALIDA (OUT).
---           Mismo patron que sventasXVend: un SELECT con CONCAT + COUNT
---           ... INTO <variables OUT> ... GROUP BY.
--- Parámetros:
---   nomina            -> TRABAJADOR.numeroNomina (IN)
---   nombre            -> OUT: nombre completo del trabajador
---   ordenes_asignadas -> OUT: total de ordenes asignadas al trabajador
---   ordenes_cerradas  -> OUT: total de ordenes cerradas (estado CERRA)
--- Lógica:
---   1) Cruza TRABAJADOR con ORDEN_MANTENIMIENTO por numeroNomina.
---   2) Concatena nombre + apellidoPat + apellidoMat (con IFNULL por si
---      el segundo apellido no existe).
---   3) Cuenta el total de ordenes asignadas (COUNT) y las cerradas (una
---      subconsulta con COUNT(*)... estado_orden = 'CERRA').
---   4) Agrupa por trabajador y devuelve los tres valores por OUT.
--- =====================================================================
-
-DROP PROCEDURE IF EXISTS sp_rendimiento_trabajador;
-
-DELIMITER $$
-
-CREATE PROCEDURE sp_rendimiento_trabajador(
-    IN  nomina            VARCHAR(15),
-    OUT nombre            VARCHAR(250),
-    OUT ordenes_asignadas INT,
-    OUT ordenes_cerradas  INT
-)
-BEGIN
-    SELECT
-        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', ifnull(t.apellidoMat, '')),
-        COUNT(o.folio),
-        (SELECT COUNT(*)
-         FROM ORDEN_MANTENIMIENTO o2
-         WHERE o2.trabajador = t.numeroNomina
-           AND o2.estado_orden = 'CERRA')
-    INTO nombre, ordenes_asignadas, ordenes_cerradas
-    FROM TRABAJADOR t
-    INNER JOIN ORDEN_MANTENIMIENTO o ON o.trabajador = t.numeroNomina
-    WHERE t.numeroNomina = nomina
-    GROUP BY t.numeroNomina;
 END $$
 
 DELIMITER ;
@@ -550,130 +484,6 @@ END $$
 DELIMITER ;
 
 -- Llamada:
--- call sp_resumen_maquina('MAQ001', @nombre, @estado, @fallas, @ordenes, @horas,
---                         @mtbf, @mttr, @dispo, @inactividad, @reparaciones);
--- select @nombre, @estado, @fallas, @ordenes, @horas,
---        @mtbf, @mttr, @dispo, @inactividad, @reparaciones;
-
-/* =====================================================================
-   FRAGMENTOS PREVIOS DE sp_resumen_maquina (solo referencia, no se usan)
-   ---------------------------------------------------------------------
-   Version A - ficha del drawer de Monitoreo (1 IN + 9 OUT), leia la vista:
-   ---------------------------------------------------------------------
-   CREATE PROCEDURE sp_resumen_maquina(
-       IN  maquina             VARCHAR(10),
-       OUT nombre              VARCHAR(100),
-       OUT estado              VARCHAR(50),
-       OUT mtbf                FLOAT,
-       OUT mttr                FLOAT,
-       OUT disponibilidad      INT,
-       OUT total_horas         INT,
-       OUT numero_fallas       INT,
-       OUT tiempo_inactividad  INT,
-       OUT numero_reparaciones INT
-   )
-   BEGIN
-       SELECT Maquina, Estado, MTTR, MTBF, Disponibilidad,
-              TotalHorasOperacion, TotalFallas, TiempoTotalParo, NumReparaciones
-       INTO nombre, estado, mttr, mtbf, disponibilidad,
-            total_horas, numero_fallas, tiempo_inactividad, numero_reparaciones
-       FROM v_kpi_indicadores_actuales
-       WHERE Codigo = maquina;
-   END $$
-   ---------------------------------------------------------------------
-   Version B - resumen de Maquinaria (1 IN + 8 OUT), consultas inline:
-   ---------------------------------------------------------------------
-   CREATE PROCEDURE sp_resumen_maquina(
-       IN  p_maquina           VARCHAR(10),
-       OUT p_nombre            VARCHAR(100),
-       OUT p_estado            VARCHAR(5),
-       OUT p_total_fallas      INT,
-       OUT p_total_ordenes     INT,
-       OUT p_horas_operacion   INT,
-       OUT p_mtbf              FLOAT,
-       OUT p_mttr              FLOAT,
-       OUT p_disponibilidad    INT
-   )
-   BEGIN
-       SELECT m.nombre, m.estado_maquina,
-              COUNT(DISTINCT rf.numeroRegistro),
-              COUNT(DISTINCT om.folio),
-              ( SELECT IFNULL(SUM(ro.horasOperacion), 0)
-                FROM REGISTRO_OPS ro WHERE ro.maquina = m.codigo )
-       INTO p_nombre, p_estado, p_total_fallas, p_total_ordenes, p_horas_operacion
-       FROM MAQUINA m
-       LEFT JOIN REPORTE_FALLA rf ON rf.maquina = m.codigo
-       LEFT JOIN ORDEN_MANTENIMIENTO om ON om.maquina = m.codigo
-       WHERE m.codigo = p_maquina
-       GROUP BY m.codigo, m.nombre, m.estado_maquina;
-
-       -- Indicadores vigentes: prioriza el periodo abierto (fechaFin IS NULL);
-       -- si no hay uno abierto, cae al ultimo periodo cerrado como respaldo.
-       SELECT i.mtbf, i.mttr, i.porcentajeDispo
-       INTO p_mtbf, p_mttr, p_disponibilidad
-       FROM INDICADOR i
-       WHERE i.maquina = p_maquina
-       ORDER BY (i.fechaFin IS NULL) DESC, i.numeroRegistro DESC
-       LIMIT 1;
-   END $$
-   ===================================================================== */
-
--- =====================================================================
--- Procedimiento 7: sp_historial_maquina
--- =====================================================================
--- Objetivo: devolver, en un solo result set, todas las ordenes de
---           mantenimiento y todos los reportes de falla de una maquina,
---           con el trabajador que atendio cada uno. Va como result set
---           (no OUT) porque es una lista de N filas, no un escalar.
--- Parámetros:
---   maquina -> MAQUINA.codigo
--- Lógica:
---   1) UNION ALL entre ORDEN_MANTENIMIENTO y REPORTE_FALLA, marcando el
---      tipo de cada fila ('ORDEN' / 'FALLA').
---   2) LEFT JOIN con TRABAJADOR para traer el nombre completo de quien
---      la atendio (LEFT porque trabajador puede ser NULL en ordenes).
---   3) Ordena todo por fecha descendente (mas reciente primero).
--- =====================================================================
-DROP PROCEDURE IF EXISTS sp_historial_maquina;
-
-DELIMITER $$
-
-CREATE PROCEDURE sp_historial_maquina(
-    IN maquina VARCHAR(10)
-)
-BEGIN
-    SELECT
-        'ORDEN' AS tipo,
-        om.folio AS identificador,
-        om.fechaCreacion AS fecha,
-        om.descripcion AS detalle,
-        om.estado_orden AS estado,
-        om.trabajador AS trabajador_nomina,
-        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, '')) AS trabajador_nombre
-    FROM ORDEN_MANTENIMIENTO om
-    LEFT JOIN TRABAJADOR t ON t.numeroNomina = om.trabajador
-    WHERE om.maquina = maquina
-
-    UNION ALL
-
-    SELECT
-        'FALLA' AS tipo,
-        CAST(rf.numeroRegistro AS CHAR) AS identificador,
-        rf.fechaCreacion AS fecha,
-        rf.asunto AS detalle,
-        rf.estado_reporte AS estado,
-        rf.trabajador AS trabajador_nomina,
-        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, '')) AS trabajador_nombre
-    FROM REPORTE_FALLA rf
-    LEFT JOIN TRABAJADOR t ON t.numeroNomina = rf.trabajador
-    WHERE rf.maquina = maquina
-
-    ORDER BY fecha DESC;
-END $$
-
-DELIMITER ;
-
--- Llamada:
 -- call sp_historial_maquina('MAQ001');
 
 -- =====================================================================
@@ -775,3 +585,190 @@ DELIMITER ;
 -- Llamada:
 -- call sp_perfil_trabajador('NOM-001', @asignadas, @cerradas, @pendientes, @fallas, @maquinas);
 -- select @asignadas, @cerradas, @pendientes, @fallas, @maquinas;
+
+
+-- Llamada (igual que el ejemplo):
+-- call sp_registrar_salida_refaccion(1, 'OMP260807080459', 'Descripcion de prueba', '2026-08-08', '10:30:00', 'SN123456');
+-- select * from REFACCION;
+-- Líneas de prueba eliminadas:
+-- select * from REFACCION
+-- call  sregistrar_salida_refaccion(1, "OMP260807080459", "Descripcoion de prueba")
+-- HORAS 
+
+-- SELECT * FROM  ORDEN_MANTENIMIENTO  -- Consulta de prueba temporal (eliminada)
+
+-- =====================================================================
+-- Procedimiento 4: srendimiento_trabajador
+-- =====================================================================
+-- Objetivo: devolver el rendimiento de un trabajador (modulo de
+--           trabajadores) mediante parametros de SALIDA (OUT).
+--           Mismo patron que sventasXVend: un SELECT con CONCAT + COUNT
+--           ... INTO <variables OUT> ... GROUP BY.
+-- Parámetros:
+--   nomina            -> TRABAJADOR.numeroNomina (IN)
+--   nombre            -> OUT: nombre completo del trabajador
+--   ordenes_asignadas -> OUT: total de ordenes asignadas al trabajador
+--   ordenes_cerradas  -> OUT: total de ordenes cerradas (estado CERRA)
+-- Lógica:
+--   1) Cruza TRABAJADOR con ORDEN_MANTENIMIENTO por numeroNomina.
+--   2) Concatena nombre + apellidoPat + apellidoMat (con IFNULL por si
+--      el segundo apellido no existe).
+--   3) Cuenta el total de ordenes asignadas (COUNT) y las cerradas (una
+--      subconsulta con COUNT(*)... estado_orden = 'CERRA').
+--   4) Agrupa por trabajador y devuelve los tres valores por OUT.
+-- =====================================================================
+
+DROP PROCEDURE IF EXISTS sp_rendimiento_trabajador;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_rendimiento_trabajador(
+    IN  nomina            VARCHAR(15),
+    OUT nombre            VARCHAR(250),
+    OUT ordenes_asignadas INT,
+    OUT ordenes_cerradas  INT
+)
+BEGIN
+    SELECT
+        CONCAT(t.nombre, ' ', t.apellidoPat, ' ', ifnull(t.apellidoMat, '')),
+        COUNT(o.folio),
+        (SELECT COUNT(*)
+         FROM ORDEN_MANTENIMIENTO o2
+         WHERE o2.trabajador = t.numeroNomina
+           AND o2.estado_orden = 'CERRA')
+    INTO nombre, ordenes_asignadas, ordenes_cerradas
+    FROM TRABAJADOR as t
+    INNER JOIN ORDEN_MANTENIMIENTO o ON o.trabajador = t.numeroNomina
+    WHERE t.numeroNomina = nomina
+    GROUP BY t.numeroNomina;
+END $$
+
+DELIMITER ;
+
+
+
+-- Llamada:
+-- call sp_resumen_maquina('MAQ001', @nombre, @estado, @fallas, @ordenes, @horas,
+--                         @mtbf, @mttr, @dispo, @inactividad, @reparaciones);
+-- select @nombre, @estado, @fallas, @ordenes, @horas,
+--        @mtbf, @mttr, @dispo, @inactividad, @reparaciones;
+
+/* =====================================================================
+   FRAGMENTOS PREVIOS DE sp_resumen_maquina (solo referencia, no se usan)
+   ---------------------------------------------------------------------
+   Version A - ficha del drawer de Monitoreo (1 IN + 9 OUT), leia la vista:
+   ---------------------------------------------------------------------
+   CREATE PROCEDURE sp_resumen_maquina(
+       IN  maquina             VARCHAR(10),
+       OUT nombre              VARCHAR(100),
+       OUT estado              VARCHAR(50),
+       OUT mtbf                FLOAT,
+       OUT mttr                FLOAT,
+       OUT disponibilidad      INT,
+       OUT total_horas         INT,
+       OUT numero_fallas       INT,
+       OUT tiempo_inactividad  INT,
+       OUT numero_reparaciones INT
+   )
+   BEGIN
+       SELECT Maquina, Estado, MTTR, MTBF, Disponibilidad,
+              TotalHorasOperacion, TotalFallas, TiempoTotalParo, NumReparaciones
+       INTO nombre, estado, mttr, mtbf, disponibilidad,
+            total_horas, numero_fallas, tiempo_inactividad, numero_reparaciones
+       FROM v_kpi_indicadores_actuales
+       WHERE Codigo = maquina;
+   END $$
+   ---------------------------------------------------------------------
+   Version B - resumen de Maquinaria (1 IN + 8 OUT), consultas inline:
+   ---------------------------------------------------------------------
+   CREATE PROCEDURE sp_resumen_maquina(
+       IN  p_maquina           VARCHAR(10),
+       OUT p_nombre            VARCHAR(100),
+       OUT p_estado            VARCHAR(5),
+       OUT p_total_fallas      INT,
+       OUT p_total_ordenes     INT,
+       OUT p_horas_operacion   INT,
+       OUT p_mtbf              FLOAT,
+       OUT p_mttr              FLOAT,
+       OUT p_disponibilidad    INT
+   )
+   BEGIN
+       SELECT m.nombre, m.estado_maquina,
+              COUNT(DISTINCT rf.numeroRegistro),
+              COUNT(DISTINCT om.folio),
+              ( SELECT IFNULL(SUM(ro.horasOperacion), 0)
+                FROM REGISTRO_OPS ro WHERE ro.maquina = m.codigo )
+       INTO p_nombre, p_estado, p_total_fallas, p_total_ordenes, p_horas_operacion
+       FROM MAQUINA m
+       LEFT JOIN REPORTE_FALLA rf ON rf.maquina = m.codigo
+       LEFT JOIN ORDEN_MANTENIMIENTO om ON om.maquina = m.codigo
+       WHERE m.codigo = p_maquina
+       GROUP BY m.codigo, m.nombre, m.estado_maquina;
+
+       -- Indicadores vigentes: prioriza el periodo abierto (fechaFin IS NULL);
+       -- si no hay uno abierto, cae al ultimo periodo cerrado como respaldo.
+       SELECT i.mtbf, i.mttr, i.porcentajeDispo
+       INTO p_mtbf, p_mttr, p_disponibilidad
+       FROM INDICADOR i
+       WHERE i.maquina = p_maquina
+       ORDER BY (i.fechaFin IS NULL) DESC, i.numeroRegistro DESC
+       LIMIT 1;
+   END $$
+   ===================================================================== */
+
+-- =====================================================================
+-- Procedimiento 7: sp_historial_maquina
+-- =====================================================================
+-- Objetivo: devolver, en un solo result set, todas las ordenes de
+--           mantenimiento y todos los reportes de falla de una maquina,
+--           con el trabajador que atendio cada uno. Va como result set
+--           (no OUT) porque es una lista de N filas, no un escalar.
+-- Parámetros:
+--   maquina -> MAQUINA.codigo
+-- Lógica:
+--   1) UNION ALL entre ORDEN_MANTENIMIENTO y REPORTE_FALLA, marcando el
+--      tipo de cada fila ('ORDEN' / 'FALLA').
+--   2) Nombre del trabajador via subconsulta escalar (trabajador puede ser
+--      NULL en ordenes: la subconsulta devuelve NULL, igual que el LEFT
+--      JOIN original).
+--   3) Ordena todo por fecha descendente (mas reciente primero).
+-- =====================================================================
+DROP PROCEDURE IF EXISTS sp_historial_maquina;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_historial_maquina(
+    IN maquina VARCHAR(10)
+)
+BEGIN
+    SELECT
+        'ORDEN' AS tipo,
+        om.folio AS identificador,
+        om.fechaCreacion AS fecha,
+        om.descripcion AS detalle,
+        om.estado_orden AS estado,
+        om.trabajador AS trabajador_nomina,
+        (SELECT CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, ''))
+         FROM TRABAJADOR as t WHERE t.numeroNomina = om.trabajador) AS trabajador_nombre
+    FROM ORDEN_MANTENIMIENTO as om
+    WHERE om.maquina = maquina
+
+    UNION ALL
+
+    SELECT
+        'FALLA' AS tipo,
+        CAST(rf.numeroRegistro AS CHAR) AS identificador,
+        rf.fechaCreacion AS fecha,
+        rf.asunto AS detalle,
+        rf.estado_reporte AS estado,
+        rf.trabajador AS trabajador_nomina,
+        (SELECT CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, ''))
+         FROM TRABAJADOR as t WHERE t.numeroNomina = rf.trabajador) AS trabajador_nombre
+    FROM REPORTE_FALLA as rf
+    WHERE rf.maquina = maquina
+
+    ORDER BY fecha DESC;
+END $$
+
+DELIMITER ;
+

@@ -193,7 +193,7 @@ JOIN TIPO_HERRAMIENTA th ON h.tipo_herramienta = th.numeroRegistro;
 -- SUBCONSULTAS ADICIONALES (CA-14 A CA-20)
 -- -----------------------------------------------------------------------------
 -- Las consultas CA-11 y CA-12 (subconsultas escalares en SELECT) viven dentro
--- de sp_reporte_disponibilidad_planta (sp.sql), y la CA-13 (subconsulta
+-- de sp_reporte_disponibilidad_linea (sp.sql), y la CA-13 (subconsulta
 -- correlacionada con MAX) dentro de v_kpi_indicadores_actuales y
 -- v_kpi_monitoreo_predictivo (vistas_kpi.sql). Aquí se anexan las variantes
 -- que completan los tipos de subconsulta requeridos para la evidencia.
@@ -232,7 +232,7 @@ WHERE m.codigo NOT IN (SELECT DISTINCT o.maquina FROM ORDEN_MANTENIMIENTO o);
 -- Ubicación: documentacion-consultas-vistas.md, consulta avanzada CA-16
 -- Qué resuelve: Detecta las líneas que tienen reportes de falla en estado
 --               Abierto, En Atención o En Espera.
--- Apoya a: sp_reporte_disponibilidad_planta (sp.sql) y v_kpi_reportes_atencion
+-- Apoya a: sp_reporte_disponibilidad_linea (sp.sql) y v_kpi_reportes_atencion
 -- JOINs / Agregación: LINEA + EXISTS (REPORTE_FALLA JOIN MAQUINA)
 -- -----------------------------------------------------------------------------
 SELECT 
@@ -252,7 +252,7 @@ WHERE EXISTS (
 -- Ubicación: documentacion-consultas-vistas.md, consulta avanzada CA-17
 -- Qué resuelve: Con una tabla derivada que agrupa el conteo de fallas por
 --               máquina, promedia ese conteo a nivel de línea.
--- Apoya a: sp_reporte_disponibilidad_planta (sp.sql)
+-- Apoya a: sp_reporte_disponibilidad_linea (sp.sql)
 -- JOINs / Agregación: LINEA LEFT JOIN MAQUINA LEFT JOIN (SELECT ... GROUP BY)
 -- -----------------------------------------------------------------------------
 SELECT 

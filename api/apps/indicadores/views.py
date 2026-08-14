@@ -72,7 +72,7 @@ TITULOS_KPI = {
 }
 
 # Slug especial: NO es una vista de VISTAS_KPI (no sale de un SELECT * FROM
-# v_..., sino de sp_reporte_disponibilidad_planta con el rango que el
+# v_..., sino de sp_reporte_disponibilidad_linea con el rango que el
 # usuario ya generó en la sección "Reporte de disponibilidad por línea"
 # del panel de KPI's).
 SLUG_DISPONIBILIDAD_RANGO = "disponibilidad-por-rango"
@@ -95,7 +95,7 @@ COLUMNAS_OVERRIDE = {
     "Umbral": "Umbral de vibración",
     "Vibracion": "Vibración",
     "Excede": "¿Excede umbral?",
-    # Columnas de sp_reporte_disponibilidad_planta (snake_case, no las
+    # Columnas de sp_reporte_disponibilidad_linea (snake_case, no las
     # separa el humanizador automatico porque ese solo parte CamelCase).
     "linea": "Línea",
     "nombrelinea": "Línea",
@@ -548,7 +548,7 @@ class ReporteKPIExportAPIView(APIView):
             if rango_inicio and rango_fin:
                 try:
                     with connection.cursor() as cur:
-                        cur.callproc("sp_reporte_disponibilidad_planta", [rango_inicio, rango_fin])
+                        cur.callproc("sp_reporte_disponibilidad_linea", [rango_inicio, rango_fin])
                         data_rango = _filas_a_dicts(cur)
                 except Exception:
                     data_rango = []
@@ -598,7 +598,7 @@ class CerrarPeriodoIndicadorAPIView(APIView):
 
 class ReporteDisponibilidadPlantaAPIView(APIView):
     """Reporte de disponibilidad/MTBF/MTTR + fallas/ordenes por linea para
-    un rango de fechas arbitrario, via sp_reporte_disponibilidad_planta.
+    un rango de fechas arbitrario, via sp_reporte_disponibilidad_linea.
     GET /indicadores/v1/reporte-disponibilidad/?fecha_inicio=...&fecha_fin=..."""
 
     def get(self, request):
@@ -611,7 +611,7 @@ class ReporteDisponibilidadPlantaAPIView(APIView):
             )
         try:
             with connection.cursor() as cur:
-                cur.callproc("sp_reporte_disponibilidad_planta", [fecha_inicio, fecha_fin])
+                cur.callproc("sp_reporte_disponibilidad_linea", [fecha_inicio, fecha_fin])
                 data = _filas_a_dicts(cur)
         except OperationalError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

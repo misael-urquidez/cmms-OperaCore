@@ -716,7 +716,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- call sp_registrar_salida_refaccion(2, 'OM-2026-034', 'Boquilla usada en preventivo', '2026-08-12', '10:00:00', 'PS-YPK2-002');
 -- select * from REFACCION where numeroRegistro = 2;
 --
--- call sp_reporte_disponibilidad_planta('2026-01-01', '2026-08-10');
+-- call sp_reporte_disponibilidad_linea('2026-01-01', '2026-08-10');
 --
 -- call sp_cerrar_periodo_indicador('MAQ001', '2026-08-10');
 -- select * from INDICADOR where maquina = 'MAQ001' order by numeroRegistro desc;

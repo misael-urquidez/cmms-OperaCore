@@ -183,7 +183,7 @@ class CerrarPeriodoProxy(View):
 class ReporteDisponibilidadProxy(View):
     """Reenvia GET /indicadores/v1/reporte-disponibilidad/ al api/, para
     el reporte de disponibilidad/MTBF/MTTR por linea en un rango de
-    fechas elegido a mano (sp_reporte_disponibilidad_planta)."""
+    fechas elegido a mano (sp_reporte_disponibilidad_linea)."""
 
     def get(self, request):
         fecha_inicio = request.GET.get("fecha_inicio")
