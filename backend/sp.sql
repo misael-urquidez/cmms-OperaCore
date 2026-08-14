@@ -42,6 +42,21 @@ USE operacore;
 
 -- DOCUMENTADO
 
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_cerrar_periodo_indicador)
+-- Backend (llamada al SP):
+--   Archivo: api/apps/indicadores/views.py
+--   Clase:   CerrarPeriodoIndicadorAPIView (línea 570)
+--   Llamada: cur.callproc("sp_cerrar_periodo_indicador", [maquina, fecha_fin])
+--            -> línea 587
+--   Endpoint (urls.py): api/apps/indicadores/urls.py
+--            POST /indicadores/v2/cerrar-periodo/  (name="cerrar_periodo")
+-- Frontend (formulario / botón):
+--   Archivo: client/client/templates/indicadores/kpis.html
+--   Modal:   "Cerrar periodo de indicador" (línea 69, botón línea 82)
+--   JS:      client/client/static/indicadores/js/kpis-acciones.js (línea 28)
+-- =====================================================================
+
 DROP PROCEDURE IF EXISTS sp_cerrar_periodo_indicador;
 
 DELIMITER $$
@@ -145,6 +160,26 @@ DELIMITER ;
 -- =====================================================================
 
 -- DOCUMENTADO
+
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_reporte_disponibilidad_planta)
+-- Backend (llamadas al SP, hay DOS puntos de uso):
+--   Archivo: api/apps/indicadores/views.py
+--   1) Clase: ReporteDisponibilidadPlantaAPIView (línea 601)
+--      Llamada: cur.callproc("sp_reporte_disponibilidad_planta",
+--               [fecha_inicio, fecha_fin]) -> línea 614
+--      Endpoint (urls.py): GET /indicadores/v1/reporte-disponibilidad/
+--               ?fecha_inicio=...&fecha_fin=...  (name="reporte_disponibilidad")
+--   2) Reutilizado dentro de ReporteKPIExportAPIView (exportación
+--      CSV/XLSX/PDF), sección "reporte por rango" -> línea 551
+--      Endpoint (urls.py): GET /indicadores/v1/reporte/export/<formato>/
+-- Frontend (formulario / tabla):
+--   Archivo: client/client/templates/indicadores/kpis.html
+--   Panel:   "Reporte de disponibilidad por línea" (línea 43, inputs
+--            DESDE/HASTA + botón "Generar")
+--   JS:      client/client/static/indicadores/js/kpis-acciones.js
+--            (línea 133, fetch a v1/reporte-disponibilidad/ en línea 180)
+-- =====================================================================
 
 DROP PROCEDURE IF EXISTS sp_reporte_disponibilidad_planta;
 
@@ -281,6 +316,23 @@ DELIMITER ;
 -- =====================================================================
 
 -- DOCUMENTADO
+
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_registrar_salida_refaccion)
+-- Backend (llamadas al SP, hay DOS puntos de uso):
+--   1) Archivo: api/apps/inventario/views.py
+--      Clase:   RegistrarSalidaRefaccionAPIView (línea 477)
+--      Llamada: cur.callproc("sp_registrar_salida_refaccion", [...]) -> línea 503
+--      Endpoint (urls.py): POST /inventario/v2/movimientos/salida-refaccion/
+--   2) Archivo: api/apps/mantenimiento/views.py
+--      Método:  _call_sp_salida_refaccion (línea 192)
+--      Llamada: cur.callproc("sp_registrar_salida_refaccion", [...]) -> línea 199
+--      (se usa al instalar una refacción/pieza directo desde una orden
+--       de mantenimiento)
+-- Frontend (formulario):
+--   Módulo Inventario -> "Dar salida" de una refacción, o
+--   Módulo Mantenimiento -> detalle de orden -> "Instalar refacción"
+-- =====================================================================
 
 DROP PROCEDURE IF EXISTS sp_registrar_salida_refaccion;
 
@@ -421,6 +473,30 @@ DELIMITER ;
 --   4) Agrupa por trabajador y devuelve los tres valores por OUT.
 -- =====================================================================
 
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_rendimiento_trabajador)
+-- Backend (llamadas al SP, hay TRES puntos de uso):
+--   1) Archivo: api/apps/usuarios/views.py
+--      Clase:   RendimientoTrabajadorAPIView (línea 166)
+--      Llamada: cur.execute("CALL sp_rendimiento_trabajador(%s, @nombre, "
+--               "@asignadas, @cerradas)", ...) -> línea 175
+--      Endpoint (urls.py): GET /usuarios/v1/trabajadores/<numeroNomina>/rendimiento/
+--   2) Archivo: api/apps/indicadores/views.py
+--      Clase:   RendimientoTrabajadoresAPIView (línea 677) — recorre TODOS
+--               los trabajadores llamando al SP uno por uno (loop)
+--      Llamada: cur.callproc("sp_rendimiento_trabajador", [...]) -> línea 695
+--      Endpoint (urls.py): GET /indicadores/v1/rendimiento-trabajadores/
+--   3) Archivo: api/apps/indicadores/views.py
+--      Clase:   RendimientoTrabajadorDetailAPIView (línea 725)
+--      Llamada: cur.callproc("sp_rendimiento_trabajador", [...]) -> línea 734
+--      Endpoint (urls.py): GET /indicadores/v1/rendimiento-trabajador/<nomina>/
+-- Frontend (tabla / pestaña):
+--   Archivo: client/client/templates/indicadores/rendimiento.html
+--   Pestaña: "Rendimiento" del módulo Indicadores (sidebar,
+--            client/client/templates/base_admin.html línea 78)
+--   JS:      client/client/static/indicadores/js/rendimiento.js
+-- =====================================================================
+
 DROP PROCEDURE IF EXISTS sp_rendimiento_trabajador;
 
 DELIMITER $$
@@ -502,6 +578,23 @@ DELIMITER ;
 -- =====================================================================
 
 -- DOCUMENTADO
+
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_resumen_maquina)
+-- Backend (llamadas al SP, hay DOS puntos de uso):
+--   1) Archivo: api/apps/maquinaria/views.py
+--      Clase:   ResumenMaquinaAPIView (línea 250)
+--      Llamada: cur.callproc("sp_resumen_maquina", [...]) -> línea 261
+--      Endpoint (urls.py): GET /maquinaria/v1/maquina/<codigo>/resumen/
+--   2) Archivo: api/apps/monitoreo/views.py
+--      Clase:   IndicadoresMaquinaAPIView (línea 59)
+--      Llamada: cur.callproc("sp_resumen_maquina", [...]) -> línea 73
+--      Endpoint (urls.py): GET /api/monitoreo/maquinas/<codigo>/indicadores/
+-- Frontend (pantalla mostrada, capturas ya revisadas):
+--   Módulo Maquinaria -> detalle de máquina -> "Resumen de Mantenimiento"
+--   + "Indicadores Actuales" (MTBF, MTTR, Disponibilidad, etc.)
+--   Módulo Monitoreo -> drawer/panel lateral de una máquina (indicadores)
+-- =====================================================================
 
 DROP PROCEDURE IF EXISTS sp_resumen_maquina_maquinaria;
 
@@ -634,6 +727,19 @@ DELIMITER ;
 --      la atendio (LEFT porque trabajador puede ser NULL en ordenes).
 --   3) Ordena todo por fecha descendente (mas reciente primero).
 -- =====================================================================
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_historial_maquina)
+-- Backend:
+--   Archivo: api/apps/maquinaria/views.py
+--   Clase:   HistorialMaquinaAPIView (línea 300)
+--   Llamada: cur.callproc("sp_historial_maquina", [codigo]) -> línea 310
+--   Endpoint (urls.py): GET /maquinaria/v1/maquina/<codigo>/historial/
+-- Frontend (pantalla mostrada, captura ya revisada):
+--   Módulo Maquinaria -> detalle de máquina -> tabla "Historial de
+--   Órdenes y Fallas" (columnas Tipo, Folio, Fecha, Detalle, Estado,
+--   Trabajador)
+-- =====================================================================
+
 DROP PROCEDURE IF EXISTS sp_historial_maquina;
 
 DELIMITER $$
@@ -709,6 +815,24 @@ DELIMITER ;
 -- =====================================================================
 
 -- DOCUMENTADO
+
+-- =====================================================================
+-- 📍 IMPLEMENTACIÓN EN EL PROYECTO (sp_perfil_trabajador)
+-- Backend:
+--   Archivo: api/apps/usuarios/views.py
+--   Clase:   PerfilTrabajadorAPIView (línea 201)
+--   Llamada: cur.execute("CALL sp_perfil_trabajador(%s, @o_asignadas, "
+--            "@o_cerradas, @o_pendientes, @f_reportadas, @m_atendidas)",
+--            ...) -> línea 214
+--   Endpoint (urls.py): GET /usuarios/v1/trabajadores/<numeroNomina>/perfil/
+-- Frontend (pantalla mostrada, captura ya revisada):
+--   Archivo: client/client/templates/mantenimiento/trabajador_detalle.html
+--   Encabezado del perfil del trabajador -> los 5 contadores (Órdenes
+--   asignadas, cerradas, pendientes, Fallas reportadas, Máquinas
+--   atendidas). La lista de "Órdenes asignadas" que aparece debajo NO
+--   sale de este SP, sale de otro endpoint normal (ver comentario del
+--   objetivo del SP más abajo).
+-- =====================================================================
 
 DROP PROCEDURE IF EXISTS sp_perfil_trabajador;
 
