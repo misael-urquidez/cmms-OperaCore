@@ -385,10 +385,10 @@ class UpdateMaquinaSerializer(serializers.ModelSerializer):
 
             # estado_maquina NUNCA se pisa directo aquí: si viene en el payload
             # (p. ej. desde Gestión) se saca del validated_data y se enruta por
-            # cambiar_estado_maquina(), para que HISTORIAL_ESTADO_MAQUINA y
-            # REGISTRO_OPS (y con ello MTBF/MTTR/Disponibilidad) queden
-            # consistentes sin importar que el cambio venga de Gestión o de los
-            # endpoints dedicados (validar/deshabilitar/reactivar).
+            # cambiar_estado_maquina(), para que HISTORIAL_ESTADO_MAQUINA quede
+            # consistente sin importar que el cambio venga de Gestión o de los
+            # endpoints dedicados (validar/deshabilitar/reactivar). Las horas de
+            # operación (REGISTRO_OPS -> MTBF) son 100% manuales.
             nuevo_estado = validated_data.pop("estado_maquina", None)
             if nuevo_estado is not None:
                 nuevo_estado_id = nuevo_estado.pk if hasattr(nuevo_estado, "pk") else nuevo_estado

@@ -127,7 +127,7 @@ CREATE TRIGGER tg_actualizar_mttr_orden
 AFTER UPDATE ON ORDEN_MANTENIMIENTO
 FOR EACH ROW
 BEGIN
-    DECLARE sumaTiempoParo INT;
+    DECLARE sumaTiempoParo DECIMAL(8,2);
     DECLARE numReparaciones INT;
     DECLARE nuevoMTTR FLOAT;
     DECLARE existePeriodoAbierto INT;

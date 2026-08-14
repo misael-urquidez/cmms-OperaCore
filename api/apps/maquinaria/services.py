@@ -21,18 +21,14 @@ TRANSICIONES_VALIDAS = {
     "DESHA": {"OPERA"},
 }
 
-# Salir de OPERA hacia estos estados es lo único que "cierra" un periodo
-# de operación -> dispara el INSERT en REGISTRO_OPS -> trigger de MTBF.
-ESTADOS_QUE_DETIENEN_OPERACION = {"FALLO", "DESHA"}
-
-
 @transaction.atomic
 def cambiar_estado_maquina(maquina_codigo, nuevo_estado, referencia_tipo=None, referencia_id=None, forzar=False):
     """Punto único para cambiar Maquina.estado_maquina. Todo lo automático
     (fallas/mantenimiento/monitoreo) y lo manual (endpoints de views.py)
-    pasan siempre por aquí, para que HISTORIAL_ESTADO_MAQUINA y
-    REGISTRO_OPS (y en cascada MTBF/MTTR/Disponibilidad vía los triggers
-    de triggers2.sql) queden consistentes sin importar el origen del cambio.
+    pasan siempre por aquí, para que HISTORIAL_ESTADO_MAQUINA quede
+    consistente sin importar el origen del cambio. Las horas de operación
+    se registran SIEMPRE a mano en REGISTRO_OPS (módulo Monitoreo); este
+    cambio de estado ya no las auto-genera.
 
     Recibe el codigo (string) de la máquina, NUNCA un objeto Maquina:
     fallas.Maquina, monitoreo.Maquina (importado de fallas) y maquinaria.Maquina
@@ -55,9 +51,6 @@ def cambiar_estado_maquina(maquina_codigo, nuevo_estado, referencia_tipo=None, r
 
     ahora = timezone.localtime()
 
-    if estado_anterior == "OPERA" and nuevo_estado in ESTADOS_QUE_DETIENEN_OPERACION:
-        _registrar_horas_operacion(maquina, ahora)
-
     HistorialEstadoMaquina.objects.create(
         maquina=maquina,
         estado_anterior_id=estado_anterior,
@@ -73,33 +66,3 @@ def cambiar_estado_maquina(maquina_codigo, nuevo_estado, referencia_tipo=None, r
         maquina.save(update_fields=["requiere_revision_preventiva"])
 
     return maquina
-
-
-def _registrar_horas_operacion(maquina, ahora):
-    """INSERT en REGISTRO_OPS -> dispara tg_actualizar_mtbf_registroops
-    (ya existe en triggers2.sql, no se toca).
-
-    Nota: no se reutiliza monitoreo.services.registrar_horas_operacion()
-    aunque hace lo mismo, porque esa función espera un objeto Maquina
-    completo (de fallas.models) y aquí solo tenemos maquinaria.Maquina.
-    Se usa maquina_id=... directo para no cruzar clases distintas de
-    Maquina (ver docstring de cambiar_estado_maquina más arriba)."""
-    from datetime import datetime, time
-    from apps.monitoreo.models import RegistroOps
-
-    ultimo_inicio = (
-        HistorialEstadoMaquina.objects.filter(maquina=maquina, estado_nuevo_id="OPERA")
-        .order_by("-fecha")
-        .values_list("fecha", flat=True)
-        .first()
-    )
-    # Horas con precisión real (total_seconds/3600), igual que tiempoParo en
-    # mantenimiento: el cálculo anterior por .days*24 truncaba a días completos
-    # y cualquier periodo < 24 h daba 0 -> nunca se insertaba en REGISTRO_OPS
-    # -> el MTBF se quedaba en NULL para siempre.
-    inicio_dt = ultimo_inicio or timezone.make_aware(datetime.combine(maquina.fechainstalacion, time.min))
-    horas = max(int((ahora - inicio_dt).total_seconds() / 3600), 0)
-    if horas > 0:
-        RegistroOps.objects.create(
-            maquina_id=maquina.codigo, fechaInicio=inicio_dt.date(), fechaFin=ahora.date(), horasOperacion=horas,
-        )

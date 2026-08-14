@@ -9,7 +9,7 @@ from django.views import View
 API_URL = f"{settings.API_BASE_URL}/monitoreo"
 # Los cambios de estado (validar/deshabilitar/reactivar) viven en la API de
 # maquinaria (apps/maquinaria/views.py), que es la que pasa siempre por
-# cambiar_estado_maquina() -> HISTORIAL_ESTADO_MAQUINA / REGISTRO_OPS.
+# cambiar_estado_maquina() -> HISTORIAL_ESTADO_MAQUINA.
 MAQUINARIA_URL = f"{settings.API_BASE_URL}/maquinaria/v1/maquina"
 SESSION = requests.Session()
 

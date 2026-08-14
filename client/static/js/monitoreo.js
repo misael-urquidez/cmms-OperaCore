@@ -445,6 +445,19 @@ refrescar();
     actualizarSeccionesPorModo(drawerModoSelect.value);
   });
 
+  // Error de la API (objeto DRF) -> JSON de varias líneas y bien indentado.
+  // Si no es objeto, usa el texto recibido o un fallback genérico.
+  function apiErrorLegible(data, fallback) {
+    if (typeof data === "string" && data) return data;
+    if (data && typeof data === "object") {
+      try {
+        var json = JSON.stringify(data, null, 2);
+        if (json) return json;
+      } catch (e) { /* si no se puede serializar, cae al fallback */ }
+    }
+    return fallback || "Error en la solicitud.";
+  }
+
   function mostrarMsg(el, texto, ok) {
     el.hidden = false;
     el.textContent = texto;
@@ -462,7 +475,7 @@ refrescar();
     }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok) {
-          mostrarMsg(drawerModoMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo actualizar el modo.", false);
+          mostrarMsg(drawerModoMsg, apiErrorLegible(res.data, "No se pudo actualizar el modo."), false);
           return;
         }
         var msg = "Modo actualizado a " + res.data.modo_monitoreo + ".";
@@ -536,7 +549,7 @@ refrescar();
     }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok) {
-          mostrarMsg(drawerManualMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo registrar la lectura.", false);
+          mostrarMsg(drawerManualMsg, apiErrorLegible(res.data, "No se pudo registrar la lectura."), false);
           return;
         }
         mostrarMsg(drawerManualMsg, res.data.reporte_automatico
@@ -558,7 +571,7 @@ refrescar();
       .then(function (res) {
         drawerSimularBtn.disabled = false;
         if (!res.ok) {
-          mostrarMsg(drawerSimularMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo generar la lectura.", false);
+          mostrarMsg(drawerSimularMsg, apiErrorLegible(res.data, "No se pudo generar la lectura."), false);
           return;
         }
         mostrarMsg(drawerSimularMsg, res.data.reporte_automatico
@@ -587,7 +600,7 @@ refrescar();
     }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok) {
-          mostrarMsg(drawerOpsMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo registrar el periodo.", false);
+          mostrarMsg(drawerOpsMsg, apiErrorLegible(res.data, "No se pudo registrar el periodo."), false);
           return;
         }
         mostrarMsg(drawerOpsMsg, "Periodo registrado (" + res.data.horasOperacion + " h). Indicadores actualizados.", true);
@@ -607,7 +620,7 @@ drawerReparacionForm.addEventListener("submit", function (ev) {
     }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok) {
-          mostrarMsg(drawerReparacionMsg, typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo registrar la reparación.", false);
+          mostrarMsg(drawerReparacionMsg, apiErrorLegible(res.data, "No se pudo registrar la reparación."), false);
           return;
         }
         mostrarMsg(drawerReparacionMsg, "Reparación registrada (" + res.data.tiempoParo + " h). Indicadores actualizados.", true);
@@ -782,7 +795,7 @@ drawerReparacionForm.addEventListener("submit", function (ev) {
       .then(function (res) {
         if (!res.ok) {
           errorBox.hidden = false;
-          errorBox.textContent = typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo crear la máquina.";
+          errorBox.textContent = apiErrorLegible(res.data, "No se pudo crear la máquina.");
           return;
         }
         cerrarModal();

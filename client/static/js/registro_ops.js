@@ -8,6 +8,19 @@
     return c ? c.pop() : '';
   }
 
+  // Error de la API (objeto DRF) -> JSON de varias líneas y bien indentado.
+  // Si no es objeto, usa el texto recibido o un fallback genérico.
+  function apiErrorLegible(data, fallback) {
+    if (typeof data === 'string' && data) return data;
+    if (data && typeof data === 'object') {
+      try {
+        var json = JSON.stringify(data, null, 2);
+        if (json) return json;
+      } catch (e) { /* si no se puede serializar, cae al fallback */ }
+    }
+    return fallback || 'Error en la solicitud.';
+  }
+
   function showMsg(text, type) {
     msg.textContent = text;
     msg.className = 'feedback-msg is-' + type;
@@ -102,7 +115,7 @@
             showMsg('Registro actualizado correctamente.', 'success');
             loadRegistros(select.value);
           } else {
-            showMsg(data.detail || 'Error al actualizar.', 'error');
+            showMsg(apiErrorLegible(data, 'Error al actualizar.'), 'error');
           }
         })
         .catch(function () {
@@ -120,7 +133,7 @@
             showMsg('Registro eliminado.', 'success');
             loadRegistros(select.value);
           } else {
-            showMsg(data.detail || 'Error al eliminar.', 'error');
+            showMsg(apiErrorLegible(data, 'Error al eliminar.'), 'error');
           }
         })
         .catch(function () {

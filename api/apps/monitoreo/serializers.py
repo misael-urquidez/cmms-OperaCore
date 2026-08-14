@@ -122,7 +122,9 @@ class ReporteFallaManualSerializer(serializers.Serializer):
     asunto = serializers.CharField(max_length=500)
     causaRaiz = serializers.CharField(max_length=500)
     descripcion = serializers.CharField(max_length=500, required=False, allow_blank=True)
-    tiempoParo = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    tiempoParo = serializers.DecimalField(
+        max_digits=5, decimal_places=2, required=False, allow_null=True, min_value=0
+    )
     tipo_falla = serializers.IntegerField()
     tipo_severidad = serializers.CharField(max_length=5)
 
@@ -134,7 +136,7 @@ class ModoMonitoreoSerializer(serializers.Serializer):
 class ReparacionManualSerializer(serializers.Serializer):
     """Alimenta el MTTR a mano (para pruebas/expo). No expone mttr:
     lo calcula el trigger tg_actualizar_mttr_orden."""
-    horas_reparacion = serializers.IntegerField(min_value=0)
+    horas_reparacion = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0)
 
 class RegistroOpsSerializer(serializers.Serializer):
     """Registra un periodo de horas de operación de la máquina.

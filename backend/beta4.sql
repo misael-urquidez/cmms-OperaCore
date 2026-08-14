@@ -411,7 +411,7 @@ CREATE TABLE REPORTE_FALLA (
     fechaResolucion DATE NULL,
     fechaCreacion   DATE NOT NULL,
     horaCreacion    TIME NOT NULL,
-    tiempoParo      INT NULL,
+    tiempoParo      DECIMAL(5,2) NULL,
     causaRaiz       VARCHAR(500) NOT NULL,
     descripcion     VARCHAR(500) NULL,
     imagen          VARCHAR(255) NULL,

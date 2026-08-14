@@ -537,11 +537,15 @@ class OrdenMantenimientoCerrarAPIView(APIView):
         # en la orden, para que tg_actualizar_mttr_orden (dispara con el
         # UPDATE de abajo) lea el tiempoParo ya actualizado. Ambos saves
         # van en la misma transacción gracias al @transaction.atomic.
+        # El tiempoParo es dato capturado en el formulario de la falla: aquí
+        # NO se pisa. Solo se calcula por transcurrido como respaldo cuando
+        # el reporte quedó sin horas (NULL), conservando los decimales.
         if orden.reporte_falla_id:
             from datetime import datetime
             reporte = orden.reporte_falla
-            creado = datetime.combine(reporte.fechaCreacion, reporte.horaCreacion)
-            reporte.tiempoParo = int((ahora.replace(tzinfo=None) - creado).total_seconds() / 3600)
+            if reporte.tiempoParo is None:
+                creado = datetime.combine(reporte.fechaCreacion, reporte.horaCreacion)
+                reporte.tiempoParo = round((ahora.replace(tzinfo=None) - creado).total_seconds() / 3600, 2)
             reporte.estado_reporte_id = "RESUE"
             reporte.save(update_fields=["tiempoParo", "estado_reporte"])
 

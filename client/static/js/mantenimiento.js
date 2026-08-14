@@ -4,6 +4,19 @@
   var root = document.querySelector(".ordenes");
   if (!root) return;
 
+  // Error de la API (objeto DRF) -> JSON de varias líneas y bien indentado.
+  // Si no es objeto, usa el texto recibido o un fallback genérico.
+  function apiErrorLegible(data, fallback) {
+    if (typeof data === "string" && data) return data;
+    if (data && typeof data === "object") {
+      try {
+        var json = JSON.stringify(data, null, 2);
+        if (json) return json;
+      } catch (e) { /* si no se puede serializar, cae al fallback */ }
+    }
+    return fallback || "Error en la solicitud.";
+  }
+
   var DATOS_URL = root.dataset.datosUrl;
   var CREAR_URL = root.dataset.crearUrl;
   var ASIGNAR_TPL = root.dataset.asignarUrlBase;
@@ -410,7 +423,7 @@
           .then(function (res) {
             if (!res.ok) {
               errorEl.hidden = false;
-              errorEl.textContent = typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo crear la tarea.";
+              errorEl.textContent = apiErrorLegible(res.data, "No se pudo crear la tarea.");
               if (window.mostrarToast) mostrarToast(errorEl.textContent, "error");
               return;
             }
@@ -525,7 +538,7 @@
         .then(function (res) {
           if (!res.ok) {
             errorEl.hidden = false;
-            errorEl.textContent = typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo crear la orden.";
+            errorEl.textContent = apiErrorLegible(res.data, "No se pudo crear la orden.");
             if (window.mostrarToast) mostrarToast(errorEl.textContent, "error");
             return;
           }
@@ -914,7 +927,7 @@
         body: JSON.stringify(payload),
       }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
         .then(function (res) {
-          if (!res.ok) { mostrarMsg(typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo actualizar.", false); return; }
+          if (!res.ok) { mostrarMsg(apiErrorLegible(res.data, "No se pudo actualizar."), false); return; }
           mostrarMsg("Orden actualizada.", true);
           cerrarDrawerPanel();
           cargarOrdenes();
@@ -1069,7 +1082,7 @@
       }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
         .then(function (res) {
           if (!res.ok) {
-            mostrarMsg(typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo cerrar la orden.", false);
+            mostrarMsg(apiErrorLegible(res.data, "No se pudo cerrar la orden."), false);
             return;
           }
           mostrarMsg("Orden cerrada. Indicadores actualizados.", true);
