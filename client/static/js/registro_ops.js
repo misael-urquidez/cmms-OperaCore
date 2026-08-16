@@ -13,10 +13,23 @@
   function apiErrorLegible(data, fallback) {
     if (typeof data === 'string' && data) return data;
     if (data && typeof data === 'object') {
-      try {
-        var json = JSON.stringify(data, null, 2);
-        if (json) return json;
-      } catch (e) { /* si no se puede serializar, cae al fallback */ }
+      var mensajes = [];
+      if (Array.isArray(data.non_field_errors)) {
+        data.non_field_errors.forEach(function (m) { mensajes.push(m); });
+      }
+      if (typeof data.detail === 'string') {
+        mensajes.push(data.detail);
+      }
+      Object.keys(data).forEach(function (k) {
+        if (k === 'non_field_errors' || k === 'detail') return;
+        var v = data[k];
+        if (Array.isArray(v)) {
+          v.forEach(function (m) { mensajes.push(k + ': ' + m); });
+        } else if (typeof v === 'string') {
+          mensajes.push(k + ': ' + v);
+        }
+      });
+      if (mensajes.length) return mensajes.join('\n');
     }
     return fallback || 'Error en la solicitud.';
   }

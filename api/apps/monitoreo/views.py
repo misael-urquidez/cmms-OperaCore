@@ -1,8 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.db import connection
 from django.db.models import Prefetch
+from django.db.utils import OperationalError
 from django.utils import timezone
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from rest_framework.views import APIView
@@ -284,6 +285,17 @@ class ReparacionManualAPIView(APIView):
             "tiempoParo": reporte.tiempoParo,
         }, status=status.HTTP_201_CREATED)
 
+def _error_trigger_bd(e):
+    """Convierte un SIGNAL de MySQL (trigger) en un error DRF con formato
+    non_field_errors, para que el cliente siempre reciba el mismo JSON
+    (p. ej. solapamiento de fechas) aunque lo atrape el trigger y no el
+    serializer (carreras, inserciones concurrentes)."""
+    mensaje = str(e)
+    if getattr(e, "args", None) and len(e.args) > 1:
+        mensaje = str(e.args[1])
+    return serializers.ValidationError({"non_field_errors": [mensaje]})
+
+
 class RegistroOpsAPIView(APIView):
     """Lista y crea periodos de horas de operación de una máquina.
     No recibe ni escribe mtbf/mttr/disponibilidad -- eso lo calculan
@@ -313,7 +325,10 @@ class RegistroOpsAPIView(APIView):
             raise NotFound("Máquina no encontrada.") from exc
         serializer = RegistroOpsSerializer(data=request.data, context={"maquina": maquina})
         serializer.is_valid(raise_exception=True)
-        registro = services.registrar_horas_operacion(maquina=maquina, **serializer.validated_data)
+        try:
+            registro = services.registrar_horas_operacion(maquina=maquina, **serializer.validated_data)
+        except OperationalError as e:
+            raise _error_trigger_bd(e) from e
         return Response({
             "numeroRegistro": registro.numeroRegistro,
             "maquina": maquina.codigo,
@@ -330,11 +345,17 @@ class RegistroOpsUpdateAPIView(APIView):
             registro = RegistroOps.objects.get(pk=pk)
         except RegistroOps.DoesNotExist as exc:
             raise NotFound("Registro no encontrado.") from exc
-        serializer = RegistroOpsSerializer(data=request.data, partial=True, context={"maquina": registro.maquina})
+        serializer = RegistroOpsSerializer(
+            data=request.data, partial=True, instance=registro,
+            context={"maquina": registro.maquina},
+        )
         serializer.is_valid(raise_exception=True)
         for attr, val in serializer.validated_data.items():
             setattr(registro, attr, val)
-        registro.save()
+        try:
+            registro.save()
+        except OperationalError as e:
+            raise _error_trigger_bd(e) from e
         services.recalcular_mtbf_maquina(registro.maquina_id)
         return Response({
             "numeroRegistro": registro.numeroRegistro,

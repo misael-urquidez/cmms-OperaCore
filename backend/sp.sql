@@ -92,7 +92,7 @@ BEGIN
     SELECT vp.numeroRegistro, vp.fechaInicio, vp.mtbf, vp.mttr
     INTO id_abierto, fecha_inicio, mtbf_actual, mttr_actual
     FROM v_periodo_abierto_maquina AS vp
-    WHERE vp.maquina = maquina
+    WHERE vp.maquina = maquinita
     ORDER BY vp.numeroRegistro DESC
     LIMIT 1;
 
@@ -112,7 +112,7 @@ BEGIN
     WHERE numeroRegistro = id_abierto;
 
     INSERT INTO INDICADOR (maquina, fechaInicio, mtbf, mttr)
-    VALUES (maquina, DATE_ADD(fecha_fin, INTERVAL 1 DAY), mtbf_actual, mttr_actual);
+    VALUES (maquinita, DATE_ADD(fecha_fin, INTERVAL 1 DAY), mtbf_actual, mttr_actual);
 END $$
 
 DELIMITER ;

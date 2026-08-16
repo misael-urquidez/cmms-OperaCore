@@ -579,7 +579,7 @@ BEGIN
 
     IF solapados > 0 THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'El rango de fechas se solapa con otro registro de horas de operacion de la misma maquina';
+        SET MESSAGE_TEXT = 'El rango de fechas se solapa con otro registro de horas de operación de la misma máquina.';
     END IF;
 END$$
 DELIMITER ;
@@ -607,7 +607,7 @@ BEGIN
 
     IF solapados > 0 THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'El rango de fechas se solapa con otro registro de horas de operacion de la misma maquina';
+        SET MESSAGE_TEXT = 'El rango de fechas se solapa con otro registro de horas de operación de la misma máquina.';
     END IF;
 END$$
 DELIMITER ;

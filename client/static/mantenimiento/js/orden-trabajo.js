@@ -29,6 +29,30 @@
     if (window.mostrarToast) mostrarToast(texto, ok ? "success" : "error");
   }
 
+  function apiErrorLegible(data, fallback) {
+    if (typeof data === "string" && data) return data;
+    if (data && typeof data === "object") {
+      var mensajes = [];
+      if (Array.isArray(data.non_field_errors)) {
+        data.non_field_errors.forEach(function (m) { mensajes.push(m); });
+      }
+      if (typeof data.detail === "string") {
+        mensajes.push(data.detail);
+      }
+      Object.keys(data).forEach(function (k) {
+        if (k === "non_field_errors" || k === "detail") return;
+        var v = data[k];
+        if (Array.isArray(v)) {
+          v.forEach(function (m) { mensajes.push(k + ": " + m); });
+        } else if (typeof v === "string") {
+          mensajes.push(k + ": " + v);
+        }
+      });
+      if (mensajes.length) return mensajes.join("\n");
+    }
+    return fallback || "Error en la solicitud.";
+  }
+
   // ---------------------------------------------------- marcar en progreso
   var btnIniciar = document.getElementById("ordenTrabajoIniciarBtn");
   if (btnIniciar) {
@@ -146,7 +170,7 @@
       }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
         .then(function (res) {
           if (!res.ok) {
-            mostrarMsg(typeof res.data === "object" ? JSON.stringify(res.data) : "No se pudo cerrar la orden.", false);
+            mostrarMsg(apiErrorLegible(res.data, "No se pudo cerrar la orden."), false);
             return;
           }
           // Recargamos: el servidor ahora renderiza la orden como cerrada,
