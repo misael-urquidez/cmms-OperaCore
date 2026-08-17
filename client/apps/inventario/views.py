@@ -5,9 +5,10 @@ from collections import defaultdict
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.views import generic
+from django.views import View, generic
 
 from apps.gestion.registry import get_tabla
 
@@ -601,6 +602,77 @@ def _contexto_movimiento(request, datos):
     }
 
 
+class HorasOperacionProxy(View):
+    """Calcula y guarda las horas de operacion de una pieza instalada.
+    Recibe ?pieza=SN123: consulta la pieza en el API, suma REGISTRO_OPS de su
+    maquina desde su fechaInstalacion (misma logica que la subquery del
+    desgaste) y actualiza Pieza.horasoperacion via PATCH. Solo aplica a piezas
+    con maquina asignada (INSTA); tras un DESMO la pieza queda sin maquina y el
+    boton ya no aplica."""
+
+    def get(self, request):
+        from urllib.parse import quote
+
+        serie = (request.GET.get("pieza") or "").strip()
+        if not serie:
+            return JsonResponse(
+                {"detail": "Falta la pieza.", "total_horas": 0}, status=400
+            )
+
+        try:
+            respuesta = SESSION.get(
+                f"{API_URL}/v1/piezas/{quote(serie)}/", timeout=5
+            )
+            respuesta.raise_for_status()
+            pieza = respuesta.json()
+        except requests.RequestException:
+            return JsonResponse(
+                {"detail": "No fue posible consultar la pieza."}, status=502
+            )
+
+        maquina = pieza.get("maquina")
+        if not maquina:
+            return JsonResponse(
+                {
+                    "detail": "La pieza no está instalada en una máquina.",
+                    "total_horas": 0,
+                },
+                status=400,
+            )
+        desde = (pieza.get("fechainstalacion") or "").split("T")[0]
+
+        try:
+            respuesta = SESSION.get(
+                f"{settings.API_BASE_URL}/monitoreo/maquinas/{quote(maquina)}/registro-ops/",
+                timeout=5,
+            )
+            respuesta.raise_for_status()
+            registros = respuesta.json()
+        except requests.RequestException:
+            return JsonResponse(
+                {"detail": "No fue posible conectar con el API."}, status=502
+            )
+
+        total = 0
+        for r in registros:
+            fecha_inicio = (r.get("fechaInicio") or "").split("T")[0]
+            if fecha_inicio >= desde:
+                total += int(r.get("horasOperacion") or 0)
+
+        try:
+            respuesta = SESSION.patch(
+                f"{API_URL}/v1/piezas/{quote(serie)}/",
+                json={"horasoperacion": total},
+                timeout=5,
+            )
+            respuesta.raise_for_status()
+        except requests.RequestException:
+            return JsonResponse(
+                {"detail": "No se pudo guardar las horas de operación."}, status=502
+            )
+        return JsonResponse({"total_horas": total})
+
+
 class ListaProveedores(generic.View):
     """Lista de proveedores con buscador."""
 
@@ -1105,7 +1177,16 @@ class ExistenciaModalView(generic.View):
                 ]
         except requests.exceptions.RequestException:
             pass
-        return render(request, "inventario/modal-existencia.html", {"existencias": existencias})
+
+        catalogos, _ = _cargar_catalogos()
+        estados_map = {
+            e.get("codigo"): e.get("nombre")
+            for e in catalogos.get("estados_refaccion", [])
+        }
+        return render(request, "inventario/modal-existencia.html", {
+            "existencias": existencias,
+            "estados_map": estados_map,
+        })
 
 
 class ExistenciaHerramientaModalView(generic.View):

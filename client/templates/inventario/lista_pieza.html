@@ -140,6 +140,11 @@
                     </div>
                     <span class="inv-drawer__pieza-pct">{{ pieza.porcentaje_desgaste }}%</span>
                   </div>
+                  <div class="inv-drawer__pieza-acciones">
+                    <span class="inv-drawer__pieza-horas" id="horas-{{ pieza.numeroserie }}">{{ pieza.horasoperacion|default:0 }} h</span>
+                    <button type="button" class="btn-primary-sm" data-serie="{{ pieza.numeroserie }}"
+                            data-url="{% url 'inventario:horas_operacion' %}">Calcular horas de operación</button>
+                  </div>
                 </div>
               {% empty %}
                 <p class="inv-drawer__piezas-vacia">Sin piezas asignadas.</p>
@@ -166,6 +171,32 @@ function closeInvDrawer() {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeInvDrawer();
 });
+</script>
+<script>
+(function () {
+  var botones = document.querySelectorAll('#invDrawer [data-serie]');
+  botones.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var serie = btn.getAttribute('data-serie');
+      var url = btn.getAttribute('data-url') + '?pieza=' + encodeURIComponent(serie);
+      var texto = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Calculando...';
+      fetch(url)
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (res) {
+          if (!res.ok) { alert(res.data.detail || 'No se pudo calcular las horas de operación.'); return; }
+          var el = document.getElementById('horas-' + serie);
+          if (el) el.textContent = (res.data.total_horas || 0) + ' h';
+        })
+        .catch(function () { alert('No se pudo calcular las horas de operación.'); })
+        .then(function () {
+          btn.disabled = false;
+          btn.textContent = texto;
+        });
+    });
+  });
+})();
 </script>
 <script src="{% static 'js/buscador.js' %}"></script>
 {% endblock %}

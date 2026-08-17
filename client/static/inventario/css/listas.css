@@ -65,4 +65,7 @@
 .inv-drawer__progress { flex:1; height:.45rem; border-radius:.3rem; background:var(--hover-soft); overflow:hidden; }
 .inv-drawer__progress-bar { height:100%; border-radius:.3rem; background:linear-gradient(90deg, #22c55e, #f59e0b, #ef4444); transition:width .3s ease; }
 .inv-drawer__pieza-pct { font-size:.75rem; font-weight:600; min-width:3rem; text-align:right; }
+.inv-drawer__pieza-acciones { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-top:.35rem; }
+.inv-drawer__pieza-horas { font-size:.75rem; color:var(--color-muted); }
+.inv-drawer__pieza-acciones .btn-primary-sm { font-size:.72rem; padding:.3rem .55rem; }
 .inv-drawer__piezas-vacia { font-size:.8rem; color:var(--color-muted); margin:0; }

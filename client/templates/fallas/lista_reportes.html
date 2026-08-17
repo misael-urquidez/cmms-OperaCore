@@ -60,7 +60,11 @@
                 <td>{{ r.maquina_nombre|default:"-" }}</td>
                 <td>{{ r.trabajador_nombre|default:"-" }}</td>
                 <td><button type="button" onclick="abrir_modal_detalle({{ r.numeroRegistro }})">Ver detalles</button></td>
-                <td><a href="{% url 'fallas:actualizar_reporte' pk=r.numeroRegistro %}">Actualizar</a></td>
+                {% if usuario.rol != "TECNI" or r.trabajador == usuario.numeroNomina %}
+                  <td><a href="{% url 'fallas:actualizar_reporte' pk=r.numeroRegistro %}">Actualizar</a></td>
+                {% else %}
+                  <td>—</td>
+                {% endif %}
                 <td><button type="button" class="btn-export-row" onclick="abrir_modal_exportar({{ r.numeroRegistro }})">Exportar</button></td>
               </tr>
             {% endfor %}
@@ -185,6 +189,7 @@ $(function() {
   });
 });
 </script>
+{% if usuario.rol != "TECNI" %}
 <script>
 (function () {
   var params = new URLSearchParams(window.location.search);
@@ -201,4 +206,5 @@ $(function() {
   }
 })();
 </script>
+{% endif %}
 {% endblock %}

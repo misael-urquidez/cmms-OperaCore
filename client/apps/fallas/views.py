@@ -157,6 +157,10 @@ class ReporteFalla(generic.View):
             cache.delete("fallas_reportes_list")
             creado = self.response.json()
             messages.success(request, "El reporte de falla ha sido registrado")
+            # Solo el admin recibe la sugerencia de levantar una orden de
+            # mantenimiento; el tecnico se va directo a la lista.
+            if usuario.get("rol") == "TECNI":
+                return redirect("fallas:lista")
             return redirect(
                 "{}?levantar_orden=1&reporte={}&asunto={}&maquina={}".format(
                     reverse("fallas:lista"),
@@ -334,6 +338,10 @@ class ActualizarReporte(generic.View):
         if reporte is None:
             return redirect("fallas:lista")
 
+        if not self._puede_editar(request, reporte):
+            messages.warning(request, "No tienes permisos para actualizar este reporte.")
+            return redirect("fallas:lista")
+
         return render(request, self.template_name, self._contexto(request, reporte))
 
     def post(self, request, pk):
@@ -341,6 +349,14 @@ class ActualizarReporte(generic.View):
         if not usuario:
             messages.warning(request, "Inicia sesión para continuar.")
             return redirect("usuarios:index")
+
+        reporte = self._cargar_reporte(request, pk)
+        if reporte is None:
+            return redirect("fallas:lista")
+
+        if not self._puede_editar(request, reporte):
+            messages.warning(request, "No tienes permisos para actualizar este reporte.")
+            return redirect("fallas:lista")
 
         payload = {
             "asunto": request.POST.get("asunto"),
@@ -384,6 +400,16 @@ class ActualizarReporte(generic.View):
         else:
             messages.warning(request, "Error al actualizar el reporte.")
             return self._render_error(request, pk, payload)
+
+    def _puede_editar(self, request, reporte):
+        """El tecnico solo puede actualizar sus propios reportes; el resto
+        de roles (admin) puede actualizar cualquiera."""
+        usuario = request.session.get("usuario")
+        if not usuario:
+            return False
+        if usuario.get("rol") != "TECNI":
+            return True
+        return reporte.get("trabajador") == usuario.get("numeroNomina")
 
     def _render_error(self, request, pk, payload):
         reporte = self._cargar_reporte(request, pk)

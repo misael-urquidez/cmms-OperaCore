@@ -14,6 +14,7 @@ urlpatterns = [
     # ------------ PIEZAS -------------------------------------------------------
     path("piezas/", views.ListaPiezas.as_view(), name="lista_piezas"),
     path("piezas/crear/", views.CrearPieza.as_view(), name="crear_pieza"),
+    path("piezas/horas-operacion/", views.HorasOperacionProxy.as_view(), name="horas_operacion"),
 
     # ------------ HERRAMIENTAS --------------------------------------------------
     path("herramientas/", views.ListaHerramientas.as_view(), name="lista_herramientas"),

@@ -174,16 +174,8 @@
                 <input type="number" step="0.01" id="pieza_costoinicial" name="pieza_costoinicial" min="0" placeholder="0.00" value="{% if datos.pieza_costoinicial %}{{ datos.pieza_costoinicial.0 }}{% endif %}">
               </div>
               <div class="mov-pieza__campo">
-                <label for="pieza_horasoperacion">Horas de operación</label>
-                <input type="number" id="pieza_horasoperacion" name="pieza_horasoperacion" min="0" value="{% if datos.pieza_horasoperacion %}{{ datos.pieza_horasoperacion.0 }}{% else %}0{% endif %}">
-              </div>
-              <div class="mov-pieza__campo">
                 <label for="pieza_tiempovidautil">Vida útil estimada (horas) *</label>
                 <input type="number" id="pieza_tiempovidautil" name="pieza_tiempovidautil" min="0" value="{% if datos.pieza_tiempovidautil %}{{ datos.pieza_tiempovidautil.0 }}{% endif %}">
-              </div>
-              <div class="mov-pieza__campo">
-                <label for="pieza_depresacionanual">Depreciación anual (%)</label>
-                <input type="number" step="0.01" id="pieza_depresacionanual" name="pieza_depresacionanual" min="0" value="{% if datos.pieza_depresacionanual %}{{ datos.pieza_depresacionanual.0 }}{% else %}0{% endif %}">
               </div>
               <div class="mov-pieza__campo">
                 <label for="pieza_valorresidual">Valor residual ($)</label>
