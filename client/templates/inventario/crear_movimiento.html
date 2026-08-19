@@ -75,19 +75,6 @@
   {# ---- Formulario dinámico ---- #}
   <div id="formulario-movimiento" style="display:none; max-width:640px;">
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
-      <div>
-        <label class="fallas-modal__label" for="mov-fecha">Fecha</label>
-        <input type="date" name="fecha" id="mov-fecha" required
-               style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem;" value="{{ datos.fecha|default:'' }}">
-      </div>
-      <div>
-        <label class="fallas-modal__label" for="mov-hora">Hora</label>
-        <input type="time" name="hora" id="mov-hora" required
-               style="width:100%; padding:.5rem .65rem; background:var(--color-bg); color:var(--color-text); border:1px solid var(--line); border-radius:.375rem; font-size:.9rem;" value="{{ datos.hora|default:'' }}">
-      </div>
-    </div>
-
     {# Orden de mantenimiento — INSTA y DESMO #}
     <div id="campo-orden" style="margin-bottom:1rem;">
       <label class="fallas-modal__label" for="mov-orden">Orden de mantenimiento</label>
@@ -183,7 +170,7 @@
               </div>
               <div class="mov-pieza__campo">
                 <label for="pieza_fechainstalacion">Fecha de instalación</label>
-                <input type="date" id="pieza_fechainstalacion" name="pieza_fechainstalacion" value="{% if datos.pieza_fechainstalacion %}{{ datos.pieza_fechainstalacion.0 }}{% endif %}">
+                <input type="date" id="pieza_fechainstalacion" name="pieza_fechainstalacion" value="{% if datos.pieza_fechainstalacion %}{{ datos.pieza_fechainstalacion.0 }}{% else %}{% now "Y-m-d" %}{% endif %}">
               </div>
               <div class="mov-pieza__campo">
                 <label for="pieza_fechagarantia">Fecha fin de garantía</label>

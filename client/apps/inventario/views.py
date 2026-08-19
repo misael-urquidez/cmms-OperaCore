@@ -492,8 +492,6 @@ class CrearMovimiento(generic.View):
     def post(self, request):
         payload = {
             "tipoMovimiento": request.POST.get("tipoMovimiento"),
-            "fecha": request.POST.get("fecha"),
-            "hora": request.POST.get("hora"),
             "orden_mantenimiento": request.POST.get("orden_mantenimiento") or None,
             "refaccion": request.POST.get("refaccion") or None,
             "pieza": request.POST.get("pieza") or None,
@@ -540,8 +538,6 @@ class CrearMovimiento(generic.View):
         # Error: re-render con los datos del formulario para no perder lo escrito.
         datos = {
             "tipoMovimiento": request.POST.get("tipoMovimiento") or "",
-            "fecha": request.POST.get("fecha") or "",
-            "hora": request.POST.get("hora") or "",
             "orden_mantenimiento": request.POST.get("orden_mantenimiento") or "",
             "refaccion": request.POST.get("refaccion") or "",
             "descripcion": request.POST.get("descripcion") or "",

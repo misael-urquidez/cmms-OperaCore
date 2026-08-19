@@ -186,6 +186,24 @@ class MovimientoCreateAPIView(generics.CreateAPIView):
             if orden and orden.maquina_id:
                 pieza_campos["maquina"] = orden.maquina_id
 
+        def _float(campos, clave, por_defecto=0.0):
+            try:
+                return float(campos.get(clave) or por_defecto)
+            except (TypeError, ValueError):
+                return por_defecto
+
+        costo = _float(pieza_campos, "costoinicial")
+        residual = _float(pieza_campos, "valorresidual")
+        try:
+            vida = int(pieza_campos.get("tiempovidautil") or 0)
+        except (TypeError, ValueError):
+            vida = 0
+        pieza_campos["depresacionanual"] = (
+            round((costo - residual) * 8760 / vida, 2) if vida > 0 else 0.0
+        )
+        if pieza_campos.get("horasoperacion") is None:
+            pieza_campos["horasoperacion"] = 0
+
         pieza_ser = CreatePiezaSerializer(data=pieza_campos)
         pieza_ser.is_valid(raise_exception=True)
         pieza = pieza_ser.save()

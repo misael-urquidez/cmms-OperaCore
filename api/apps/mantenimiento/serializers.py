@@ -129,6 +129,7 @@ class CreateMovimientoSerializer(serializers.ModelSerializer):
         model = models.Movimiento
         fields = ["tipoMovimiento", "fecha", "hora", "descripcion",
                   "orden_mantenimiento", "refaccion", "pieza", "pieza_data", "refaccion_data"]
+        extra_kwargs = {"fecha": {"required": False}, "hora": {"required": False}}
 
 
 class DetailTareaOrdenSerializer(serializers.ModelSerializer):

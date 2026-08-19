@@ -342,7 +342,6 @@ BEGIN
     DECLARE numero_refaccion INT;
     DECLARE disponible      INT DEFAULT 0;
     DECLARE existe_pieza    INT;
-    DECLARE existe_inmaq    INT DEFAULT 0;
     DECLARE existe_refaccion INT;
     DECLARE fechaP DATE;
     DECLARE horaP TIME;
@@ -394,23 +393,6 @@ BEGIN
         END IF;
     END IF;
 
-    -- 4) validar ANTES de tocar la M:M que la refaccion no este ya
-    --    instalada (no exista fila INMAQ). Asi el error es claro y, sobre
-    --    todo, no se descuenta DISPO si el INSERT de INMAQ fallaria.
-    --    OJO: hay que calificar con el alias (e.refaccion) porque si no
-    --    MySQL resuelve `refaccion` al PARAMETRO del procedimiento, que
-    --    eclipsa la columna, y el COUNT cuenta TODAS las filas INMAQ
-    --    (refaccion = numero_refaccion siempre verdadero).
-    SELECT COUNT(*) INTO existe_inmaq
-    FROM ESTADO_REFACCION AS e
-    WHERE e.estado_refaccion = 'INMAQ'
-      AND e.refaccion = numero_refaccion;
-
-    IF existe_inmaq > 0 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'La refaccion ya esta instalada en una maquina';
-    END IF;
-
     -- 5) mover 1 unidad DISPO -> INMAQ en la tabla M:M ESTADO_REFACCION
     UPDATE ESTADO_REFACCION AS e
     SET e.cantidad = e.cantidad - 1
@@ -418,7 +400,8 @@ BEGIN
       AND e.refaccion = numero_refaccion;
 
     INSERT INTO ESTADO_REFACCION (estado_refaccion, refaccion, cantidad)
-    VALUES ('INMAQ', numero_refaccion, 1);
+    VALUES ('INMAQ', numero_refaccion, 1)
+    ON DUPLICATE KEY UPDATE cantidad = cantidad + 1;
 
     -- 6) dejar el registro de auditoria en MOVIMIENTO (tipo INSTA) con la
     --    fecha/hora indicadas (o las del sistema) y la pieza instalada.
