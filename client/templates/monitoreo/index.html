@@ -13,7 +13,6 @@
          data-estado-url-base="{% url 'monitoreo:estado' codigo='__CODIGO__' %}"
          data-estado-accion-url-base="{% url 'monitoreo:estado-accion' codigo='__CODIGO__' %}"
          data-catalogos-url="{% url 'monitoreo:catalogos' %}"
-         data-crear-url="{% url 'monitoreo:crear-maquina' %}"
          data-modo-url-base="{% url 'monitoreo:modo' codigo='__CODIGO__' %}"
          data-lectura-manual-url="{% url 'monitoreo:lectura-manual' %}"
          data-simular-url-base="{% url 'monitoreo:simular' codigo='__CODIGO__' %}"
@@ -33,10 +32,10 @@
     </div>
     <div class="monitoring__actions">
       <p class="monitoring__refresh" id="refreshStatus">Actualizado —</p>
-      <button type="button" class="btn-plant-new" id="btnNuevaMaquina">
+      <a href="{% url 'maquinaria:crear_maquina' %}" class="btn-plant-new" id="btnNuevaMaquina">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         Nueva máquina
-      </button>
+      </a>
     </div>
   </div>
 
@@ -205,42 +204,6 @@
       <button type="button" class="btn-plant-new" id="drawerAccionFallaMantBtn" style="width:100%;"></button>
     </div>
   </aside>
-</div>
-
-{# ---------------- Modal "Nueva máquina" ---------------- #}
-<div class="new-machine-modal" id="newMachineModal" aria-hidden="true">
-  <div class="new-machine-modal__backdrop" id="newMachineBackdrop"></div>
-  <div class="new-machine-modal__panel" role="dialog" aria-modal="true" aria-labelledby="newMachineTitle">
-    <div class="new-machine-modal__head">
-      <h2 id="newMachineTitle">Nueva máquina</h2>
-      <button type="button" class="machine-drawer__close" id="newMachineClose" aria-label="Cerrar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <form id="newMachineForm" class="new-machine-form" enctype="multipart/form-data">
-      <p class="new-machine-form__error" id="newMachineError" hidden></p>
-      <div id="estado" style="font-family: monospace; font-size: 14px;"></div>
-      <div class="new-machine-form__grid">
-        <label>Código<span id="codigo-error"></span><input type="text" name="codigo" id="fCodigo" data-error-id="codigo-error" maxlength="10" required placeholder="MAQ007"></label>
-        <label>Nombre<span id="nombre-error"></span><input type="text" name="nombre" id="fNombre" data-error-id="nombre-error" maxlength="100" required placeholder="Pick &amp; Place 2"></label>
-        <label>Línea<select name="linea" id="fLinea"><option value="">Selecciona línea</option></select></label>
-        <label>Tipo de máquina<select name="tipo_maquina" id="fTipo"><option value="">Selecciona tipo</option></select></label>
-        <label>Marca<select name="marca" id="fMarca"><option value="">Selecciona marca</option></select></label>
-        <label>Modelo<select name="modelo" id="fModelo"><option value="">Selecciona modelo</option></select></label>
-        <label>Estado inicial<select name="estado_maquina" id="fEstado"><option value="">Selecciona estado</option></select></label>
-        <label>Modo de monitoreo<select name="modo_monitoreo" id="fModo"><option value="">Selecciona modo</option></select></label>
-        <label>Umbral de vibración<input type="number" name="umbral_vibracion" id="fUmbral" step="0.1" min="0" value="4.0"></label>
-        <label>N° de serie<span id="serie-error"></span><input type="text" name="numeroSerie" id="fSerie" data-error-id="serie-error" maxlength="30" required placeholder="MAQ007-SN001"></label>
-        <label>Imagen<input type="file" name="imagen" id="fImagen" accept="image/*"></label>
-        <label>Modelo 3D (.glb)<input type="file" name="modelo_3d_archivo" id="fModelo3d" accept=".glb,model/gltf-binary"></label>
-      </div>
-      <label class="new-machine-form__full">Descripción<span id="descripcion-error"></span><textarea name="descripcion" id="fDescripcion" data-error-id="descripcion-error" maxlength="255" rows="2" placeholder="Descripción breve del equipo..."></textarea></label>
-      <div class="new-machine-form__actions">
-        <button type="button" class="btn-plant-secondary" id="newMachineCancel">Cancelar</button>
-        <button type="submit" class="btn-plant-new" id="newMachineSubmit">Crear máquina</button>
-      </div>
-    </form>
-  </div>
 </div>
 
 {% endblock %}

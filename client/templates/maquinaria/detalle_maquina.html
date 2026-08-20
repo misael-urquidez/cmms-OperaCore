@@ -342,7 +342,7 @@
                 </div>
                 <div class="info-group">
                     <span>Horas de Operación:</span>
-                    <b>{{ maquina.horas_operacion_total|default:"0" }} hrs</b>
+                    <b>{{ maquina.horas_operacion_total|default:"0"|floatformat:2 }} hrs</b>
                 </div>
                 <div class="info-group">
                     <span>Estado Operativo:</span>
@@ -382,7 +382,7 @@
                 </div>
                 <div class="info-group" style="flex-direction: column; align-items: flex-start; gap: 6px;">
                     <span>Horas de Operación Acumuladas:</span>
-                    <b style="font-size: 22px;">{{ resumen.horas_operacion|default:"0" }} hrs</b>
+                    <b style="font-size: 22px;">{{ resumen.horas_operacion|default:"0"|floatformat:2 }} hrs</b>
                 </div>
             </div>
         </div>
@@ -392,15 +392,15 @@
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
                 <div class="info-group" style="flex-direction: column; align-items: flex-start; gap: 6px;">
                     <span>MTBF:</span>
-                    <b style="font-size: 22px;">{{ resumen.mtbf|default:"—" }} hrs</b>
+                    <b style="font-size: 22px;">{{ resumen.mtbf|default:"—"|floatformat:2 }} hrs</b>
                 </div>
                 <div class="info-group" style="flex-direction: column; align-items: flex-start; gap: 6px;">
                     <span>MTTR:</span>
-                    <b style="font-size: 22px;">{{ resumen.mttr|default:"—" }} hrs</b>
+                    <b style="font-size: 22px;">{{ resumen.mttr|default:"—"|floatformat:2 }} hrs</b>
                 </div>
                 <div class="info-group" style="flex-direction: column; align-items: flex-start; gap: 6px;">
                     <span>Disponibilidad:</span>
-                    <b style="font-size: 22px;">{{ resumen.disponibilidad|default:"—" }}%</b>
+                    <b style="font-size: 22px;">{{ resumen.disponibilidad|default:"—"|floatformat:2 }}%</b>
                 </div>
             </div>
         </div>
@@ -413,7 +413,7 @@
                 <thead>
                     <tr style="text-align: left; border-bottom: 1px solid var(--border-color);">
                         <th style="padding: 8px;">Tipo</th>
-                        <th style="padding: 8px;">Folio</th>
+                        <th style="padding: 8px;">Folio / Número</th>
                         <th style="padding: 8px;">Fecha</th>
                         <th style="padding: 8px;">Detalle</th>
                         <th style="padding: 8px;">Estado</th>
@@ -427,7 +427,7 @@
                         <td style="padding: 8px;">{{ h.identificador }}</td>
                         <td style="padding: 8px;">{{ h.fecha }}</td>
                         <td style="padding: 8px; color: var(--text-muted);">{{ h.detalle }}</td>
-                        <td style="padding: 8px;">{{ h.estado }}</td>
+                        <td style="padding: 8px;">{{ h.estado_nombre|default:h.estado }}</td>
                         <td style="padding: 8px;">
                             {% if h.trabajador_nomina %}
                             <a href="{% url 'mantenimiento:trabajadores-detalle' h.trabajador_nomina %}" style="color: var(--accent); text-decoration: none;">{{ h.trabajador_nombre }}</a>

@@ -11,7 +11,6 @@
   var ESTADO_TPL = root.dataset.estadoUrlBase;
   var ESTADO_ACCION_TPL = root.dataset.estadoAccionUrlBase;
   var CATALOGOS_URL = root.dataset.catalogosUrl;
-  var CREAR_URL = root.dataset.crearUrl;
   var MODO_TPL = root.dataset.modoUrlBase;
   var LECTURA_MANUAL_URL = root.dataset.lecturaManualUrl;
   var SIMULAR_TPL = root.dataset.simularUrlBase;
@@ -716,109 +715,6 @@ drawerReparacionForm.addEventListener("submit", function (ev) {
     });
   }
 
-  // -------------------------------------------------- modal nueva máquina
-  var modal = document.getElementById("newMachineModal");
-  var form = document.getElementById("newMachineForm");
-  var errorBox = document.getElementById("newMachineError");
-  var catalogosCargados = false;
-
-  document.getElementById("btnNuevaMaquina").addEventListener("click", function () {
-    modal.setAttribute("aria-hidden", "false");
-    if (!catalogosCargados) cargarCatalogos();
-  });
-  function cerrarModal() { modal.setAttribute("aria-hidden", "true"); errorBox.hidden = true; }
-  document.getElementById("newMachineClose").addEventListener("click", cerrarModal);
-  document.getElementById("newMachineCancel").addEventListener("click", cerrarModal);
-  document.getElementById("newMachineBackdrop").addEventListener("click", cerrarModal);
-
-  function llenarSelect(select, items, valueKey, labelKey, placeholder) {
-    select.innerHTML = "";
-    if (placeholder) {
-      var opt0 = document.createElement("option");
-      opt0.value = ""; opt0.textContent = placeholder;
-      select.appendChild(opt0);
-    }
-    items.forEach(function (it) {
-      var opt = document.createElement("option");
-      opt.value = it[valueKey];
-      opt.textContent = it[labelKey];
-      if (it.marca !== undefined) opt.dataset.marca = it.marca;
-      select.appendChild(opt);
-    });
-  }
-
-  var todosLosModelos = [];
-  function cargarCatalogos() {
-    fetch(CATALOGOS_URL).then(function (r) { return r.json(); }).then(function (data) {
-      catalogosCargados = true;
-      llenarSelect(document.getElementById("fLinea"), data.lineas || [], "codigo", "nombre", "Selecciona línea");
-      llenarSelect(document.getElementById("fTipo"), data.tipos_maquina || [], "numeroRegistro", "nombre", "Selecciona tipo");
-      llenarSelect(document.getElementById("fMarca"), data.marcas || [], "clave", "nombre", "Selecciona marca");
-      llenarSelect(document.getElementById("fEstado"), data.estados_maquina || [], "codigo", "nombre", "Selecciona estado");
-      llenarSelect(document.getElementById("fModo"), data.modos_monitoreo || [], "valor", "etiqueta", "Selecciona modo");
-      todosLosModelos = data.modelos || [];
-      filtrarModelos("");
-    }).catch(function () {
-      errorBox.hidden = false;
-      errorBox.textContent = "No se pudieron cargar los catálogos.";
-    });
-  }
-  function filtrarModelos(marca) {
-    var lista = marca ? todosLosModelos.filter(function (m) { return m.marca === marca; }) : todosLosModelos;
-    llenarSelect(document.getElementById("fModelo"), lista, "codigo", "nombre", "Sin especificar");
-  }
-  document.getElementById("fMarca").addEventListener("change", function (ev) { filtrarModelos(ev.target.value); });
-
-  form.addEventListener("submit", function (ev) {
-    ev.preventDefault();
-    errorBox.hidden = true;
-
-    var campos = {
-      codigo: document.getElementById("fCodigo").value.trim(),
-      nombre: document.getElementById("fNombre").value.trim(),
-      descripcion: document.getElementById("fDescripcion").value.trim(),
-      numeroSerie: document.getElementById("fSerie").value.trim(),
-      linea: document.getElementById("fLinea").value,
-      marca: document.getElementById("fMarca").value,
-      modelo: document.getElementById("fModelo").value,
-      tipo_maquina: document.getElementById("fTipo").value,
-      estado_maquina: document.getElementById("fEstado").value,
-      modo_monitoreo: document.getElementById("fModo").value,
-      umbral_vibracion: parseFloat(document.getElementById("fUmbral").value) || 4.0,
-    };
-
-    var formData = new FormData();
-    Object.keys(campos).forEach(function (key) {
-      var valor = campos[key];
-      if (valor !== "" && valor !== null && valor !== undefined) {
-        formData.append(key, valor);
-      }
-    });
-
-    var imagenFile = document.getElementById("fImagen").files[0];
-    if (imagenFile) formData.append("imagen", imagenFile);
-    var modelo3dFile = document.getElementById("fModelo3d").files[0];
-    if (modelo3dFile) formData.append("modelo_3d_archivo", modelo3dFile);
-
-    fetch(CREAR_URL, {
-      method: "POST",
-      headers: { "X-CSRFToken": getCookie("csrftoken") },
-      body: formData,
-    }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
-      .then(function (res) {
-        if (!res.ok) {
-          errorBox.hidden = false;
-          errorBox.textContent = apiErrorLegible(res.data, "No se pudo crear la máquina.");
-          return;
-        }
-        cerrarModal();
-        form.reset();
-        refrescar();
-      }).catch(function () {
-        errorBox.hidden = false;
-        errorBox.textContent = "No fue posible conectar con el servidor.";
-      });
-  });
   var CREAR_ORDEN_URL = root.dataset.crearOrdenUrl;
   var btnLevantarOrden = document.getElementById("drawerLevantarOrden");
   if (btnLevantarOrden && CREAR_ORDEN_URL) {

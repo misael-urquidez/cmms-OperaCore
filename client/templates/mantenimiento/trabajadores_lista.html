@@ -18,11 +18,21 @@
 .trab-card__contacto { font-size: 12px; color: var(--color-muted); }
 .trab-card__btn { margin-top: 10px; padding: 8px 18px; border-radius: 8px; background: var(--color-primary); color: #0f172a; font-weight: 600; text-decoration: none; font-size: 13px; }
 .trab-empty { padding: 40px; text-align: center; color: var(--color-muted); }
+.trab-buscador { margin-bottom: 18px; display: flex; align-items: center; gap: 0.5rem; }
+.trab-buscador label { display: flex; align-items: center; gap: .5rem; font-size: .78rem; font-weight: 600; color: var(--color-muted); text-transform: uppercase; letter-spacing: .04em; }
+.trab-buscador__input { background: var(--input-bg); border: 1px solid var(--line); border-radius: .45rem; padding: .4rem .6rem; color: var(--color-text); font-size: .85rem; font-family: inherit; font-weight: 400; text-transform: none; letter-spacing: 0; min-width: 240px; outline: none; }
+.trab-buscador__input:focus { border-color: var(--color-primary); }
 </style>
 {% endblock %}
 {% block content %}
 <section>
     <p style="color: var(--color-muted); margin: 0 0 18px;">Personal técnico y administrativo registrado en el sistema.</p>
+
+    <div class="trab-buscador">
+        <label>Buscar
+            <input type="search" id="trabBuscador" class="trab-buscador__input" placeholder="Nombre, nómina, especialidad…">
+        </label>
+    </div>
 
     {% if trabajadores %}
     <div class="trab-grid">
@@ -49,4 +59,7 @@
     <div class="trab-empty">No se pudo cargar la lista de trabajadores.</div>
     {% endif %}
 </section>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/buscador-trabajadores.js' %}"></script>
 {% endblock %}

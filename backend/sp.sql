@@ -729,10 +729,12 @@ BEGIN
         om.fechaCreacion AS fecha,
         om.descripcion AS detalle,
         om.estado_orden AS estado,
+        eo.nombre AS estado_nombre,
         om.trabajador AS trabajador_nomina,
         CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, '')) AS trabajador_nombre
     FROM ORDEN_MANTENIMIENTO om
     LEFT JOIN TRABAJADOR t ON t.numeroNomina = om.trabajador
+    LEFT JOIN ESTADO_ORDEN eo ON eo.codigo = om.estado_orden
     WHERE om.maquina = maquina
 
     UNION ALL
@@ -743,10 +745,12 @@ BEGIN
         rf.fechaCreacion AS fecha,
         rf.asunto AS detalle,
         rf.estado_reporte AS estado,
+        er.nombre AS estado_nombre,
         rf.trabajador AS trabajador_nomina,
         CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, '')) AS trabajador_nombre
     FROM REPORTE_FALLA rf
     LEFT JOIN TRABAJADOR t ON t.numeroNomina = rf.trabajador
+    LEFT JOIN EDO_REPORTE er ON er.codigo = rf.estado_reporte
     WHERE rf.maquina = maquina
 
     ORDER BY fecha DESC;
@@ -1036,10 +1040,12 @@ BEGIN
         om.fechaCreacion AS fecha,
         om.descripcion AS detalle,
         om.estado_orden AS estado,
+        eo.nombre AS estado_nombre,
         om.trabajador AS trabajador_nomina,
         (SELECT CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, ''))
          FROM TRABAJADOR as t WHERE t.numeroNomina = om.trabajador) AS trabajador_nombre
     FROM ORDEN_MANTENIMIENTO as om
+    LEFT JOIN ESTADO_ORDEN eo ON eo.codigo = om.estado_orden
     WHERE om.maquina = maquina
 
     UNION ALL
@@ -1050,10 +1056,12 @@ BEGIN
         rf.fechaCreacion AS fecha,
         rf.asunto AS detalle,
         rf.estado_reporte AS estado,
+        er.nombre AS estado_nombre,
         rf.trabajador AS trabajador_nomina,
         (SELECT CONCAT(t.nombre, ' ', t.apellidoPat, ' ', IFNULL(t.apellidoMat, ''))
          FROM TRABAJADOR as t WHERE t.numeroNomina = rf.trabajador) AS trabajador_nombre
     FROM REPORTE_FALLA as rf
+    LEFT JOIN EDO_REPORTE er ON er.codigo = rf.estado_reporte
     WHERE rf.maquina = maquina
 
     ORDER BY fecha DESC;
