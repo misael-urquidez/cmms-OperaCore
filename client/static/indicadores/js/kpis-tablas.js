@@ -139,6 +139,15 @@
     });
   }
 
+  // Busca el par Inicio/Fin dentro de las columnas de fecha de la vista.
+  // Si existe, se fusionan en un solo filtro "Periodo" en vez de dos
+  // rangos independientes (que se veian repetidos/uno al lado del otro).
+  function detectarParPeriodo(columnasFecha) {
+    var colInicio = columnasFecha.filter(function (c) { return /inicio/i.test(c); })[0];
+    var colFin = columnasFecha.filter(function (c) { return /fin/i.test(c); })[0];
+    return (colInicio && colFin) ? { colInicio: colInicio, colFin: colFin } : null;
+  }
+
   function esColumnaNumerica(col, filas) {
     return filas.every(function (f) { return typeof f[col] === "number" || f[col] === null || f[col] === undefined; });
   }
@@ -181,7 +190,57 @@
     var columnas = Object.keys(filas[0]);
     var huboControl = false;
 
+    var columnasFecha = columnas.filter(function (col) { return esColumnaFecha(col, filas); });
+    var parPeriodo = detectarParPeriodo(columnasFecha);
+
+    if (parPeriodo) {
+      var grupo = document.createElement("div");
+      grupo.className = "kpi__filtro-fecha-grupo";
+
+      var titulo = document.createElement("span");
+      titulo.className = "kpi__filtro-fecha-titulo";
+      titulo.textContent = "Periodo";
+      grupo.appendChild(titulo);
+
+      var inputDesde = document.createElement("input");
+      inputDesde.type = "date";
+      inputDesde.title = "Periodo desde";
+      inputDesde.setAttribute("aria-label", "Periodo desde");
+
+      var inputHasta = document.createElement("input");
+      inputHasta.type = "date";
+      inputHasta.title = "Periodo hasta";
+      inputHasta.setAttribute("aria-label", "Periodo hasta");
+
+      function aplicarPeriodo() {
+        var desde = inputDesde.value || null;
+        var hasta = inputHasta.value || null;
+        if (!desde && !hasta) {
+          delete FILTROS[slug]["__periodo"];
+        } else {
+          FILTROS[slug]["__periodo"] = {
+            tipo: "periodo", colInicio: parPeriodo.colInicio, colFin: parPeriodo.colFin,
+            desde: desde, hasta: hasta
+          };
+        }
+        renderizarVista(slug);
+      }
+      inputDesde.addEventListener("change", aplicarPeriodo);
+      inputHasta.addEventListener("change", aplicarPeriodo);
+
+      grupo.appendChild(inputDesde);
+      var guion = document.createElement("span");
+      guion.className = "kpi__filtro-fecha-guion";
+      guion.textContent = "–";
+      grupo.appendChild(guion);
+      grupo.appendChild(inputHasta);
+
+      cont.appendChild(grupo);
+      huboControl = true;
+    }
+
     columnas.forEach(function (col) {
+      if (parPeriodo && (col === parPeriodo.colInicio || col === parPeriodo.colFin)) return;
       if (esColumnaFecha(col, filas)) {
         var grupo = document.createElement("div");
         grupo.className = "kpi__filtro-fecha-grupo";
@@ -281,16 +340,25 @@
   function pasaFiltros(fila, filtros) {
     return Object.keys(filtros).every(function (col) {
       var f = filtros[col];
-      var v = fila[col];
       if (f.tipo === "select") {
+        var v = fila[col];
         return v !== null && v !== undefined && String(v) === f.valor;
       }
       if (f.tipo === "fecha") {
-        if (v === null || v === undefined || v === "") return false; // sin fecha no pasa un filtro de rango activo
-        var d = new Date(v);
+        var v2 = fila[col];
+        if (v2 === null || v2 === undefined || v2 === "") return false;
+        var d = new Date(v2);
         if (isNaN(d.getTime())) return true;
         if (f.desde && d < new Date(f.desde)) return false;
         if (f.hasta && d > new Date(f.hasta + "T23:59:59")) return false;
+        return true;
+      }
+      if (f.tipo === "periodo") {
+        var ini = fila[f.colInicio] ? new Date(fila[f.colInicio]) : null;
+        var fin = fila[f.colFin] ? new Date(fila[f.colFin]) : null;
+        // traslape: el periodo de la fila cruza el rango [desde, hasta]
+        if (f.desde && fin && fin < new Date(f.desde)) return false;
+        if (f.hasta && ini && ini > new Date(f.hasta + "T23:59:59")) return false;
         return true;
       }
       return true;
