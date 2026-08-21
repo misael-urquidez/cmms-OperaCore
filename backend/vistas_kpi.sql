@@ -309,13 +309,15 @@ from MAQUINA m;
 DROP VIEW IF EXISTS v_kpi_disponibilidad_linea;
 
 CREATE VIEW v_kpi_disponibilidad_linea as
-select l.nombre as Linea, i.fechaFin as Periodo,
-       round(avg(i.porcentajeDispo), 1) as Disponibilidad
+select l.nombre as Linea,
+       m.codigo as Maquina,
+       i.fechaInicio as FechaInicio,
+       i.fechaFin as FechaFin,
+       i.porcentajeDispo as Disponibilidad
 from INDICADOR i
 inner join MAQUINA m on m.codigo = i.maquina
 inner join LINEA l on l.codigo = m.linea
-group by l.codigo, l.nombre, i.fechaFin
-order by l.nombre, i.fechaFin;
+order by l.nombre, m.codigo, i.fechaInicio;
 
 -- =====================================================================
 -- 10. v_kpi_monitoreo_predictivo: ultima lectura de sensor por maquina

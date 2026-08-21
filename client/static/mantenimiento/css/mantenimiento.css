@@ -247,6 +247,7 @@ dialog#ordenDrawer #ordenDrawerEdit div.orden-asig { display:grid; gap:.45rem; j
 .orden-asig__chip--sel { background:var(--color-primary) !important; color:#04121c !important; border-color:var(--color-primary) !important; }
 .orden-asig__chip--sel:hover { color:#04121c !important; }
 .orden-asig__chip:disabled { opacity:.55; cursor:not-allowed; filter:none; }
+.orden-asig__chip--link { text-decoration:none; }
 .orden-asig__nueva { display:flex; gap:.4rem; align-items:center; }
 .orden-asig__nueva input { flex:1; min-width:0; }
 dialog#newOrdenModal #newOrdenForm .orden-asig__nueva button,

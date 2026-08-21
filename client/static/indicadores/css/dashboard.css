@@ -251,6 +251,54 @@
 .kpi__vista-card--expanded .kpi__table td { padding: 0.7rem 0.8rem; }
 .kpi__vista-card--expanded .kpi__vista-canvas-wrap { height: 420px; }
 
+/* Filtros por tarjeta: solo se muestran (display via JS) cuando la
+   tarjeta esta expandida y esa vista tiene al menos una columna filtrable. */
+.kpi__vista-filtros {
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  margin: 0.75rem 0;
+  background: var(--color-bg);
+  border: 1px solid var(--admin-border, rgba(255, 255, 255, 0.08));
+  border-radius: 0.6rem;
+}
+.kpi__vista-filtros .kpi__filtro { min-width: 0; }
+.kpi__vista-filtros .kpi__filtro select,
+.kpi__vista-filtros .kpi__filtro input { min-width: 140px; padding: 0.35rem 0.5rem; font-size: 0.8rem; }
+.kpi__vista-filtros .kpi__btn--ghost { align-self: flex-end; }
+
+.kpi__table-resumen {
+  margin: 0 0 0.5rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  color: var(--color-muted, #94a3b8);
+  background: var(--color-bg);
+  border: 1px solid var(--admin-border, rgba(255, 255, 255, 0.08));
+  border-radius: 0.5rem;
+  display: inline-block;
+}
+
+.kpi__filtro-fecha-grupo {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.kpi__filtro-fecha-titulo {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--color-muted, #94a3b8);
+  margin-right: 0.15rem;
+}
+.kpi__filtro-fecha-guion {
+  color: var(--color-muted, #94a3b8);
+}
+.kpi__filtro-fecha-grupo input[type="date"] {
+  min-width: 120px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+}
+
 @media (max-width: 860px) {
   .kpi__charts { grid-template-columns: 1fr; }
   .kpi__spacer { flex-basis: 100%; }

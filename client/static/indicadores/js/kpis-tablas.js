@@ -24,6 +24,8 @@
   var DATOS = {};
   var MODO = {};
   var CHARTS = {};
+  var FILTROS = {};              // slug -> { columna: {tipo:'select', valor} | {tipo:'fecha', desde, hasta} }
+  var FILTROS_DISPONIBLES = {};  // slug -> bool (si esa vista tiene al menos un filtro util)
 
   function cssVar(name, fallback) {
     var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -91,12 +93,14 @@
           '<button type="button" class="kpi__btn kpi__btn--ghost kpi__btn--grafica" disabled>Ver como gráfica</button>' +
         '</div>' +
       '</div>' +
+      '<div class="kpi__vista-filtros" data-vista-filtros="' + vista.slug + '" style="display:none"></div>' +
       '<div class="kpi__table-wrap" data-vista="' + vista.slug + '"></div>';
 
     var btnExpandir = card.querySelector(".kpi__btn--expandir");
     btnExpandir.addEventListener("click", function () {
       var expandido = card.classList.toggle("kpi__vista-card--expanded");
       btnExpandir.textContent = expandido ? "⤡ Contraer" : "⤢ Expandir";
+      actualizarVisibilidadFiltros(vista.slug, expandido);
       // Si esta en modo grafica, Chart.js necesita que le avisen del resize
       // del contenedor (el toggle cambia el alto via CSS).
       if (CHARTS[vista.slug]) {
@@ -127,6 +131,180 @@
     }
   }
 
+  // --- Filtros por tarjeta (solo visibles con la tarjeta expandida) --------
+
+  function esColumnaFecha(col, filas) {
+    return /fecha/i.test(col) && filas.some(function (f) {
+      return typeof f[col] === "string" && /^\d{4}-\d{2}-\d{2}/.test(f[col]);
+    });
+  }
+
+  function esColumnaNumerica(col, filas) {
+    return filas.every(function (f) { return typeof f[col] === "number" || f[col] === null || f[col] === undefined; });
+  }
+
+  function valoresUnicos(col, filas) {
+    var vistos = {};
+    var out = [];
+    filas.forEach(function (f) {
+      var v = f[col];
+      if (v === null || v === undefined || v === "") return;
+      var key = String(v);
+      if (!vistos[key]) { vistos[key] = true; out.push(key); }
+    });
+    return out.sort();
+  }
+
+  function actualizarVisibilidadFiltros(slug, expandido) {
+    var cont = document.querySelector('.kpi__vista-filtros[data-vista-filtros="' + slug + '"]');
+    if (!cont) return;
+    cont.style.display = (expandido && FILTROS_DISPONIBLES[slug]) ? "flex" : "none";
+  }
+
+  // Arma los controles de filtro segun las columnas que trae la vista.
+  // Columnas "fecha*" -> rango Desde/Hasta. Columnas de texto con pocos
+  // valores distintos (2-25) -> select. El resto (numericas, con
+  // demasiados valores unicos, etc.) no se filtran: no vale la pena.
+  function construirFiltros(vista, filas) {
+    var slug = vista.slug;
+    var cont = document.querySelector('.kpi__vista-filtros[data-vista-filtros="' + slug + '"]');
+    if (!cont) return;
+
+    cont.innerHTML = "";
+    FILTROS[slug] = {};
+
+    if (!filas || !filas.length) {
+      FILTROS_DISPONIBLES[slug] = false;
+      return;
+    }
+
+    var columnas = Object.keys(filas[0]);
+    var huboControl = false;
+
+    columnas.forEach(function (col) {
+      if (esColumnaFecha(col, filas)) {
+        var grupo = document.createElement("div");
+        grupo.className = "kpi__filtro-fecha-grupo";
+
+        var titulo = document.createElement("span");
+        titulo.className = "kpi__filtro-fecha-titulo";
+        titulo.textContent = etiquetaColumna(col);
+        grupo.appendChild(titulo);
+
+        var inputDesde = document.createElement("input");
+        inputDesde.type = "date";
+        inputDesde.title = etiquetaColumna(col) + " desde";
+        inputDesde.setAttribute("aria-label", etiquetaColumna(col) + " desde");
+
+        var inputHasta = document.createElement("input");
+        inputHasta.type = "date";
+        inputHasta.title = etiquetaColumna(col) + " hasta";
+        inputHasta.setAttribute("aria-label", etiquetaColumna(col) + " hasta");
+
+        function aplicarFecha() {
+          var desde = inputDesde.value || null;
+          var hasta = inputHasta.value || null;
+          if (!desde && !hasta) {
+            delete FILTROS[slug][col];
+          } else {
+            FILTROS[slug][col] = { tipo: "fecha", desde: desde, hasta: hasta };
+          }
+          renderizarVista(slug);
+        }
+        inputDesde.addEventListener("change", aplicarFecha);
+        inputHasta.addEventListener("change", aplicarFecha);
+
+        grupo.appendChild(inputDesde);
+        var guion = document.createElement("span");
+        guion.className = "kpi__filtro-fecha-guion";
+        guion.textContent = "–";
+        grupo.appendChild(guion);
+        grupo.appendChild(inputHasta);
+
+        cont.appendChild(grupo);
+        huboControl = true;
+        return;
+      }
+
+      if (esColumnaNumerica(col, filas)) return; // no vale la pena un select de numeros
+
+      var valores = valoresUnicos(col, filas);
+      if (valores.length < 2 || valores.length > 25) return;
+
+      var wrap = document.createElement("label");
+      wrap.className = "kpi__filtro";
+      wrap.appendChild(document.createTextNode(etiquetaColumna(col)));
+      var select = document.createElement("select");
+      var optTodas = document.createElement("option");
+      optTodas.value = "";
+      optTodas.textContent = "Todas";
+      select.appendChild(optTodas);
+      valores.forEach(function (v) {
+        var opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v;
+        select.appendChild(opt);
+      });
+      select.addEventListener("change", function () {
+        if (select.value) {
+          FILTROS[slug][col] = { tipo: "select", valor: select.value };
+        } else {
+          delete FILTROS[slug][col];
+        }
+        renderizarVista(slug);
+      });
+      wrap.appendChild(select);
+      cont.appendChild(wrap);
+      huboControl = true;
+    });
+
+    if (huboControl) {
+      var btnLimpiar = document.createElement("button");
+      btnLimpiar.type = "button";
+      btnLimpiar.className = "kpi__btn kpi__btn--ghost";
+      btnLimpiar.textContent = "Limpiar filtros";
+      btnLimpiar.addEventListener("click", function () {
+        FILTROS[slug] = {};
+        cont.querySelectorAll("select").forEach(function (s) { s.value = ""; });
+        cont.querySelectorAll("input[type='date']").forEach(function (i) { i.value = ""; });
+        renderizarVista(slug);
+      });
+      cont.appendChild(btnLimpiar);
+    }
+
+    FILTROS_DISPONIBLES[slug] = huboControl;
+    var card = document.getElementById("vista-" + slug);
+    var expandido = !!(card && card.classList.contains("kpi__vista-card--expanded"));
+    actualizarVisibilidadFiltros(slug, expandido);
+  }
+
+  function pasaFiltros(fila, filtros) {
+    return Object.keys(filtros).every(function (col) {
+      var f = filtros[col];
+      var v = fila[col];
+      if (f.tipo === "select") {
+        return v !== null && v !== undefined && String(v) === f.valor;
+      }
+      if (f.tipo === "fecha") {
+        if (v === null || v === undefined || v === "") return false; // sin fecha no pasa un filtro de rango activo
+        var d = new Date(v);
+        if (isNaN(d.getTime())) return true;
+        if (f.desde && d < new Date(f.desde)) return false;
+        if (f.hasta && d > new Date(f.hasta + "T23:59:59")) return false;
+        return true;
+      }
+      return true;
+    });
+  }
+
+  function filasFiltradas(slug) {
+    var filas = DATOS[slug];
+    if (!filas) return filas;
+    var filtros = FILTROS[slug];
+    if (!filtros || !Object.keys(filtros).length) return filas;
+    return filas.filter(function (fila) { return pasaFiltros(fila, filtros); });
+  }
+
   // --- Estados vacios/errores ----------------------------------------------
 
   function pintarLoading(wrap) {
@@ -147,12 +325,32 @@
 
   // --- Tabla ----------------------------------------------------------------
 
-  function pintarTabla(wrap, filas) {
+  function resumenFiltrosSelect(slug) {
+    var filtros = FILTROS[slug];
+    var resumen = [];
+    var columnasOcultas = {};
+    if (filtros) {
+      Object.keys(filtros).forEach(function (col) {
+        var f = filtros[col];
+        if (f.tipo === "select") {
+          resumen.push(etiquetaColumna(col) + ": " + f.valor);
+          columnasOcultas[col] = true;
+        }
+      });
+    }
+    return { resumen: resumen, columnasOcultas: columnasOcultas };
+  }
+
+  function pintarTabla(wrap, filas, slug) {
     if (!filas || !filas.length) {
       pintarVacio(wrap);
       return;
     }
-    var columnas = Object.keys(filas[0]);
+
+    var info = resumenFiltrosSelect(slug);
+    var columnas = Object.keys(filas[0]).filter(function (col) {
+      return !info.columnasOcultas[col];
+    });
 
     var table = document.createElement("table");
     table.className = "kpi__table";
@@ -181,6 +379,14 @@
     table.appendChild(tbody);
 
     wrap.innerHTML = "";
+
+    if (info.resumen.length) {
+      var nota = document.createElement("p");
+      nota.className = "kpi__table-resumen";
+      nota.textContent = info.resumen.join(" · ");
+      wrap.appendChild(nota);
+    }
+
     var scroll = document.createElement("div");
     scroll.className = "kpi__table-scroll";
     scroll.appendChild(table);
@@ -282,13 +488,13 @@
     var wrap = document.querySelector('.kpi__table-wrap[data-vista="' + slug + '"]');
     if (!wrap) return;
     actualizarControles(slug);
-    var filas = DATOS[slug];
-    if (filas === undefined) return; // aun cargando
+    if (DATOS[slug] === undefined) return; // aun cargando
+    var filas = filasFiltradas(slug);
     if (MODO[slug] === "grafica") {
       var vista = VISTAS.filter(function (v) { return v.slug === slug; })[0];
       pintarGrafica(wrap, filas, vista);
     } else {
-      pintarTabla(wrap, filas);
+      pintarTabla(wrap, filas, slug);
     }
   }
 
@@ -302,6 +508,7 @@
         DATOS[vista.slug] = data;
         var btnGrafica = card && card.querySelector(".kpi__btn--grafica");
         if (btnGrafica) btnGrafica.disabled = false;
+        construirFiltros(vista, data);
         renderizarVista(vista.slug);
       })
       .catch(function () { pintarError(wrap); });

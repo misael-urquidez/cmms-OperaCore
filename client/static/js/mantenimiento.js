@@ -45,6 +45,7 @@
   var EXPORTAR_XLSX_TPL = root.dataset.exportarXlsxBase;
   var EXPORTAR_PDF_TPL = root.dataset.exportarPdfBase;
   var DOCUMENTO_TPL = root.dataset.documentoUrlBase;
+  var TRABAJADOR_DETALLE_TPL = root.dataset.trabajadorDetalleUrlBase;
   var ES_TECNICO = root.dataset.esTecnico === "1";
   var ES_ADMIN = root.dataset.esAdmin === "1";
   var NUMERO_NOMINA = root.dataset.numeroNomina;
@@ -137,6 +138,38 @@
       chip.className = "orden-asig__chip";
       chip.textContent = labelFn(item);
       listaEl.appendChild(chip);
+    });
+  }
+
+  // Mismos chips que pintarChipsEstaticos, pero como <a> hacia el perfil del
+  // trabajador (TrabajadorDetalleView, que ya arma sus datos con
+  // sp_perfil_trabajador). Se abre en pestaña nueva para no perder el
+  // drawer de la orden que se estaba viendo.
+  function pintarChipsTrabajadores(listaEl, items, labelFn, numeroNominaFn) {
+    if (!listaEl) return;
+    listaEl.innerHTML = "";
+    if (!items || !items.length) {
+      var vacio = document.createElement("span");
+      vacio.className = "orden-asig__chip";
+      vacio.textContent = "Ninguno";
+      listaEl.appendChild(vacio);
+      return;
+    }
+    items.forEach(function (item) {
+      var nomina = numeroNominaFn(item);
+      if (!nomina || !TRABAJADOR_DETALLE_TPL) {
+        var chip = document.createElement("span");
+        chip.className = "orden-asig__chip";
+        chip.textContent = labelFn(item);
+        listaEl.appendChild(chip);
+        return;
+      }
+      var link = document.createElement("a");
+      link.className = "orden-asig__chip orden-asig__chip--link";
+      link.textContent = labelFn(item);
+      link.href = TRABAJADOR_DETALLE_TPL.replace("CODIGOPLACEHOLDER", encodeURIComponent(nomina));
+      link.title = "Ver perfil de " + labelFn(item);
+      listaEl.appendChild(link);
     });
   }
 
@@ -613,7 +646,7 @@
   }
 
   function renderAsociacionesVista(det) {
-    pintarChipsEstaticos(document.getElementById("ordenDrawerEquipo"), det ? (det.trabajadores || []) : [], etiquetaTrabajador);
+    pintarChipsTrabajadores(document.getElementById("ordenDrawerEquipo"), det ? (det.trabajadores || []) : [], etiquetaTrabajador, function (t) { return t.numeroNomina; });
     pintarChipsEstaticos(document.getElementById("ordenDrawerHerramientas"), det ? (det.herramientas || []) : [], function (h) { return h.nombre; });
     pintarChipsEstaticos(document.getElementById("ordenDrawerTareas"), det ? (det.tareas || []) : [], function (t) { return t.instruccion; });
     pintarChecklistTareas(det);
