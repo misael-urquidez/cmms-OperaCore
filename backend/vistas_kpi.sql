@@ -313,6 +313,8 @@ select l.nombre as Linea,
        m.codigo as Maquina,
        i.fechaInicio as FechaInicio,
        i.fechaFin as FechaFin,
+       i.mtbf as MTBF,
+       i.mttr as MTTR,
        i.porcentajeDispo as Disponibilidad
 from INDICADOR i
 inner join MAQUINA m on m.codigo = i.maquina
