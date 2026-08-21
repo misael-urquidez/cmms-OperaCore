@@ -214,8 +214,10 @@ def _autofill_local(texto, maquinas, severidades, tipos_falla, estados):
 # Modelos de IA disponibles (Groq)
 # ─────────────────────────────────────────────────────────
 MODELOS_IA = {
-    'groq-llama':   {'id': 'llama-3.3-70b-versatile', 'label': 'Llama 3.3 70B', 'desc': 'Potente y rapido'},
-    'groq-llama-8': {'id': 'llama-3.1-8b-instant',    'label': 'Llama 3.1 8B',  'desc': 'Ultra rapido'},
+    # Groq retiro llama-3.3-70b-versatile y llama-3.1-8b-instant el
+    # 17-jun-2026. Estos son los reemplazos que ellos mismos recomiendan.
+    'groq-llama':   {'id': 'openai/gpt-oss-120b', 'label': 'GPT-OSS 120B', 'desc': 'Potente y rapido'},
+    'groq-llama-8': {'id': 'openai/gpt-oss-20b',  'label': 'GPT-OSS 20B',  'desc': 'Ultra rapido'},
 }
 MODELO_DEFAULT = 'groq-llama'
 
